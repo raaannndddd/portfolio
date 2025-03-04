@@ -2,9 +2,9 @@ import {fileURLToPath, URL} from 'node:url'
 import { defineConfig } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
 import vue from '@vitejs/plugin-vue'
- 
-// https://vite.dev/config/
+
 export default defineConfig({
+  assetsInclude: ['**/*.jpg', '**/*.jpeg', '**/*.png', '**/*.gif', "**/*.JPG"],
   plugins: [vue(), 
     tailwindcss()],
   resolve:{
