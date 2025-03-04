@@ -44,11 +44,11 @@
             </a>
           </li>
         </ul>
-        <button @click="toggleDarkMode" class="text-white ml-20 z-10 hidden md:block"> 
+        <!-- <button @click="toggleDarkMode" class="text-white ml-20 z-10 hidden md:block">  -->
           <!-- make backgruound invisible -->
-          <Icon v-if="!isDarkMode" icon="line-md:moon-filled" class="text-5xl text-primary" />
+          <!-- <Icon v-if="!isDarkMode" icon="line-md:moon-filled" class="text-5xl text-primary" />
           <Icon v-if="isDarkMode" icon="line-md:sunny-outline" class="text-5xl text-white" />
-        </button>
+        </button> -->
       </nav>
     </div>
   </header>
@@ -59,7 +59,7 @@ import { ref } from "vue";
 const isMenuOpen = ref(false);
 const Menu = ref([
   { name: "Home", href: "#home" },
-  { name: "About", href: "#about" },
+  { name: "About", href: "./about" },
   { name: "Showroom", href: "#showroom" },
   { name: "Connect", href: "#connect" },
 ]);
@@ -73,16 +73,26 @@ const scrollToSection = (href) => {
 };
 
 const isDarkMode = ref(localStorage.getItem('theme') === 'dark');
-const toggleDarkMode = ()=>{
+
+// // Apply theme on load
+// if (isDarkMode.value) {
+//   document.documentElement.classList.add('dark');
+// } else {
+//   document.documentElement.classList.remove('dark');
+// }
+
+const toggleDarkMode = () => {
+  // isDarkMode.value = !isDarkMode.value;
   const html = document.documentElement;
-  if(isDarkMode.value){
-    html.classList.remove('dark');
-    localStorage.setItem('theme', 'light');
-  } else {
+
+  if (isDarkMode.value) {
     html.classList.add('dark');
     localStorage.setItem('theme', 'dark');
+  } else {
+    html.classList.remove('dark');
+    localStorage.setItem('theme', 'light');
   }
 
   isDarkMode.value = !isDarkMode.value;
-}
+};
 </script>

@@ -19,8 +19,8 @@
             <span class="text-secondary stroke-text text-stroke-primary dark:text-stroke-secondary">Rand.</span>
           </h1>
           <h1 class="mb-6 text-10xl md:text-12xl lg:text-20pt font-bold">A Developer.</h1>
-          <h2 class="">A full stack developer passionate about</h2>
-          <h2>Artificial Intelligence and Natural Language Processing.</h2>
+          <p class="text-lg max-w-xl mx-auto lg:mx-0 font-serif font-semibold">A full stack developer passionate about</p>
+          <p class="text-lg max-w-xl mx-auto lg:mx-0 font-serif font-semibold">Artificial Intelligence and Natural Language Processing.</p>
         </header>
     </main>
   </section>
