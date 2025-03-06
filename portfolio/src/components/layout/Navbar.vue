@@ -14,10 +14,10 @@
           class="block focus:outline-none"
           @click="isMenuOpen = !isMenuOpen"
         >
-          <span v-if="isMenuOpen" class="text-5xl text-white dark:text-white">
+          <span v-if="isMenuOpen" class="text-5xl text-white">
             <Icon icon="el:lines" />
           </span>
-          <span v-else class="text-5xl text-white dark:text-white">
+          <span v-else class="text-5xl text-white">
             <Icon icon="lucide:house" />
           </span>
         </button>

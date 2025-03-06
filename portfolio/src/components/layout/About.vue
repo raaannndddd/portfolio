@@ -2,24 +2,25 @@
 import 'vue3-carousel/dist/carousel.css';
 import { Carousel, Slide, Pagination, Navigation } from 'vue3-carousel';
 
-import img1 from '@/assets/img/baking.jpg';
+import img1 from '@/assets/img/rand_and_karaz.jpg';
 import img2 from '@/assets/img/beach_walk.jpg';
 import img3 from '@/assets/img/cheese_platter.jpg';
 import img4 from '@/assets/img/hike.jpg';
-import img5 from '@/assets/img/rand_and_karaz.jpg';
-import img6 from '@/assets/img/beach.jpg';
+import img5 from '@/assets/img/baking.jpg';
+import img6 from '@/assets/img/rand_and_friends.JPG';
 import img7 from '@/assets/img/flower.jpg';
 import img8 from '@/assets/img/usa.jpg';
 import img9 from '@/assets/img/karaz.jpg';
 import img10 from '@/assets/img/new_year_grapes.jpg';
 import img11 from '@/assets/img/lany.jpg';
 import img12 from '@/assets/img/rand_and_hyerim.jpg';
-import img13 from '@/assets/img/rand_and_friends.JPG';
 import img14 from '@/assets/img/snow.jpg';
 import img15 from '@/assets/img/view.jpg';
 import img16 from '@/assets/img/cousin_grad.jpg';
 import img17 from '@/assets/img/rand_and_jazz.jpg';
 import img18 from '@/assets/img/friends.JPG';
+import img13 from '@/assets/img/touch_grass.JPG';
+import img19 from '@/assets/img/beach.jpg';
 
 const images = [
   { id: 1, url: img1 },
@@ -40,6 +41,7 @@ const images = [
   { id: 16, url: img16 },
   { id: 17, url: img17 },
   { id: 18, url: img18 },
+  { id: 19, url: img19 },
 ];
 
 const config = {
@@ -54,9 +56,9 @@ const config = {
 
 <template>
     <div class="mt-20">
-        <!-- <div class="content-center m-20">
+        <div class="content-center m-20">
             <h1>Hi, I'm Rand</h1>
-        </div> -->
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-[0.5fr_1.5fr] lg:grid-cols-2">
             <!-- <div class="pr-30 pl-60"> -->
             <div class="p-30 pt-0 pb-20 md:p-0 md:ml-10 lg:pr-30 lg:pl-60">
