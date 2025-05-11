@@ -1,140 +1,207 @@
 <template>
-    <div class="bg-white py-24 sm:py-32">
-      <!-- Previous Works -->
-      <section class="mx-auto max-w-7xl px-6 lg:px-8">
-        <div class="mx-auto max-w-2xl text-center mb-12">
-          <h2 class="text-4xl sm:text-5xl font-semibold tracking-tight text-gray-900">Previous Works</h2>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
-          <WorkCard v-for="post in previousPosts" :key="post.id" :post="post" />
-        </div>
-      </section>
-  
-      <!-- Future Works -->
-      <section class="mx-auto max-w-7xl px-6 lg:px-8 mt-28">
-        <div class="mx-auto max-w-2xl text-center mb-12">
-          <h2 class="text-4xl sm:text-5xl font-semibold tracking-tight text-gray-900">Future Works</h2>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
-          <WorkCard v-for="post in futurePosts" :key="post.id" :post="post" />
-        </div>
-      </section>
-    </div>
-  </template>
-  
-  <script setup>
-  const previousPosts = [
-    {
-      id: 1,
-      title: 'AI Research Paper',
-      date: 'Jan 15, 2024',
-      datetime: '2024-01-15',
-      imageUrl: 'https://source.unsplash.com/600x400/?technology',
-      href: '#',
-      author: {
-        name: 'John Doe',
-        imageUrl: 'https://source.unsplash.com/50x50/?portrait',
-      },
-    },
-    {
-      id: 2,
-      title: 'UX/UI Case Study',
-      date: 'Feb 20, 2024',
-      datetime: '2024-02-20',
-      imageUrl: 'https://source.unsplash.com/600x400/?design',
-      href: '#',
-      author: {
-        name: 'Jane Smith',
-        imageUrl: 'https://source.unsplash.com/51x51/?portrait',
-      },
-    },
-    {
-      id: 3,
-      title: 'Vue + Django App',
-      date: 'Mar 10, 2024',
-      datetime: '2024-03-10',
-      imageUrl: 'https://source.unsplash.com/600x400/?code',
-      href: '#',
-      author: {
-        name: 'Alice Chen',
-        imageUrl: 'https://source.unsplash.com/52x52/?portrait',
-      },
-    },
-  ];
-  
-  const futurePosts = [
-    {
-      id: 4,
-      title: 'AI-Powered Email Sorter',
-      date: 'Coming Soon',
-      datetime: '',
-      imageUrl: 'https://source.unsplash.com/600x400/?ai',
-      href: '#',
-      author: {
-        name: 'You',
-        imageUrl: 'https://source.unsplash.com/53x53/?portrait',
-      },
-    },
-    {
-      id: 5,
-      title: 'Mental Health Tracker App',
-      date: 'Coming Soon',
-      datetime: '',
-      imageUrl: 'https://source.unsplash.com/600x400/?mentalhealth',
-      href: '#',
-      author: {
-        name: 'You',
-        imageUrl: 'https://source.unsplash.com/54x54/?portrait',
-      },
-    },
-    {
-      id: 6,
-      title: 'ML-based Sleep Analysis Tool',
-      date: 'Coming Soon',
-      datetime: '',
-      imageUrl: 'https://source.unsplash.com/600x400/?sleep',
-      href: '#',
-      author: {
-        name: 'You',
-        imageUrl: 'https://source.unsplash.com/55x55/?portrait',
-      },
-    },
-  ];
-  </script>
-  
-  <!-- Work Card as reusable component -->
-  <script>
-  export default {
-    components: {
-      WorkCard: {
-        props: ['post'],
-        template: `
-          <article class="relative flex flex-col justify-end overflow-hidden rounded-2xl bg-gray-900 text-white shadow-md hover:shadow-xl transition-shadow duration-300">
-            <img :src="post.imageUrl" alt="" class="absolute inset-0 -z-10 h-full w-full object-cover" />
-            <div class="absolute inset-0 -z-10 bg-gradient-to-t from-gray-900 via-gray-900/60" />
-            <div class="absolute inset-0 -z-10 rounded-2xl ring-1 ring-inset ring-gray-900/10" />
-            <div class="p-6">
-              <div class="flex items-center gap-4 text-sm text-gray-300 mb-2">
-                <time v-if="post.datetime" :datetime="post.datetime">{{ post.date }}</time>
-                <div class="flex items-center gap-2">
-                  <img :src="post.author.imageUrl" alt="" class="h-6 w-6 rounded-full bg-white/10" />
-                  <span>{{ post.author.name }}</span>
-                </div>
-              </div>
-              <h3 class="text-xl font-semibold">
-                <a :href="post.href" class="hover:underline">{{ post.title }}</a>
-              </h3>
+  <div class="bg-white py-24 sm:py-32">
+    <div class="mx-auto max-w-7xl px-6 lg:px-8">
+      <div class="mx-auto max-w-2xl text-center">
+        <h2 class="text-balance text-4xl font-semibold tracking-tight text-gray-900 sm:text-5xl">Previous Works</h2>
+        <!-- <p class="mt-2 text-lg/8 text-gray-600"></p> -->
+      </div>
+      <div class="mx-auto mt-16 grid max-w-2xl auto-rows-fr grid-cols-1 gap-8 sm:mt-20 lg:mx-0 lg:max-w-none lg:grid-cols-3">
+        <article v-for="post in previous" :key="post.id" class="relative isolate flex flex-col justify-end overflow-hidden rounded-2xl bg-gray-900 px-8 pb-8 pt-80 sm:pt-48 lg:pt-80">
+          <img :src="post.imageUrl" alt="" class="absolute inset-0 -z-10 size-full object-cover" />
+          <div class="absolute inset-0 -z-10 bg-gradient-to-t from-gray-900 via-gray-900/40" />
+          <div class="absolute inset-0 -z-10 rounded-2xl ring-1 ring-inset ring-gray-900/10" />
+
+          <div class="flex flex-wrap items-center gap-y-1 overflow-hidden text-sm/6 text-gray-300">
+            <!-- <time :datetime="post.datetime" class="mr-8">{{ post.date }}</time> -->
+            <div class="-ml-4 flex items-center gap-x-4">
+              <svg viewBox="0 0 2 2" class="-ml-0.5 size-0.5 flex-none fill-white/50">
+                <circle cx="1" cy="1" r="1" />
+              </svg>
+              <!-- <div class="flex gap-x-2.5">
+                <img :src="post.author.imageUrl" alt="" class="size-6 flex-none rounded-full bg-white/10" />
+                {{ post.author.name }}
+              </div> -->
             </div>
-          </article>
-        `,
-      },
+          </div>
+          <h3 class="mt-3 text-lg/6 font-semibold text-white">
+            <a :href="post.href">
+              <span class="absolute inset-0" />
+              {{ post.title }}
+              <br/>
+              {{ post.description }}
+            </a>
+          </h3>
+        </article>
+      </div>
+    </div>
+  </div>
+  <!-- <div class="bg-white pb-24 sm:pb-32">
+    <div class="mx-auto max-w-7xl px-6 lg:px-8">
+      <div class="mx-auto max-w-2xl text-center">
+        <h2 class="text-balance text-4xl font-semibold tracking-tight text-gray-900 sm:text-5xl">Future Works</h2>
+      </div>
+      <div class="mx-auto mt-16 grid max-w-2xl auto-rows-fr grid-cols-1 gap-8 sm:mt-20 lg:mx-0 lg:max-w-none lg:grid-cols-3">
+        <article v-for="post in future" :key="post.id" class="relative isolate flex flex-col justify-end overflow-hidden rounded-2xl bg-gray-900 px-8 pb-8 pt-80 sm:pt-48 lg:pt-80">
+          <img :src="post.imageUrl" alt="" class="absolute inset-0 -z-10 size-full object-cover" />
+          <div class="absolute inset-0 -z-10 bg-gradient-to-t from-gray-900 via-gray-900/40" />
+          <div class="absolute inset-0 -z-10 rounded-2xl ring-1 ring-inset ring-gray-900/10" />
+
+          <div class="flex flex-wrap items-center gap-y-1 overflow-hidden text-sm/6 text-gray-300">
+            <time :datetime="post.datetime" class="mr-8">{{ post.date }}</time>
+            <div class="-ml-4 flex items-center gap-x-4">
+              <svg viewBox="0 0 2 2" class="-ml-0.5 size-0.5 flex-none fill-white/50">
+                <circle cx="1" cy="1" r="1" />
+              </svg>
+              <div class="flex gap-x-2.5">
+                <img :src="post.author.imageUrl" alt="" class="size-6 flex-none rounded-full bg-white/10" />
+                {{ post.author.name }}
+              </div>
+            </div>
+          </div>
+          <h3 class="mt-3 text-lg/6 font-semibold text-white">
+            <a :href="post.href">
+              <span class="absolute inset-0" />
+              {{ post.title }}
+            </a>
+          </h3>
+        </article>
+      </div>
+    </div>
+  </div> -->
+</template>
+
+<script setup>
+const previous = [
+  {
+    id: 1,
+    title: 'Volume Control:',
+    href: 'https://github.com/raaannndddd/VolumeControl',
+    description:
+      'Program that uses hand gestures to control the volume',
+    imageUrl:
+      '/img/vol_control.png',
+  },
+  {
+    id: 2,
+    title: 'Advertising Effectiveness Analysis:',
+    href: 'https://bitbucket.org/m10_04/soft3888_m10_04/src/main/',
+    description:
+      'AI system to study effectiveness of advertising in shopping centres with real-time analysis and feedback',
+    imageUrl:
+      '/img/advertise.png',
+  },
+  {
+    id: 3,
+    title: 'Portfolio Website:',
+    href: 'https://github.com/raaannndddd/portfolio',
+    description:
+      'A website to introduce myself and showcase my work',
+    imageUrl:
+      '/img/website.png',
+  },
+  {
+    id: 4,
+    title: 'Sleep Aponea Website:',
+    href: '#',
+    description:
+      'Implemented for a startup pitch that aims to improve the diagnosis of sleep aponea',
+    imageUrl:
+      '/img/swillow.png',
+  },
+  {
+    id: 5,
+    title: 'Chronic Kidney Disease Predictor:',
+    href: 'https://github.com/raaannndddd/CKD',
+    description:
+      'Machine learning algorithms to predict the likelihood of a person developing CKD',
+    imageUrl:
+      '/img/matrix.png',
+  },
+  {
+    id: 6,
+    title: 'Space Invaders Game:',
+    href: '#',
+    description:
+      'Implemented the space invaders game with extra features',
+    imageUrl:
+      '/img/space_invaders.png',
+  },
+  {
+    id: 7,
+    title: 'Multi-type Linked List:',
+    href: '#',
+    description:
+      'Multi-type linked list and a program to use it.',
+    imageUrl:
+      '/img/linked_list.png',
+  },
+  {
+    id: 8,
+    title: 'P2P File-Transfer program:',
+    href: '#',
+    description:
+      'P2P File-Transfer program that will allow sending, receiving and detection of anomalous data chunks',
+    imageUrl:
+      '/img/bytetide.png',
+  },
+  {
+    id: 9,
+    title: 'Scroll Manager:',
+    href: '#',
+    description:
+      'Program to manage and update binary digital scrolls.',
+    imageUrl:
+      '/img/scrolls.png',
+  },
+]
+const future = [
+  {
+    id: 1,
+    title: 'Boost your conversion rate',
+    href: '#',
+    description:
+      'Illo sint voluptas. Error voluptates culpa eligendi. Hic vel totam vitae illo. Non aliquid explicabo necessitatibus unde. Sed exercitationem placeat consectetur nulla deserunt vel. Iusto corrupti dicta.',
+    imageUrl:
+      'https://images.unsplash.com/photo-1496128858413-b36217c2ce36?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=3603&q=80',
+    date: 'Mar 16, 2020',
+    datetime: '2020-03-16',
+    author: {
+      name: 'Michael Foster',
+      imageUrl:
+        'https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
     },
-  };
-  </script>
-  
-  <style scoped>
-  /* Optional: Smooth fade on hover */
-  article:hover img {
-    filter: brightness(0.9);
-  }
-  </style>  
+  },
+  {
+    id: 2,
+    title: 'Boost your conversion rate',
+    href: '#',
+    description:
+      'Illo sint voluptas. Error voluptates culpa eligendi. Hic vel totam vitae illo. Non aliquid explicabo necessitatibus unde. Sed exercitationem placeat consectetur nulla deserunt vel. Iusto corrupti dicta.',
+    imageUrl:
+      'https://images.unsplash.com/photo-1496128858413-b36217c2ce36?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=3603&q=80',
+    date: 'Mar 16, 2020',
+    datetime: '2020-03-16',
+    author: {
+      name: 'Michael Foster',
+      imageUrl:
+        'https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+    },
+  },
+  {
+    id: 3,
+    title: 'Boost your conversion rate',
+    href: '#',
+    description:
+      'Illo sint voluptas. Error voluptates culpa eligendi. Hic vel totam vitae illo. Non aliquid explicabo necessitatibus unde. Sed exercitationem placeat consectetur nulla deserunt vel. Iusto corrupti dicta.',
+    imageUrl:
+      'https://images.unsplash.com/photo-1496128858413-b36217c2ce36?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=3603&q=80',
+    date: 'Mar 16, 2020',
+    datetime: '2020-03-16',
+    author: {
+      name: 'Michael Foster',
+      imageUrl:
+        'https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+    },
+  },
+]
+</script>
