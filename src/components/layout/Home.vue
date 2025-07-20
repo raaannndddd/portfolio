@@ -8,5 +8,5 @@
   <script setup>
   import { defineAsyncComponent } from 'vue';
   const Header = defineAsyncComponent(() => import('@/components/layout/Header.vue'));
-  const Footer = defineAsyncComponent(() => import('@/components/layout/Footer1.vue'));
+  const Footer = defineAsyncComponent(() => import('@/components/layout/Footer.vue'));
   </script>

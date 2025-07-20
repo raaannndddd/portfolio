@@ -14,6 +14,6 @@
 
     const Navbar = defineAsyncComponent(() => import('@/components/layout/Navbar.vue'));
     const Header = defineAsyncComponent(() => import('@/components/layout/HeaderAbout.vue'));
-    const Footer = defineAsyncComponent(() => import('@/components/layout/Footer1.vue'));
+    const Footer = defineAsyncComponent(() => import('@/components/layout/Footer.vue'));
     const Gallery = defineAsyncComponent(() => import('@/components/layout/PhotoGallery.vue'));
 </script>

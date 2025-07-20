@@ -13,5 +13,5 @@
 
     const Navbar = defineAsyncComponent(() => import('@/components/layout/Navbar.vue'));
     const List = defineAsyncComponent(() => import('@/components/layout/List.vue'));
-    const Footer = defineAsyncComponent(() => import('@/components/layout/Footer1.vue'));
+    const Footer = defineAsyncComponent(() => import('@/components/layout/Footer.vue'));
 </script>

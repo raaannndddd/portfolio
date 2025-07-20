@@ -3,7 +3,7 @@
         <nav class="flex items-center justify-between p-6 lg:px-8" aria-label="Global">
           <div class="flex lg:flex-1">
             <router-link to="/" class="-m-1.5 p-1.5">
-              <img class="h-20 w-auto" src="../../assets/img/logo.png" alt="" />
+              <img class="h-20 w-auto" src="../../../img/logo.png" alt="logo" />
             </router-link>
           </div>
           <div class="flex lg:hidden">

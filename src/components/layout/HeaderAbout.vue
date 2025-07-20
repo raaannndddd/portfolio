@@ -43,7 +43,7 @@
 <div class="px-6 mb-20 lg:px-8 flex flex-col-reverse lg:flex-row justify-evenly items-center lg:items-start">
   <div class="max-w-2xl lg:text-left">
     <p class="mt-8 text-center align-center text-pretty text-lg font-medium text-gray-500 sm:text-xl/8">
-      I am a software engineering student at the University of Sydney in my penultimate year. I’m obsessed with artificial intelligence and natural language processors, especially large language models. 
+      I am a final year software engineering student at the University of Sydney. I’m passionate about artificial intelligence and natural language processors, especially large language models. 
       Similarly, I love building websites and digital experiences for various products. Go to my showroom to see examples of my work!
       <br>
       Outside this website, you’ll find me at the beach, listening to music, surrounding myself in nature, or trying new foods and recipes! 
