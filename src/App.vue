@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white">
+  <div class="bg-white h-screen flex flex-col overflow-hidden">
     <Navbar/>
     <router-view/>
   </div>

@@ -13,7 +13,7 @@
             </button>
           </div>
           <div class="hidden lg:flex lg:gap-x-12">
-            <router-link v-for="item in navigation" :key="item.name" :to="item.href" class="text-sm/6 font-semibold text-gray-900">{{ item.name }}</router-link>        </div>
+            <router-link v-for="item in navigation" :key="item.name" :to="item.href" class="text-sm/6 font-semibold text-gray-900 transition-colors duration-200 hover:text-indigo-600">{{ item.name }}</router-link>        </div>
           <div class="hidden lg:flex lg:flex-1 lg:justify-end">
             
           </div>
@@ -24,7 +24,7 @@
             <div class="flex items-center justify-between">
               <router-link to="/" class="-m-1.5 p-1.5">
                 <span class="sr-only">Your Company</span>
-                <img class="h-8 w-auto" src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600" alt="" />
+                <img class="h-8 w-auto" src="/img/logo.png" alt="" />
               </router-link>
               <button type="button" class="-m-2.5 rounded-md p-2.5 text-gray-700" @click="mobileMenuOpen = false">
                 <span class="sr-only">Close menu</span>
@@ -44,6 +44,11 @@
   </template>
 
 <script setup>
+import { ref } from 'vue'
+import { Dialog, DialogPanel } from '@headlessui/vue'
+import { Bars3Icon, XMarkIcon } from '@heroicons/vue/24/outline'
+
+const mobileMenuOpen = ref(false)
 const navigation = [
     { name: 'Home', href: '/' },
     { name: 'About', href: '/about' },

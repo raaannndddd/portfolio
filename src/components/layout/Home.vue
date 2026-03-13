@@ -1,5 +1,5 @@
 <template>
-    <div class="bg-white">
+    <div class="flex flex-col flex-1 min-h-0">
       <Header/>
       <Footer/>
     </div>

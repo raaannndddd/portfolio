@@ -43,24 +43,18 @@
 <div class="px-6 mb-20 lg:px-8 flex flex-col-reverse lg:flex-row justify-evenly items-center lg:items-start">
   <div class="max-w-2xl lg:text-left">
     <p class="mt-8 text-center align-center text-pretty text-lg font-medium text-gray-500 sm:text-xl/8">
-      I am a final year software engineering student at the University of Sydney. I’m passionate about artificial intelligence and natural language processors, especially large language models. 
-      Similarly, I love building websites and digital experiences for various products. Go to my showroom to see examples of my work!
-      <br>
-      Outside this website, you’ll find me at the beach, listening to music, surrounding myself in nature, or trying new foods and recipes! 
+      I am a final year software engineering student at the University of Sydney. I’m passionate about all things digital, especially SEO/GEO in marketing, automation, and AI.       <br>
+      Outside this website, you’ll find me running, listening to music, at the beach, or trying new foods and recipes! 
       I love learning new languages and am currently focused on improving my French (oui oui 😎). 
       I also enjoy exploring unique fashion styles, often evolving my wardrobe through thrifting and one-of-a-kind pieces :)
     </p>
   </div>
   <div class="max-w-4xl pt-10 lg:pt-0">
-    <img src="../../assets/img/face.png" class="h-90 rounded-full" alt="face pic">
+    <img src="../../assets/img/face.webp" fetchpriority="high" decoding="async" class="h-90 rounded-full shadow-lg transition-transform duration-300 hover:-translate-y-2 hover:shadow-2xl" alt="Portrait of Rand">
   </div>
 </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue";
-// const Header = defineAsyncComponent(() => import('./Header.vue'));
-
-const mobileMenuOpen = ref(false);
 </script>

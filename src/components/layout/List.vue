@@ -10,9 +10,9 @@
       </p>
       </div>
       <div class="mx-auto mt-16 grid max-w-2xl auto-rows-fr grid-cols-1 gap-8 sm:mt-20 lg:mx-0 lg:max-w-none lg:grid-cols-3">
-        <article v-for="post in previous" :key="post.id" class="relative isolate flex flex-col justify-end overflow-hidden rounded-2xl bg-gray-900 px-8 pb-8 pt-80 sm:pt-48 lg:pt-80">
-          <img :src="post.imageUrl" alt="" class="absolute inset-0 -z-10 size-full object-cover" />
-          <div class="absolute inset-0 -z-10 bg-gradient-to-t from-gray-900 via-gray-900/40" />
+        <article v-for="post in previous" :key="post.id" class="relative isolate flex flex-col justify-end overflow-hidden rounded-2xl bg-gray-900 px-8 pb-8 pt-80 sm:pt-48 lg:pt-80 transition-transform duration-300 hover:scale-105 hover:shadow-xl group">
+          <img :src="post.imageUrl" :alt="post.title" loading="lazy" decoding="async" class="absolute inset-0 -z-10 size-full object-cover transition-transform duration-300 group-hover:scale-110" />
+          <div class="absolute inset-0 -z-10 bg-gradient-to-t from-gray-900 via-gray-900/40 opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
           <div class="absolute inset-0 -z-10 rounded-2xl ring-1 ring-inset ring-gray-900/10" />
 
           <div class="flex flex-wrap items-center gap-y-1 overflow-hidden text-sm/6 text-gray-300">
@@ -45,7 +45,7 @@ const previous = [
     description:
       'Program that uses hand gestures to control the volume',
     imageUrl:
-      '/img/vol_control.png',
+      '/img/vol_control.webp',
   },
   {
     id: 2,
@@ -54,7 +54,7 @@ const previous = [
     description:
       'AI system to study effectiveness of advertising in shopping centres with real-time analysis and feedback',
     imageUrl:
-      '/img/advertise.png',
+      '/img/advertise.webp',
   },
   {
     id: 3,
@@ -63,16 +63,16 @@ const previous = [
     description:
       'A website to introduce myself and showcase my work',
     imageUrl:
-      '/img/website.png',
+      '/img/website.webp',
   },
   {
     id: 4,
-    title: 'Sleep Aponea Website:',
-    href: 'https://github.com/raaannndddd/SleepApnoeaWebsite',
+    title: 'Jordan Language Academy Website:',
+    href: 'https://jla-website-green.vercel.app',
     description:
-      'Implemented for a startup pitch that aims to improve the diagnosis of sleep aponea',
+      'SEO/ GEO Friendly website for a language academy based in Jordan',
     imageUrl:
-      '/img/swillow.png',
+      '/img/jla.webp',
   },
   {
     id: 5,
@@ -81,7 +81,7 @@ const previous = [
     description:
       'Machine learning algorithms to predict the likelihood of a person developing CKD',
     imageUrl:
-      '/img/matrix.png',
+      '/img/matrix.webp',
   },
   {
     id: 6,
@@ -90,7 +90,7 @@ const previous = [
     description:
       'Implemented the space invaders game with extra features',
     imageUrl:
-      '/img/space_invaders.png',
+      '/img/space_invaders.webp',
   },
   {
     id: 7,
@@ -99,7 +99,7 @@ const previous = [
     description:
       'Multi-type linked list and a program to use it.',
     imageUrl:
-      '/img/linked_list.png',
+      '/img/linked_list.webp',
   },
   {
     id: 8,
@@ -108,7 +108,7 @@ const previous = [
     description:
       'P2P File-Transfer program that will allow sending, receiving and detection of anomalous data chunks',
     imageUrl:
-      '/img/bytetide.png',
+      '/img/bytetide.webp',
   },
   {
     id: 9,
@@ -117,57 +117,16 @@ const previous = [
     description:
       'Program to manage and update binary digital scrolls.',
     imageUrl:
-      '/img/scrolls.png',
-  },
-]
-const future = [
-  {
-    id: 1,
-    title: 'Boost your conversion rate',
-    href: '#',
-    description:
-      'Illo sint voluptas. Error voluptates culpa eligendi. Hic vel totam vitae illo. Non aliquid explicabo necessitatibus unde. Sed exercitationem placeat consectetur nulla deserunt vel. Iusto corrupti dicta.',
-    imageUrl:
-      'https://images.unsplash.com/photo-1496128858413-b36217c2ce36?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=3603&q=80',
-    date: 'Mar 16, 2020',
-    datetime: '2020-03-16',
-    author: {
-      name: 'Michael Foster',
-      imageUrl:
-        'https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    },
+      '/img/scrolls.webp',
   },
   {
-    id: 2,
-    title: 'Boost your conversion rate',
-    href: '#',
+    id: 10,
+    title: 'Sleep Aponea Website:',
+    href: 'https://github.com/raaannndddd/SleepApnoeaWebsite',
     description:
-      'Illo sint voluptas. Error voluptates culpa eligendi. Hic vel totam vitae illo. Non aliquid explicabo necessitatibus unde. Sed exercitationem placeat consectetur nulla deserunt vel. Iusto corrupti dicta.',
+      'Implemented for a startup pitch that aims to improve the diagnosis of sleep aponea',
     imageUrl:
-      'https://images.unsplash.com/photo-1496128858413-b36217c2ce36?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=3603&q=80',
-    date: 'Mar 16, 2020',
-    datetime: '2020-03-16',
-    author: {
-      name: 'Michael Foster',
-      imageUrl:
-        'https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    },
-  },
-  {
-    id: 3,
-    title: 'Boost your conversion rate',
-    href: '#',
-    description:
-      'Illo sint voluptas. Error voluptates culpa eligendi. Hic vel totam vitae illo. Non aliquid explicabo necessitatibus unde. Sed exercitationem placeat consectetur nulla deserunt vel. Iusto corrupti dicta.',
-    imageUrl:
-      'https://images.unsplash.com/photo-1496128858413-b36217c2ce36?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=3603&q=80',
-    date: 'Mar 16, 2020',
-    datetime: '2020-03-16',
-    author: {
-      name: 'Michael Foster',
-      imageUrl:
-        'https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    },
+      '/img/swillow.webp',
   },
 ]
 </script>

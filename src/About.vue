@@ -9,8 +9,6 @@
 
 <script setup>
     import { defineAsyncComponent } from 'vue';
-    import 'vue3-carousel/dist/carousel.css';
-    import { Carousel, Slide, Pagination, Navigation } from 'vue3-carousel';
 
     const Navbar = defineAsyncComponent(() => import('@/components/layout/Navbar.vue'));
     const Header = defineAsyncComponent(() => import('@/components/layout/HeaderAbout.vue'));

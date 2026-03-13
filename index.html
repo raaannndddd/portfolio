@@ -1,25 +1,82 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" href="./public/img/logo.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Rand's Portfolio</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.js"></script>
-    <script>
-      const theme = localStorage.getItem('theme');
-      if (!theme) {
-        document.documentElement.classList.add('dark');
-        localStorage.setItem('theme', 'dark')
-      } else if (theme === 'dark') {
-        document.documentElement.classList.add('dark')}
-      else if (theme === 'light') {
-        document.documentElement.classList.remove('dark')
-      }
 
-    </script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="/img/logo.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Resource hints for external domains -->
+  <link rel="dns-prefetch" href="https://unpkg.com" />
+  <link rel="dns-prefetch" href="https://lottie.host" />
+  <link rel="dns-prefetch" href="https://github.com" />
+  <link rel="dns-prefetch" href="https://linkedin.com" />
+  <title>Rand - Software Engineer & SEO/AI Enthusiast</title>
+  <meta name="description"
+    content="Portfolio of Rand, a final year Software Engineering student at the University of Sydney passionate about SEO, marketing automation, and Artificial Intelligence." />
+  <meta name="keywords"
+    content="Rand, Software Engineer, Portfolio, Developer, Artificial Intelligence, AI, SEO, Marketing Automation, Full Stack, Sydney" />
+  <meta name="author" content="Rand" />
+  <link rel="canonical" href="https://raaannndddd.github.io/portfolio/" />
+
+  <!-- GEO Tags -->
+  <meta name="geo.region" content="AU-NSW" />
+  <meta name="geo.placename" content="Sydney" />
+
+  <!-- Open Graph / Social Media -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://raaannndddd.github.io/portfolio/" />
+  <meta property="og:title" content="Rand - Software Engineer Portfolio" />
+  <meta property="og:description"
+    content="A showcase of my software engineering projects, SEO work, and personal interests." />
+  <meta property="og:image" content="https://raaannndddd.github.io/portfolio/img/logo.png" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Rand - Software Engineer Portfolio" />
+  <meta name="twitter:description"
+    content="A showcase of my software engineering projects, SEO work, and personal interests." />
+  <meta name="twitter:image" content="https://raaannndddd.github.io/portfolio/img/logo.png" />
+
+  <!-- JSON-LD Structured Data (Person) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "Rand",
+    "url": "https://raaannndddd.github.io/portfolio/",
+    "jobTitle": "Software Engineer",
+    "description": "Final year Software Engineering student at the University of Sydney, passionate about SEO, AI and full-stack development.",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Sydney",
+      "addressRegion": "NSW",
+      "addressCountry": "AU"
+    },
+    "sameAs": [
+      "https://github.com/raaannndddd",
+      "https://linkedin.com/in/randhalasa"
+    ]
+  }
+  </script>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script type="module" src="/src/main.js"></script>
+  <script>
+    const theme = localStorage.getItem('theme');
+    if (!theme) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark')
+    } else if (theme === 'dark') {
+      document.documentElement.classList.add('dark')
+    }
+    else if (theme === 'light') {
+      document.documentElement.classList.remove('dark')
+    }
+
+  </script>
+</body>
+
 </html>
