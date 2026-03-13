@@ -7,7 +7,7 @@
         loading="lazy"
         decoding="async"
         class="h-auto max-w-full rounded-lg object-cover object-center"
-        src="@/assets/img/rand_and_karaz.webp"
+        src="@/assets/img/rand_and_karaz.jpg"
         alt="gallery-photo"
       />
     </div>
@@ -16,7 +16,7 @@
         loading="lazy"
         decoding="async"
         class="h-auto max-w-full rounded-lg object-cover object-center "
-        src="@/assets/img/beach.webp"
+        src="@/assets/img/beach.jpg"
         alt="gallery-photo"
       />
     </div>
@@ -25,7 +25,7 @@
         loading="lazy"
         decoding="async"
         class="w-90 h-55 max-w-full rounded-lg object-cover object-center"
-        src="@/assets/img/shop.webp"
+        src="@/assets/img/shop.jpg"
         alt="gallery-photo"
       />
     </div>
@@ -45,7 +45,7 @@
         loading="lazy"
         decoding="async"
         class="h-50 w-90 max-w-full rounded-lg object-cover object-top"
-        src="@/assets/img/selfie.webp"
+        src="@/assets/img/selfie.jpg"
         alt="gallery-photo"
       />
     </div>
@@ -54,18 +54,19 @@
         loading="lazy"
         decoding="async"
         class="h-75 w-90 max-w-full rounded-lg object-cover object-center "
-        src="@/assets/img/baking.webp"
+        src="@/assets/img/baking.jpg"
         alt="gallery-photo"
       />
     </div>
   </div>
   <div class="grid gap-4">
     <div>
+        <!-- may need to fix this -->
       <img
         loading="lazy"
         decoding="async"
         class="w-90 h-55 max-w-full rounded-lg object-cover object-center" 
-        src="@/assets/img/lany.webp"
+        src="@/assets/img/lany.jpg"
         alt="gallery-photo"
       />
     </div>
@@ -74,7 +75,7 @@
         loading="lazy"
         decoding="async"
         class="h-auto max-w-full rounded-lg object-cover object-center "
-        src="@/assets/img/rand_and_jazz.webp"
+        src="@/assets/img/rand_and_jazz.jpg"
         alt="gallery-photo"
       />
     </div>
@@ -83,7 +84,7 @@
         loading="lazy"
         decoding="async"
         class="h-auto max-w-full rounded-lg object-cover object-center"
-        src="@/assets/img/cheese_platter.webp"
+        src="@/assets/img/cheese_platter.jpg"
         alt="gallery-photo"
       />
     </div>
@@ -94,7 +95,7 @@
         loading="lazy"
         decoding="async"
         class="h-auto max-w-full rounded-lg object-cover object-center"
-        src="@/assets/img/beach_walk.webp"
+        src="@/assets/img/beach_walk.jpg"
         alt="gallery-photo"
       />
     </div>
@@ -103,7 +104,7 @@
         loading="lazy"
         decoding="async"
         class="h-auto max-w-full rounded-lg object-cover object-center"
-        src="@/assets/img/new_year_grapes.webp"
+        src="@/assets/img/new_year_grapes.jpg"
         alt="gallery-photo"
       />
     </div>
@@ -112,7 +113,7 @@
         loading="lazy"
         decoding="async"
         class="h-auto max-w-full rounded-lg object-cover object-center"
-        src="@/assets/img/usa.webp"
+        src="@/assets/img/usa.jpg"
         alt="gallery-photo"
       />
     </div>
