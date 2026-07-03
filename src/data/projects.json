@@ -10,7 +10,7 @@
       "href": "https://github.com/raaannndddd/VolumeControl",
       "image": "/img/vol_control.webp",
       "language": "Python",
-      "topics": []
+      "tags": ["Computer Vision", "Python"]
     },
     {
       "id": "advertising-effectiveness",
@@ -20,7 +20,7 @@
       "href": "https://bitbucket.org/m10_04/soft3888_m10_04/src/main/",
       "image": "/img/advertise.webp",
       "language": "Python",
-      "topics": []
+      "tags": ["AI", "Computer Vision", "Data Analysis"]
     },
     {
       "id": "portfolio",
@@ -30,7 +30,7 @@
       "href": "https://github.com/raaannndddd/portfolio",
       "image": "/img/website.webp",
       "language": "Vue",
-      "topics": []
+      "tags": ["Web", "Vue"]
     },
     {
       "id": "jla-website",
@@ -40,7 +40,7 @@
       "href": "https://jla-website-green.vercel.app",
       "image": "/img/jla.webp",
       "language": "Next.js",
-      "topics": []
+      "tags": ["Web", "SEO"]
     },
     {
       "id": "ckd-predictor",
@@ -50,7 +50,7 @@
       "href": "https://github.com/raaannndddd/CKD",
       "image": "/img/matrix.webp",
       "language": "Python",
-      "topics": []
+      "tags": ["Machine Learning", "Data Analysis"]
     },
     {
       "id": "medical-chatbot-bias",
@@ -60,7 +60,7 @@
       "href": "https://github.com/raaannndddd/ELEC4713-Thesis-B",
       "image": null,
       "language": "Python",
-      "topics": []
+      "tags": ["AI", "Data Analysis", "NLP"]
     },
     {
       "id": "ai-roaster",
@@ -70,7 +70,7 @@
       "href": "https://github.com/raaannndddd/AIRoaster",
       "image": null,
       "language": "Python",
-      "topics": []
+      "tags": ["AI", "Computer Vision", "Web"]
     },
     {
       "id": "axiom-chat",
@@ -80,7 +80,7 @@
       "href": "https://github.com/raaannndddd/AxiomChat",
       "image": null,
       "language": "JavaScript",
-      "topics": []
+      "tags": ["Web", "Browser Extension", "AI"]
     },
     {
       "id": "space-invaders",
@@ -90,7 +90,7 @@
       "href": "https://github.com/raaannndddd/SpaceInvaders",
       "image": "/img/space_invaders.webp",
       "language": "Java",
-      "topics": []
+      "tags": ["Game Dev", "Java"]
     },
     {
       "id": "linked-list",
@@ -100,7 +100,7 @@
       "href": "https://github.com/raaannndddd/LinkedList",
       "image": "/img/linked_list.webp",
       "language": "C",
-      "topics": []
+      "tags": ["Systems", "C"]
     },
     {
       "id": "p2p-file-transfer",
@@ -110,7 +110,7 @@
       "href": "https://github.com/raaannndddd/P2P-File-Transfer-System",
       "image": "/img/bytetide.webp",
       "language": "C",
-      "topics": []
+      "tags": ["Systems", "Networking", "C"]
     },
     {
       "id": "scroll-manager",
@@ -120,7 +120,7 @@
       "href": null,
       "image": "/img/scrolls.webp",
       "language": "C",
-      "topics": []
+      "tags": ["Systems", "C"]
     },
     {
       "id": "sleep-apnoea-website",
@@ -130,7 +130,7 @@
       "href": "https://github.com/raaannndddd/SleepApnoeaWebsite",
       "image": "/img/swillow.webp",
       "language": "HTML",
-      "topics": []
+      "tags": ["Web", "HTML"]
     }
   ]
 }

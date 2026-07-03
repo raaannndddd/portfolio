@@ -56,8 +56,20 @@ for (const repo of repos) {
     href: repo.html_url,
     image: null,
     language: repo.language ?? null,
-    topics: repo.topics ?? [],
+    tags: tagsFor(repo),
   })
+}
+
+// Tags drive the showroom filter. GitHub topics win when set (e.g. the
+// "machine-learning" topic becomes "Machine Learning"); otherwise fall back
+// to the primary language so every card is filterable.
+function tagsFor(repo) {
+  if (repo.topics?.length) {
+    return repo.topics.map((t) =>
+      t.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+    )
+  }
+  return repo.language ? [repo.language] : []
 }
 
 // Turns e.g. "P2P-File-Transfer-System" or "AxiomChat" into readable words.

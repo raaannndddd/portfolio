@@ -1,9 +1,9 @@
 <template>
-  <header class="absolute inset-x-0 top-0 z-50">
-    <nav class="flex items-center justify-between p-6 lg:px-8" aria-label="Global">
+  <header class="fixed inset-x-0 top-0 z-50 border-b border-gray-900/5 bg-white/60 backdrop-blur-md dark:border-white/5 dark:bg-surface-dark/60">
+    <nav class="flex items-center justify-between px-6 py-3 lg:px-8" aria-label="Global">
       <div class="flex lg:flex-1">
         <router-link to="/" class="-m-1.5 p-1.5">
-          <img class="h-20 w-auto" src="/img/logo.png" alt="logo" />
+          <img class="h-12 w-auto" src="/img/logo.png" alt="logo" />
         </router-link>
       </div>
       <div class="flex items-center gap-x-4 lg:hidden">

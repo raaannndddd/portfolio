@@ -9,9 +9,30 @@
           for my latest projects!
         </p>
       </div>
-      <div class="mx-auto mt-16 grid max-w-2xl auto-rows-fr grid-cols-1 gap-8 sm:mt-20 lg:mx-0 lg:max-w-none lg:grid-cols-3">
+
+      <div class="mx-auto mt-10 flex max-w-4xl flex-wrap items-center justify-center gap-2">
+        <button
+          v-for="tag in tags"
+          :key="tag.name"
+          type="button"
+          class="rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200"
+          :class="activeTag === tag.name
+            ? 'bg-gray-900 text-white shadow-md shadow-primary/30 dark:bg-white dark:text-gray-900'
+            : 'text-gray-600 ring-1 ring-gray-900/15 hover:bg-primary/10 hover:text-gray-900 hover:ring-primary/40 dark:text-gray-300 dark:ring-white/15 dark:hover:text-white'"
+          @click="activeTag = tag.name"
+        >
+          {{ tag.name }}
+          <span class="ml-1 text-xs opacity-60">{{ tag.count }}</span>
+        </button>
+      </div>
+
+      <TransitionGroup
+        tag="div"
+        name="cards"
+        class="mx-auto mt-12 grid max-w-2xl auto-rows-fr grid-cols-1 gap-8 sm:mt-16 lg:mx-0 lg:max-w-none lg:grid-cols-3"
+      >
         <article
-          v-for="project in projects"
+          v-for="project in filtered"
           :key="project.id"
           class="group relative isolate flex flex-col justify-end overflow-hidden rounded-2xl bg-gray-900 px-8 pb-8 pt-80 ring-1 ring-gray-900/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 hover:ring-primary/40 dark:ring-white/10 sm:pt-48 lg:pt-80"
         >
@@ -32,14 +53,14 @@
 
           <div class="flex flex-wrap items-center gap-2 text-sm/6">
             <span
-              v-if="project.language"
+              v-for="tag in project.tags"
+              :key="tag"
+              class="rounded-full bg-primary/20 px-3 py-0.5 text-xs font-medium text-gray-200 ring-1 ring-primary/40 backdrop-blur-sm"
+            >{{ tag }}</span>
+            <span
+              v-if="project.language && !project.tags?.includes(project.language)"
               class="rounded-full bg-white/10 px-3 py-0.5 text-xs font-medium text-gray-200 ring-1 ring-white/20 backdrop-blur-sm"
             >{{ project.language }}</span>
-            <span
-              v-for="topic in project.topics"
-              :key="topic"
-              class="rounded-full bg-primary/20 px-3 py-0.5 text-xs font-medium text-gray-200 ring-1 ring-primary/40 backdrop-blur-sm"
-            >{{ topic }}</span>
           </div>
           <h3 class="mt-3 text-lg/6 font-semibold text-white">
             <component :is="project.href ? 'a' : 'span'" :href="project.href || undefined">
@@ -49,13 +70,48 @@
           </h3>
           <p class="mt-2 line-clamp-3 text-sm/6 text-gray-300">{{ project.description }}</p>
         </article>
-      </div>
+      </TransitionGroup>
     </div>
   </div>
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
 import data from '@/data/projects.json'
 
 const projects = data.projects
+const activeTag = ref('All')
+
+const tags = computed(() => {
+  const counts = new Map()
+  for (const project of projects) {
+    for (const tag of project.tags ?? []) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1)
+    }
+  }
+  const sorted = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([name, count]) => ({ name, count }))
+  return [{ name: 'All', count: projects.length }, ...sorted]
+})
+
+const filtered = computed(() =>
+  activeTag.value === 'All'
+    ? projects
+    : projects.filter((p) => p.tags?.includes(activeTag.value))
+)
 </script>
+
+<style scoped>
+.cards-enter-active,
+.cards-move {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.cards-enter-from {
+  opacity: 0;
+  transform: translateY(12px) scale(0.97);
+}
+.cards-leave-active {
+  display: none;
+}
+</style>
