@@ -1,13 +1,13 @@
 <template>
-    <footer class="bg-white">
+    <footer class="bg-white dark:bg-surface-dark">
       <div class="mx-auto max-w-7xl px-6 py-4 md:flex md:items-center md:justify-between lg:px-8">
         <div class="flex justify-center gap-x-6 md:order-2">
-          <a v-for="item in navigation" :key="item.name" :href="item.href" class="text-gray-600 hover:text-gray-800">
+          <a v-for="item in navigation" :key="item.name" :href="item.href" class="text-gray-600 transition-colors hover:text-primary dark:text-gray-300 dark:hover:text-primary">
             <span class="sr-only">{{ item.name }}</span>
             <component :is="item.icon" class="size-6" aria-hidden="true" />
           </a>
         </div>
-        <p class="text-center text-sm/6 text-gray-600 md:order-1 md:mt-0">Let's Connect!</p>
+        <p class="text-center text-sm/6 text-gray-600 dark:text-gray-300 md:order-1 md:mt-0">Let's Connect!</p>
       </div>
     </footer>
   </template>

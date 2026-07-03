@@ -66,16 +66,12 @@
   <script type="module" src="/src/main.js"></script>
   <script>
     const theme = localStorage.getItem('theme');
-    if (!theme) {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (theme === 'dark' || (!theme && prefersDark)) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark')
-    } else if (theme === 'dark') {
-      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark');
     }
-    else if (theme === 'light') {
-      document.documentElement.classList.remove('dark')
-    }
-
   </script>
 </body>
 

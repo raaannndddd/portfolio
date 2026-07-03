@@ -1,6 +1,5 @@
 <template>
-    <div class="bg-white">
-        <Navbar/>
+    <div class="bg-white dark:bg-surface-dark">
         <List/>
         <Footer/>
     </div>
@@ -9,7 +8,6 @@
 <script setup>
     import { defineAsyncComponent } from 'vue';
 
-    const Navbar = defineAsyncComponent(() => import('@/components/layout/Navbar.vue'));
     const List = defineAsyncComponent(() => import('@/components/layout/List.vue'));
     const Footer = defineAsyncComponent(() => import('@/components/layout/Footer.vue'));
 </script>

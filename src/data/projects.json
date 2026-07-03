@@ -1,0 +1,136 @@
+{
+  "githubUser": "raaannndddd",
+  "exclude": ["MetromanWebsite"],
+  "projects": [
+    {
+      "id": "volume-control",
+      "repo": "VolumeControl",
+      "title": "Volume Control",
+      "description": "Program that uses hand gestures to control the volume",
+      "href": "https://github.com/raaannndddd/VolumeControl",
+      "image": "/img/vol_control.webp",
+      "language": "Python",
+      "topics": []
+    },
+    {
+      "id": "advertising-effectiveness",
+      "repo": null,
+      "title": "Advertising Effectiveness Analysis",
+      "description": "AI system to study effectiveness of advertising in shopping centres with real-time analysis and feedback",
+      "href": "https://bitbucket.org/m10_04/soft3888_m10_04/src/main/",
+      "image": "/img/advertise.webp",
+      "language": "Python",
+      "topics": []
+    },
+    {
+      "id": "portfolio",
+      "repo": "portfolio",
+      "title": "Portfolio Website",
+      "description": "A website to introduce myself and showcase my work",
+      "href": "https://github.com/raaannndddd/portfolio",
+      "image": "/img/website.webp",
+      "language": "Vue",
+      "topics": []
+    },
+    {
+      "id": "jla-website",
+      "repo": null,
+      "title": "Jordan Language Academy Website",
+      "description": "SEO/GEO friendly website for a language academy based in Jordan",
+      "href": "https://jla-website-green.vercel.app",
+      "image": "/img/jla.webp",
+      "language": "Next.js",
+      "topics": []
+    },
+    {
+      "id": "ckd-predictor",
+      "repo": "CKD",
+      "title": "Chronic Kidney Disease Predictor",
+      "description": "Machine learning algorithms to predict the likelihood of a person developing CKD",
+      "href": "https://github.com/raaannndddd/CKD",
+      "image": "/img/matrix.webp",
+      "language": "Python",
+      "topics": []
+    },
+    {
+      "id": "medical-chatbot-bias",
+      "repo": "ELEC4713-Thesis-B",
+      "title": "Medical Chatbot Bias Analysis",
+      "description": "Honours thesis: automated bias analysis of consumer medical AI chatbots across patient demographics and clinical features",
+      "href": "https://github.com/raaannndddd/ELEC4713-Thesis-B",
+      "image": null,
+      "language": "Python",
+      "topics": []
+    },
+    {
+      "id": "ai-roaster",
+      "repo": "AIRoaster",
+      "title": "AI Photo Roaster",
+      "description": "Playful web app that roasts your photos using computer vision and AI-generated humour, with built-in safety filters",
+      "href": "https://github.com/raaannndddd/AIRoaster",
+      "image": null,
+      "language": "Python",
+      "topics": []
+    },
+    {
+      "id": "axiom-chat",
+      "repo": "AxiomChat",
+      "title": "AxiomChat",
+      "description": "Chrome extension for crypto traders to chat next to live charts, with sentiment analysis and AI coin insights",
+      "href": "https://github.com/raaannndddd/AxiomChat",
+      "image": null,
+      "language": "JavaScript",
+      "topics": []
+    },
+    {
+      "id": "space-invaders",
+      "repo": "SpaceInvaders",
+      "title": "Space Invaders Game",
+      "description": "Implemented the space invaders game with extra features",
+      "href": "https://github.com/raaannndddd/SpaceInvaders",
+      "image": "/img/space_invaders.webp",
+      "language": "Java",
+      "topics": []
+    },
+    {
+      "id": "linked-list",
+      "repo": "LinkedList",
+      "title": "Multi-type Linked List",
+      "description": "Multi-type linked list and a program to use it",
+      "href": "https://github.com/raaannndddd/LinkedList",
+      "image": "/img/linked_list.webp",
+      "language": "C",
+      "topics": []
+    },
+    {
+      "id": "p2p-file-transfer",
+      "repo": "P2P-File-Transfer-System",
+      "title": "P2P File-Transfer Program",
+      "description": "P2P file-transfer program that allows sending, receiving and detection of anomalous data chunks",
+      "href": "https://github.com/raaannndddd/P2P-File-Transfer-System",
+      "image": "/img/bytetide.webp",
+      "language": "C",
+      "topics": []
+    },
+    {
+      "id": "scroll-manager",
+      "repo": null,
+      "title": "Scroll Manager",
+      "description": "Program to manage and update binary digital scrolls",
+      "href": null,
+      "image": "/img/scrolls.webp",
+      "language": "C",
+      "topics": []
+    },
+    {
+      "id": "sleep-apnoea-website",
+      "repo": "SleepApnoeaWebsite",
+      "title": "Sleep Apnoea Website",
+      "description": "Implemented for a startup pitch that aims to improve the diagnosis of sleep apnoea",
+      "href": "https://github.com/raaannndddd/SleepApnoeaWebsite",
+      "image": "/img/swillow.webp",
+      "language": "HTML",
+      "topics": []
+    }
+  ]
+}

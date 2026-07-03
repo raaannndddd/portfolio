@@ -1,12 +1,12 @@
 <template>
-  <div class="bg-white">
+  <div class="bg-white dark:bg-surface-dark">
     <div class="relative isolate px-6 pt-10 lg:px-8">
       <div
         class="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80"
         aria-hidden="true"
       >
         <div
-          class="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#ff80b5] to-[#9089fc] opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"
+          class="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-primary to-secondary opacity-40 dark:opacity-25 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"
           style="
             clip-path: polygon(
               74.1% 44.1%,
@@ -32,9 +32,9 @@
       <div class="mx-auto max-w-2xl py-10 sm:py-10 lg:pt-30">
         <div class="text-center">
           <h1
-            class="text-balance text-5xl font-semibold tracking-tight text-gray-900 sm:text-7xl"
+            class="text-balance text-5xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-7xl"
           >
-            Hi, I'm Rand
+            Hi, I'm <span class="bg-gradient-to-r from-primary via-[#e7b9e8] to-secondary bg-clip-text text-transparent">Rand</span>
           </h1>
         </div>
       </div>
@@ -42,7 +42,7 @@
 <!-- Here -->
 <div class="px-6 mb-20 lg:px-8 flex flex-col-reverse lg:flex-row justify-evenly items-center lg:items-start">
   <div class="max-w-2xl lg:text-left">
-    <p class="mt-8 text-center align-center text-pretty text-lg font-medium text-gray-500 sm:text-xl/8">
+    <p class="mt-8 text-center align-center text-pretty text-lg font-medium text-gray-500 dark:text-gray-300 sm:text-xl/8">
       I am a final year software engineering student at the University of Sydney. I’m passionate about all things digital, especially SEO/GEO in marketing, automation, and AI.       <br>
       Outside this website, you’ll find me running, listening to music, at the beach, or trying new foods and recipes! 
       I love learning new languages and am currently focused on improving my French (oui oui 😎). 

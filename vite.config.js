@@ -19,7 +19,6 @@ export default defineConfig({
         manualChunks: {
           vue: ['vue', 'vue-router'],
           ui: ['@headlessui/vue', '@heroicons/vue'],
-          icons: ['@iconify/vue'],
         }
       }
     }
