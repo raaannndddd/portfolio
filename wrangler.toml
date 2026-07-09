@@ -1,10 +1,6 @@
 name = "portfolio"
 account_id = "e76192a1fd73f87c20658f49519fbabd"
 
-[build]
-command = "npm run build"
-cwd = "."
-
 [site]
 bucket = "./dist"
 
