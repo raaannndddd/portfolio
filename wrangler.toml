@@ -1,0 +1,28 @@
+name = "portfolio"
+type = "javascript"
+account_id = "e76192a1fd73f87c20658f49519fbabd"
+workers_dev = true
+route = ""
+zone_id = ""
+
+[env.production]
+name = "portfolio"
+routes = [
+  { pattern = "randhalasa.com", zone_name = "randhalasa.com" }
+]
+
+[build]
+command = "npm run build"
+cwd = "."
+watch_paths = ["src/**/*.js", "src/**/*.vue"]
+
+[build.upload]
+format = "service-worker"
+
+[[rules]]
+type = "CompiledContentType"
+globs = ["**/*.wasm"]
+fallthrough = false
+
+[site]
+bucket = "./dist"
