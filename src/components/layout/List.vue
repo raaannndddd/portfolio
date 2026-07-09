@@ -144,7 +144,6 @@
             <tr class="border-b border-gray-900/10 text-xs uppercase tracking-wide text-gray-500 dark:border-white/10 dark:text-gray-400">
               <th class="py-4 pr-4 font-medium">Date</th>
               <th class="py-4 pr-4 font-medium">Project</th>
-              <th class="hidden py-4 pr-4 font-medium sm:table-cell">Type</th>
               <th class="hidden py-4 pl-4 font-medium md:table-cell">Built with</th>
             </tr>
           </thead>
@@ -159,7 +158,6 @@
                 <p class="font-semibold text-gray-900 transition-colors group-hover:text-primary dark:text-white">{{ project.title }}</p>
                 <p class="mt-1 max-w-md text-sm text-gray-500 dark:text-gray-400">{{ project.description }}</p>
               </td>
-              <td class="hidden py-4 pr-4 align-top text-sm text-gray-600 dark:text-gray-300 sm:table-cell">{{ typeOf(project) }}</td>
               <td class="hidden py-4 pl-4 align-top md:table-cell">
                 <div class="flex flex-wrap gap-1.5">
                   <span
@@ -236,13 +234,6 @@ function formatDate(date) {
   const [year, month] = date.split('-')
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   return `${monthNames[Number(month) - 1]} ${year}`
-}
-
-function typeOf(project) {
-  if (project.category === 'coursework') return 'Coursework'
-  if (project.category === 'personal') return 'Personal'
-  if (project.category === 'client') return 'Client'
-  return project.tags?.[0] ?? '—'
 }
 
 function linkLabel(href) {

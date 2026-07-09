@@ -17,7 +17,7 @@
       <div class="max-w-2xl lg:text-left">
         <p class="mt-8 text-pretty text-lg font-medium text-gray-500 dark:text-gray-300 sm:text-xl/8">
           I'm a software engineering graduate from the University of Sydney, now working as an SEO specialist.
-          I build full-stack websites and tune them to rank on Google, and AI assistants. Recently that's meant a client site for a language academy in Jordan
+          I build full-stack websites and tune them to rank on Google and AI assistants. Recently that's meant a client site for a language academy in Jordan
           and an honours thesis measuring bias in medical AI chatbots.
         </p>
         <p class="mt-6 text-pretty text-lg font-medium text-gray-500 dark:text-gray-300 sm:text-xl/8">
