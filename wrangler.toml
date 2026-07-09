@@ -1,4 +1,4 @@
---project-name <portfolio>
+name = "portfolio"
 account_id = "e76192a1fd73f87c20658f49519fbabd"
 
 [site]
