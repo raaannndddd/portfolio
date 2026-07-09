@@ -87,6 +87,6 @@ const mobileMenuOpen = ref(false)
 const navigation = [
   { name: 'Home', href: '/' },
   { name: 'About', href: '/about' },
-  { name: 'Showroom', href: '/showroom' },
+  { name: 'Work', href: '/showroom' },
 ]
 </script>

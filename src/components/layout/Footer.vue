@@ -7,7 +7,7 @@
             <component :is="item.icon" class="size-6" aria-hidden="true" />
           </a>
         </div>
-        <p class="text-center text-sm/6 text-gray-600 dark:text-gray-300 md:order-1 md:mt-0">Let's Connect!</p>
+        <p class="text-center text-sm/6 text-gray-600 dark:text-gray-300 md:order-1 md:mt-0">© {{ new Date().getFullYear() }} Rand Halasa · Sydney</p>
       </div>
     </footer>
   </template>
