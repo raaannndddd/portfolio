@@ -1,0 +1,3240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>About Me - Rand Halasa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Edu+NSW+ACT+Cursive:wght@400..700&display=swap" />
+<style>
+  :root{
+    --ink:#1c1a17;
+    --card:#fffdf9;
+    --shadow:0 8px 30px rgba(28,22,14,.20);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;width:100%;margin:0;padding:0;background:#0e0c09;overflow:hidden}
+  body{
+    font-family:"Helvetica Neue",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+    color:var(--ink);-webkit-font-smoothing:antialiased;
+  }
+  #stage{position:fixed;inset:0;width:100vw;height:100vh}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+
+  /* lens pass */
+  .lens{position:fixed;inset:0;pointer-events:none;z-index:3}
+  #vignette{background:radial-gradient(124% 94% at 50% 46%,
+      rgba(0,0,0,0) 42%, rgba(34,28,18,.16) 74%, rgba(20,16,10,.44) 100%);}
+  #bloom{background:radial-gradient(58% 46% at 50% 4%, rgba(255,236,205,.20), rgba(255,236,205,0) 62%);
+         mix-blend-mode:screen;}
+  #grain{opacity:.045;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>");}
+
+  /* hud */
+  .hud{position:fixed;inset:0;pointer-events:none;z-index:5}
+  .hud > *{pointer-events:auto}
+  .pill{
+    position:absolute;background:var(--card);border-radius:var(--radius);
+    box-shadow:var(--shadow);border:0;color:var(--ink);
+    display:flex;align-items:center;gap:10px;
+    font-size:15px;letter-spacing:.01em;font-family:inherit;
+    padding:12px 16px;cursor:pointer;
+    transition:transform .25s cubic-bezier(.2,.8,.2,1);
+  }
+  .pill:hover{transform:translateY(-2px)}
+  .pill:active{transform:translateY(0)}
+  .pill:focus-visible{outline:2px solid #1c1a17;outline-offset:3px}
+  .square{padding:12px;width:46px;height:46px;justify-content:center}
+
+  #plaque{top:22px;left:22px;cursor:default}
+  #plaque:hover{transform:none}
+  #plaque b{font-weight:600}
+  #plaque span{color:#8c8375}
+
+
+
+
+  /* the photo, opened */
+  #lb{
+    position:fixed;inset:0;z-index:8;display:none;cursor:zoom-out;
+    align-items:center;justify-content:center;padding:58px 0 52px;
+    background:rgba(14,12,9,.84);
+    -webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);
+    opacity:0;transition:opacity .3s ease;
+  }
+  #lb.open{display:flex;opacity:1}
+  /* Print beside the words, not above them. A square photograph stacked on
+     top of a hundred words does not fit a laptop screen at any width you
+     pick — narrowing the figure to shorten the image only makes the caption
+     taller. Side by side, both fit and it reads better. */
+  #lb figure{
+    margin:0;background:var(--card);border-radius:6px;
+    box-shadow:0 30px 80px rgba(0,0,0,.55);
+    display:flex;gap:24px;padding:18px;cursor:zoom-out;
+    width:min(830px, calc(100vw - 160px));
+    max-height:100%;overflow:auto;
+    transform:translateY(12px) scale(.985);
+    transition:transform .32s cubic-bezier(.2,.8,.2,1);
+  }
+  #lb.open figure{transform:none}
+  /* The print is shown whole. It used to be forced into a square and cropped
+     to fill it, which quietly cut the top off a portrait and the sides off a
+     landscape. Bounded on both axes instead: a tall photo runs out of height
+     first, a wide one runs out of width, and each keeps its own shape. */
+  #lb img{display:block;flex:0 1 auto;align-self:flex-start;
+          width:auto;height:auto;max-width:50%;max-height:min(56vh,400px);
+          object-fit:contain;background:#e9e3d6;border-radius:3px}
+  #lb figcaption{flex:1 1 auto;align-self:center;padding:4px 6px 4px 0;
+                 font-size:13.5px;line-height:1.62;color:#3c3730}
+  #lb-cap{white-space:pre-line}
+  #lb figcaption b{display:block;font-size:11.5px;letter-spacing:.17em;
+                   text-transform:uppercase;margin-bottom:9px;font-weight:600}
+  .lb-nav{
+    position:absolute;top:50%;width:52px;height:52px;border-radius:999px;border:0;
+    background:var(--card);color:var(--ink);box-shadow:var(--shadow);cursor:pointer;
+    font-family:inherit;font-size:26px;line-height:1;padding:0 0 4px;
+    display:flex;align-items:center;justify-content:center;
+    transform:translateY(-50%);transition:transform .25s cubic-bezier(.2,.8,.2,1);
+  }
+  #lb-prev{left:26px}
+  #lb-next{right:26px}
+  .lb-nav:hover{transform:translateY(-50%) scale(1.07)}
+  .lb-nav:focus-visible{outline:2px solid var(--card);outline-offset:4px}
+  #lb-count{position:absolute;top:26px;left:50%;transform:translateX(-50%);
+    font-size:11px;letter-spacing:.18em;color:rgba(255,250,240,.55)}
+  #lb-hint{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);
+    font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:rgba(255,250,240,.55);white-space:nowrap}
+  /* the tab route to the photos: off-screen until focused, then a normal pill */
+  .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;
+    overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+  button.sr-only:focus-visible{
+    position:fixed;top:22px;left:50%;transform:translateX(-50%);
+    width:auto;height:auto;clip:auto;overflow:visible;margin:0;padding:12px 16px;
+    background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+    color:var(--ink);font-family:inherit;font-size:14px;border:0;z-index:10;
+    outline:2px solid #1c1a17;outline-offset:3px;
+  }
+
+  /* ------------------------------------------------------------
+     THE MENU, OPENED
+     A menu is a list of things you may have, so the contact
+     details are laid out as one: the way to reach me on the left,
+     the address itself on the right, and a line underneath saying
+     what ordering it actually gets you. Every word is real DOM —
+     selectable, copyable, and the addresses are real links.
+     ------------------------------------------------------------ */
+  #mn{
+    position:fixed;inset:0;z-index:8;display:none;
+    align-items:center;justify-content:center;padding:40px 20px 82px;
+    background:rgba(14,12,9,.84);
+    -webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);
+    opacity:0;transition:opacity .3s ease;
+  }
+  #mn.open{display:flex;opacity:1}
+  /* The card is the one printed thing in the room, so it is set like one:
+     Edu NSW ACT Cursive, the hand children are taught to write in New South
+     Wales. It draws at roughly the size a sans does, so the sizes below are
+     back down near normal — the tracking the sans wanted is still dropped,
+     because a joined hand with letter-spacing comes apart. The system scripts
+     stay as the fallback, so the card is still legible if the webfont never
+     arrives. */
+  .mn-card{
+    font-family:"Edu NSW ACT Cursive","Snell Roundhand","Apple Chancery",cursive;
+    position:relative;background:var(--card);border-radius:6px;
+    box-shadow:0 30px 80px rgba(0,0,0,.55);
+    width:min(500px,100%);max-height:100%;overflow:auto;
+    padding:40px 42px 34px;
+    transform:translateY(12px) scale(.985);
+    transition:transform .32s cubic-bezier(.2,.8,.2,1);
+  }
+  #mn.open .mn-card{transform:none}
+  /* the hairline border a printed menu has, inset from the paper edge */
+  .mn-card::before{
+    content:"";position:absolute;inset:11px;border:1px solid #ded5c1;
+    border-radius:3px;pointer-events:none;
+  }
+  .mn-kicker{
+    margin:0 0 4px;font-size:14px;letter-spacing:.04em;
+    color:#a09582;
+  }
+  #mn h2{
+    margin:0;font-size:33px;line-height:1.15;font-weight:700;color:var(--ink);
+  }
+  .mn-lede{margin:6px 0 0;font-size:16px;line-height:1.45;color:#6f675a}
+  .mn-list{list-style:none;margin:20px 0 0;padding:0}
+  .mn-list li{padding:15px 0;border-top:1px solid #ece5d5}
+  .mn-list li:first-child{border-top:0;padding-top:6px}
+  .mn-row{display:flex;align-items:baseline;gap:10px}
+  .mn-what{
+    font-size:17px;letter-spacing:.02em;font-weight:700;
+    color:var(--ink);white-space:nowrap;
+  }
+  /* the dotted leader a printed menu runs across to the price */
+  .mn-leader{flex:1 1 auto;height:0;border-bottom:1px dotted #cfc5ae;
+             transform:translateY(-4px)}
+  .mn-where{font-size:16px;color:#3c3730;text-decoration:none;
+            border-bottom:1px solid #c9bfa6;padding-bottom:1px}
+  a.mn-where:hover,a.mn-where:focus-visible{color:#1c1a17;border-bottom-color:#1c1a17}
+  .mn-note{margin:2px 0 0;font-size:15px;line-height:1.45;color:#7a7264}
+  .mn-foot{margin:24px 0 0;font-size:14px;line-height:1.5;color:#8c8375}
+  .mn-foot a{color:#3c3730}
+  .mn-close{
+    position:absolute;top:18px;right:18px;width:34px;height:34px;border:0;
+    border-radius:999px;background:transparent;color:#8c8375;cursor:pointer;
+    font-family:"Helvetica Neue",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:22px;line-height:1;padding:0 0 3px;
+    display:flex;align-items:center;justify-content:center;
+    transition:background .2s ease,color .2s ease;
+  }
+  .mn-close:hover{background:#f0e9db;color:var(--ink)}
+  .mn-close:focus-visible{outline:2px solid #1c1a17;outline-offset:2px}
+  @media (max-width:820px){
+    #mn{padding:16px 14px 76px}
+    .mn-card{padding:30px 24px 26px}
+    #mn h2{font-size:27px}
+    /* the leader is the first thing to go: a long address wrapped onto a
+       second line beats an address squeezed into forty pixels */
+    .mn-row{flex-wrap:wrap;gap:4px 10px}
+    .mn-leader{display:none}
+    .mn-where{white-space:normal;overflow-wrap:anywhere}
+  }
+
+  #fade{position:fixed;inset:0;background:#0e0c09;z-index:9;
+        transition:opacity .45s ease;pointer-events:none}
+  #fade.hidden{opacity:0}
+
+  @media (max-width:820px){
+    #plaque{top:14px;left:14px;font-size:13px}
+    #lb figure{flex-direction:column;gap:0;padding:14px;
+               width:min(calc(100vw - 28px), calc(100vh - 330px))}
+    #lb img{flex:none;width:auto;max-width:100%;max-height:44vh;margin:0 auto}
+    #lb figcaption{align-self:stretch;padding:15px 2px 4px;font-size:13px}
+    .lb-nav{top:auto;bottom:20px;transform:none;width:46px;height:46px}
+    .lb-nav:hover{transform:scale(1.07)}
+    #lb-prev{left:calc(50% - 62px)}
+    #lb-next{right:calc(50% - 62px)}
+    #lb-hint{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important}}
+</style>
+<!-- the whole house's pictures, started before anything else asks for them -->
+<script src="preload.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+<div class="lens" id="vignette"></div>
+<div class="lens" id="bloom"></div>
+<div class="lens" id="grain"></div>
+
+<div class="hud">
+  <div class="pill" id="plaque">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1c1a17" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="3" width="16" height="18" rx="2"/><path d="M12 3v18"/><path d="M9.4 7.6v2.6"/><path d="M14.6 7.6v2.6"/>
+    </svg>
+    <b>About me</b>
+  </div>
+
+
+  <div id="photo-links"></div>
+
+</div>
+
+<div id="lb" role="dialog" aria-modal="true" aria-label="Photo" aria-hidden="true">
+  <button class="lb-nav" id="lb-prev" aria-label="Previous photo">&lsaquo;</button>
+  <figure>
+    <img id="lb-img" alt="" crossorigin="anonymous" />
+    <figcaption><b id="lb-title"></b><span id="lb-cap"></span></figcaption>
+  </figure>
+  <button class="lb-nav" id="lb-next" aria-label="Next photo">&rsaquo;</button>
+  <div id="lb-count" aria-hidden="true"></div>
+  <div id="lb-hint">Click anywhere to close &middot; &larr; &rarr; to browse</div>
+</div>
+
+<div id="mn" role="dialog" aria-modal="true" aria-labelledby="mn-title" aria-hidden="true">
+  <div class="mn-card">
+    <button class="mn-close" id="mn-close" aria-label="Close the menu">&times;</button>
+    <p class="mn-kicker">Rand &middot; the counter</p>
+    <h2 id="mn-title">What&rsquo;s on the menu</h2>
+    <p class="mn-lede">Everything below is served all day. Order whichever suits.</p>
+    <ul class="mn-list" id="mn-list"></ul>
+    <p class="mn-foot">Prefer it without the room? <a href="contact.html">The contact
+    page</a> has the same list, flat.</p>
+  </div>
+</div>
+
+<div id="fade"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="tap-hints.js"></script>
+<script>
+(function(){
+"use strict";
+if(!window.THREE) return;
+
+/* ============================================================
+   0. HUD
+   ============================================================ */
+const fadeEl = document.getElementById('fade');
+
+/* ============================================================
+   1. PALETTE
+   ============================================================ */
+/*  >>> EVERY COLOUR IN THE ROOM IS SET HERE. Edit a hex, reload. <<< */
+const P = {
+  wall:      '#efe7d6',   // plaster above the tiling
+  ceiling:   '#f8f4ea',
+  trim:      '#e7dfcc',   // cornice, skirting, the casing round the opening
+
+  cabinet:   '#4a615c',   // door and drawer fronts
+  cabRail:   '#435853',   // the shaker frame proud of the panel
+  carcass:   '#2c3a37',   // cabinet box behind the fronts — barely seen
+  toe:       '#25302e',   // recessed kick under the base run
+
+  counter:   '#e3ddce',   // stone worktop
+  tile:      '#ece5d5',   // splashback tile
+  grout:     '#cdc4af',
+
+  floor:     '#a8825a',   // oak boards
+
+  steel:     '#c6cace',   // fridge, sink, tap
+  steelDark: '#93989e',
+  brass:     '#c6a463',   // pulls and knobs
+  glow:      '#ffeccd'    // what the ceiling fittings throw
+};
+
+/* ============================================================
+   1b. THE PHOTOS ON THE FRIDGE
+   ------------------------------------------------------------
+   >>> THE ONLY PLACE TO EDIT THE PHOTOS. <<<
+
+   Drop an image next to this file, put its path in `src`, and it
+   appears both on the fridge and in the opened view. Leave `src`
+   empty and a tinted placeholder stands in for it, so the room
+   works before the photographs exist.
+
+     name    the label on hover, and the heading when opened
+     magnet  disc | star | heart | hexagon | flower | triangle |
+             diamond | square | oval | ring | pill | moon | drop
+             — every print gets its own shape, in its own colour
+     colour  the magnet, and the tint of the placeholder
+     ar      the photograph's own aspect, width divided by height
+             (a 4032x3024 frame is 1.333). The print is cut to the
+             picture, never the picture to the print, so nothing is
+             ever cropped or squashed. Getting it wrong is not fatal:
+             the real ratio is read off the file once it loads and
+             the print re-cuts itself. It only decides the size the
+             print is built at, before the image arrives.
+     x, y    metres on the fridge door. x is measured from the
+             centre seam, y up from the floor. The doors run
+             roughly x -0.89..0.89 and y 0.05..2.37, and the two
+             handles occupy the band around x = +/-0.08.
+     tilt    degrees. Nothing on a fridge door is ever straight.
+
+   The captions below are placeholders in roughly the right voice
+   and roughly the right length. Replace them.
+   ============================================================ */
+const PHOTOS = [
+  { name:'Food', magnet:'disc', colour:'#e2673f', src:'/images/fridge/food.jpg',
+    ar:0.871, x:-0.66, y:2.14, tilt:-9,
+    caption:"I'm not the first to say it but I'll be one to emphasise it: food is amazing. The dopamine from a good bite, the smiles and laughter from good company, and the whole experience of sharing a delicious meal with the people you love is one of the greatest things. If I had to eat 3 cuisines for the rest of my life, I'll have to go with Arabic, Chinese, and Italian. But still, I'll struggle to live without K-BBQ, pho, sushi, and a juicy mushroom Swiss burger 🤤. Anyways, I'll stop now before I get hungry again…" },
+
+  { name:'Karaz', magnet:'heart', colour:'#c4456b', src:'/images/fridge/rand_and_karaz.jpg',
+    ar:1.333, x:-0.69, y:1.62, tilt:7,
+    caption:"Let me introduce you to my dog, Karaz. Karaz is a proud pug with the confidence of a German Shepherd, audacity of a Chihuahua, and the stomach of a competitive eater. Take Karaz to an all-you-can-eat and she <i>will</i> all-you-can-eat. Put Karaz in front of a bigger dog and she will try to overtake them (underdog? I veto her proving the theory right). Tell Karaz not to go somewhere, and she will test your rule to the absolute limit. Nonetheless, all this comes with being a funny dog with a big personality and even bigger menacing tendencies." },
+
+  { name:'BodyPump', magnet:'star', colour:'#e8b33c', src:'/images/fridge/bodypump.jpg',
+    ar:0.750, x:-0.30, y:1.28, tilt:-13,
+    caption:"I love challenging myself through fitness. In March 2025, my friend took me to my first ever Les Mills BodyPump class. I enjoyed going to the classes but was looking for more. Therefore, I signed up to become a certified BodyPump instructor in August and got my certification at the end of November. My journey to get certified introduced me to more than new choreography, music, and public speaking opportunities. Training 2+ hours a day for months taught me to keep going through my own self-doubt, and that no matter what, my squats can always <i>always</i> be deeper and my core more braced." },
+
+  { name:'Brisbane Marathon 2026', magnet:'ring', colour:'#c43a35', src:'images/fridge/brisbane_marathon.jpg',
+    ar:1.333, x:0.32, y:2.11, tilt:8,
+    caption:"After my BodyPump certification, I started looking for my next fitness challenge. In December, I watched a YouTube video of a girl running a marathon for the first time, which planted the seed that this could be something I attempt, too. I juggled the thought for a month, and in January, I bought my entry to the Brisbane Marathon 2026! \nIf getting a BodyPump certificate was difficult, then the marathon was a whole other beast. My average week for 6 months looked like this: running for 20 hours, working 3 days, attending university full time, and building my thesis project. Despite everything, the motto remained one foot in front of the other, and go go go! Running the marathon was a joy like no other. All the weeks of training, the nights of doubting if I'll even be able to finish, and the Strava updates were so worth it 🫶." },
+
+  { name:'Nature', magnet:'flower', colour:'#7da33f', src:'images/fridge/nature.JPG',
+    ar:1.333, x:0.66, y:1.19, tilt:11,
+    caption:"Nature is beautiful in its variety and diversity. I grew up in Jordan, where nature's beauty is displayed in the vast desert, the Dead Sea, the Red Sea, the greenery of the North and the history of Petra and Jerash. Coming to Australia, I was stunned by its endless greenery and generous bodies of water. It's fascinating how much your environment shapes your hobbies. Since coming here, I've been loving camping, swimming at the beach, and even fishing." },
+
+  { name:'Projects', magnet:'square', colour:'#4a80c4', src:'images/fridge/peojects.jpg',
+    ar:0.750, x:-0.29, y:1.82, tilt:12,
+    caption:"My brain races with thoughts day to day, and since I have an embarrassingly high screen time, a lot of them tend to revolve around digital solutions. It's hard to categorise my thoughts, but building a small prototype lets me explore them. Most of these projects never saw the light of day; an unfinished project here, a bad idea there, but they've all taught me something about validating an idea, coding, prompting, and tooling. Take this portfolio. I'd never touched 3D rendering before, and half of building it was learning what Three.js even does. Building keeps the momentum going too. It's one thing to read about 3D rendering, another to spend a weekend fighting with it. Finally, I love the feedback I receive from the people around me when I build, whether it's impressed comments or laughter." },
+
+  { name:'Claw machines', magnet:'diamond', colour:'#9c59a8', src:'/images/fridge/claw_machine.jpg',
+    ar:0.750, x:0.71, y:1.85, tilt:-12,
+    caption:"Claw machines and I have a love-hate relationship. So far, I've won 5 plushies from a claw machine, but have attempted much more. The photo on the side is me, very defeated, a few attempts before winning the plushie in the photo. After reflection, I've realised what I like is the feeling of winning (who doesn't), and what keeps me coming back is being <i>so close</i> to getting what I want." },
+
+  { name:'Friends', magnet:'hexagon', colour:'#3f8f8a', src:'/images/fridge/friends.jpeg',
+    ar:1.500, x:0.31, y:1.58, tilt:-6,
+    caption:"Building community wherever you go is so important, and I'm grateful to have a tight knit group of friends who transformed Sydney from another city on the map to a place I've been calling home for the past 4 years. We've gone through university together, nights out, lunches, brunches, and much more. It's always funny to hear someone say that my friends and I sound similar, as it attests to how close we are. They're driven, motivated, funny, kind, generous, and inspire me to be better everyday." },
+
+  { name:'Family', magnet:'moon', colour:'#32557f', src:'/images/fridge/family.jpg',
+    ar:1.333, x:-0.70, y:1.00, tilt:-5,
+    caption:"If friends are family, then family is family². My family is massive, with roughly 50 cousins from my mom's side. Growing up with a large family means growing up with a lot of love, laughter, and a very strong sense of community and belonging. Some live in Jordan, some abroad; some I see often, some every few years. No matter the distance, though, I always know I have a community that has my back and always wants what's best for me because we grow together even when apart." }
+];
+
+
+/* ============================================================
+   1c. THE MENU ON THE COUNTER
+   ------------------------------------------------------------
+   >>> THE ONLY PLACE TO EDIT THE CONTACT DETAILS. <<<
+
+   The card standing on the worktop opens this. It is a menu, so
+   it is written as one: what you are ordering, where it goes,
+   and a line saying what ordering it actually gets you.
+
+     what   the course. Keep it to a word
+     where  what the visitor reads — the address, not a URL
+     href   where it goes. Leave it empty for a line that is
+            information rather than a link
+     note   the description under it, in the voice of the room
+
+   These are the same details as contact.html. If the two ever
+   disagree, contact.html is the one that is right.
+   ============================================================ */
+const MENU = [
+  { what:  'Email',
+    where: 'hello@randhalasa.com',
+    href:  'mailto:hello@randhalasa.com',
+    note:  'The house special. Comes with a reply, usually inside a day.' },
+
+  { what:  'GitHub',
+    where: 'github.com/raaannndddd',
+    href:  'https://github.com/raaannndddd',
+    note:  'Everything I have actually built, served plain and unseasoned.' },
+
+  { what:  'LinkedIn',
+    where: 'linkedin.com/in/randhalasa',
+    href:  'https://linkedin.com/in/randhalasa',
+    note:  'The formal version, for the people who need one.' }
+];
+
+/* ============================================================
+   2. RENDERER / CAMERA
+   ============================================================ */
+const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.06;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.getElementById('stage').appendChild(renderer.domElement);
+const ANISO = renderer.capabilities.getMaxAnisotropy();
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#e9e1d1');
+
+/* room shell — these five numbers drive every wall and every run of units */
+/* SIDE_X is wider than the shot needs on purpose. The camera is pinned to
+   the back wall, and the only thing that can spoil that shot is a side wall
+   creeping into frame — so the run of joinery carries on past both edges
+   rather than ending where the picture ends. */
+const BACK_Z = -5.5, FRONT_Z = 5.0, SIDE_X = 5.2, WALL_H = 3.05, WALL_T = 0.16;
+const OPEN_Z0 = -3.8, OPEN_Z1 = 0.8, OPEN_H = 2.55;   // the gap in the right wall
+/* The visitor arrives standing a little over four metres off the fridge,
+   square to the back wall. Everything below exists to keep them there. */
+const HOME = new THREE.Vector3(0, 1.58, 2.15);
+
+const camera = new THREE.PerspectiveCamera(44, innerWidth/innerHeight, 0.05, 120);
+camera.position.copy(HOME);
+
+/* A tighter lens than the old 29°. Two reasons: a long lens flatters an
+   interior seen this close, and every degree of frame is a degree the
+   visitor cannot be allowed to turn before the side walls show. */
+const H_HALF = 26 * Math.PI/180;
+let hHalf = H_HALF;                              /* what we actually got */
+function frameCamera(){
+  camera.aspect = innerWidth / innerHeight;
+  const v = 2 * Math.atan(Math.tan(H_HALF) / camera.aspect) * 180/Math.PI;
+  camera.fov = THREE.MathUtils.clamp(v, 26, 58);
+  camera.updateProjectionMatrix();
+  /* the clamp above can widen the frame past H_HALF on a very wide window,
+     so read the real half-angle back rather than assuming it */
+  hHalf = Math.atan(Math.tan(camera.fov*Math.PI/360) * camera.aspect);
+}
+frameCamera();
+
+/* How far the visitor may turn before a side wall creeps into the frame.
+   Solved from the actual frustum each frame, so it holds at any aspect
+   ratio and at any point along the dolly. */
+/* The whole range the visitor gets. The view no longer answers to a held
+   press, so this lean towards the cursor is the only way to look down the
+   room — but it stays small, or simply passing the mouse over the fridge
+   slides the highlight across it. */
+const YAW_DRIFT = 0.055;
+function yawLimit(z){
+  const depth = Math.max(0.6, z - BACK_Z);
+  const edge  = Math.atan(SIDE_X / depth) - hHalf - YAW_DRIFT;
+  return THREE.MathUtils.clamp(edge, 0.03, 0.16);
+}
+
+/* ============================================================
+   3. TEXTURE FOUNDRY — every surface is drawn to a canvas at load
+   ============================================================ */
+function cvs(w,h){ const c = document.createElement('canvas'); c.width=w; c.height=h; return c; }
+function tex(canvas, rx, ry){
+  const t = new THREE.CanvasTexture(canvas);
+  t.encoding = THREE.sRGBEncoding;
+  t.anisotropy = ANISO;
+  if(rx){ t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry || rx); }
+  return t;
+}
+function shift(hex, dL, dS){
+  const c = new THREE.Color(hex), hsl = {};
+  c.getHSL(hsl);
+  c.setHSL(hsl.h, THREE.MathUtils.clamp(hsl.s + (dS||0), 0, 1),
+                  THREE.MathUtils.clamp(hsl.l + dL, 0.02, 0.98));
+  return '#' + c.getHexString();
+}
+function rgba(hex, a){
+  const c = new THREE.Color(hex);
+  return 'rgba(' + Math.round(c.r*255) + ',' + Math.round(c.g*255) + ',' + Math.round(c.b*255) + ',' + a + ')';
+}
+function blotch(g, w, h, base, count, spread, alpha){
+  for(let i=0;i<count;i++){
+    const x = Math.random()*w, y = Math.random()*h;
+    const r = (0.04 + Math.random()*0.22) * Math.max(w,h) * spread;
+    const c = shift(base, (Math.random()-0.5)*0.10, (Math.random()-0.5)*0.06);
+    const grd = g.createRadialGradient(x,y,0,x,y,r);
+    grd.addColorStop(0, rgba(c, alpha));
+    grd.addColorStop(1, rgba(c, 0));
+    g.fillStyle = grd; g.fillRect(x-r, y-r, r*2, r*2);
+  }
+}
+function speckle(g, w, h, count, alpha){
+  for(let i=0;i<count;i++){
+    g.fillStyle = 'rgba(52,44,30,' + (Math.random()*alpha).toFixed(3) + ')';
+    g.fillRect(Math.random()*w, Math.random()*h, 1.6, 1.1);
+  }
+}
+/* linear black gradient, used to bake occlusion into a map */
+function ao(g, w, h, x0,y0,x1,y1, a){
+  const d = g.createLinearGradient(x0,y0,x1,y1);
+  d.addColorStop(0, 'rgba(44,34,20,' + a + ')');
+  d.addColorStop(1, 'rgba(44,34,20,0)');
+  g.fillStyle = d; g.fillRect(0,0,w,h);
+}
+
+function plasterCanvas(w, h, o){
+  o = o || {};
+  const c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = P.wall; g.fillRect(0,0,w,h);
+  blotch(g, w, h, P.wall, 90, 1.0, 0.5);
+  blotch(g, w, h, shift(P.wall,-0.05), 40, 0.5, 0.28);
+  g.globalAlpha = 0.032; g.lineCap = 'round';
+  for(let i=0;i<64;i++){                                   /* trowel drag */
+    g.strokeStyle = shift(P.wall, (Math.random()-0.5)*0.14);
+    g.lineWidth = 2 + Math.random()*14;
+    const x = Math.random()*w, y = Math.random()*h;
+    g.beginPath(); g.moveTo(x,y);
+    g.lineTo(x + (Math.random()-0.5)*w*0.28, y + (Math.random()-0.5)*h*0.12); g.stroke();
+  }
+  g.globalAlpha = 1;
+  speckle(g, w, h, Math.round(w*h/1000), 0.04);
+  if(o.bottom) ao(g, w, h, 0, h, 0, h*(1-o.bottom), 0.30);
+  if(o.top)    ao(g, w, h, 0, 0, 0, h*o.top, 0.16);
+  return c;
+}
+
+/* painted joinery: primer showing through a laid-off brush coat */
+function paintCanvas(w, h, color){
+  const c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = color; g.fillRect(0,0,w,h);
+  blotch(g, w, h, color, 24, 0.9, 0.14);
+  speckle(g, w, h, Math.round(w*h/900), 0.028);
+  g.lineCap = 'round';
+  /* laid off with the grain — just enough to break the flat fill, never striped */
+  for(let i=0, n=Math.max(46, Math.round(w*h/2800)); i<n; i++){
+    g.strokeStyle = shift(color, (Math.random()-0.5)*0.032);
+    g.globalAlpha = 0.09 + Math.random()*0.14;
+    g.lineWidth = 5 + Math.random()*18;
+    const y = Math.random()*h;
+    g.beginPath(); g.moveTo(-10, y);
+    g.bezierCurveTo(w*0.3, y+(Math.random()-0.5)*5, w*0.7, y+(Math.random()-0.5)*5, w+10, y+(Math.random()-0.5)*4);
+    g.stroke();
+  }
+  g.globalAlpha = 1;
+  return c;
+}
+
+/* wide oak boards, laid across the run */
+function floorCanvas(){
+  const w = 1024, h = 1024, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = P.floor; g.fillRect(0,0,w,h);
+  const boards = 6, bh = h/boards;
+  for(let b=0;b<boards;b++){
+    const y0 = b*bh;
+    const tone = shift(P.floor, (Math.random()-0.5)*0.075, (Math.random()-0.5)*0.05);
+    g.fillStyle = tone; g.fillRect(0, y0, w, bh);
+    /* grain */
+    for(let i=0;i<90;i++){
+      g.strokeStyle = shift(tone, (Math.random()-0.55)*0.14);
+      g.globalAlpha = 0.10 + Math.random()*0.28;
+      g.lineWidth = 0.6 + Math.random()*2.6;
+      const y = y0 + Math.random()*bh;
+      g.beginPath(); g.moveTo(0,y);
+      g.bezierCurveTo(w*0.3, y+(Math.random()-0.5)*16, w*0.7, y+(Math.random()-0.5)*16, w, y+(Math.random()-0.5)*9);
+      g.stroke();
+    }
+    /* the odd knot */
+    if(Math.random() < 0.55){
+      const kx = Math.random()*w, ky = y0 + bh*(0.25+Math.random()*0.5), kr = 5+Math.random()*9;
+      g.globalAlpha = 0.5;
+      for(let r=kr;r>0;r-=1.6){
+        g.strokeStyle = shift(tone, -0.10 - r*0.004);
+        g.lineWidth = 1.2;
+        g.beginPath(); g.ellipse(kx, ky, r, r*0.55, 0, 0, Math.PI*2); g.stroke();
+      }
+    }
+    g.globalAlpha = 1;
+    /* board seam + the shadow that falls into it */
+    g.fillStyle = 'rgba(40,26,14,0.34)'; g.fillRect(0, y0, w, 1.6);
+    g.fillStyle = 'rgba(255,240,214,0.10)'; g.fillRect(0, y0+1.6, w, 1.2);
+    /* butt joints */
+    const jx = Math.random()*w;
+    g.fillStyle = 'rgba(40,26,14,0.30)'; g.fillRect(jx, y0, 1.5, bh);
+  }
+  speckle(g, w, h, 2600, 0.05);
+  return c;
+}
+
+/* honed stone: pale field, fine grit, a couple of lazy veins */
+function stoneCanvas(){
+  const w = 512, h = 512, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = P.counter; g.fillRect(0,0,w,h);
+  blotch(g, w, h, P.counter, 44, 0.9, 0.35);
+  for(let i=0;i<5;i++){
+    g.strokeStyle = 'rgba(120,112,96,' + (0.06+Math.random()*0.09).toFixed(3) + ')';
+    g.lineWidth = 1 + Math.random()*4;
+    let x = Math.random()*w, y = -10;
+    g.beginPath(); g.moveTo(x,y);
+    while(y < h+10){ x += (Math.random()-0.5)*70; y += 26+Math.random()*40; g.lineTo(x,y); }
+    g.stroke();
+  }
+  for(let i=0;i<5000;i++){
+    g.fillStyle = Math.random()<0.5 ? 'rgba(96,90,78,0.16)' : 'rgba(255,252,244,0.20)';
+    g.fillRect(Math.random()*w, Math.random()*h, 1.4, 1.4);
+  }
+  return c;
+}
+
+/* stacked splashback tile */
+function tileCanvas(){
+  const w = 512, h = 512, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = P.grout; g.fillRect(0,0,w,h);
+  const cols = 4, rows = 8, tw = w/cols, th = h/rows, gap = 3.2;
+  for(let r=0;r<rows;r++){
+    const off = (r%2) ? tw/2 : 0;
+    for(let i=-1;i<=cols;i++){
+      const x = i*tw + off, y = r*th;
+      const base = shift(P.tile, (Math.random()-0.5)*0.045, (Math.random()-0.5)*0.03);
+      g.fillStyle = base;
+      g.fillRect(x+gap, y+gap, tw-gap*2, th-gap*2);
+      /* glaze: light off the top edge, a pool at the bottom */
+      const grd = g.createLinearGradient(x, y, x, y+th);
+      grd.addColorStop(0, 'rgba(255,255,255,0.30)');
+      grd.addColorStop(0.45,'rgba(255,255,255,0.02)');
+      grd.addColorStop(1, 'rgba(70,62,48,0.10)');
+      g.fillStyle = grd; g.fillRect(x+gap, y+gap, tw-gap*2, th-gap*2);
+    }
+  }
+  speckle(g, w, h, 1400, 0.035);
+  return c;
+}
+
+/* brushed stainless
+   ------------------------------------------------------------
+   The grain here is deliberately coarser and softer than real
+   brushed steel. Fine, high-contrast strokes on a near-mirror
+   metal alias into crawling static the moment the camera moves —
+   the noise lands under a pixel and swims. Wide, blurred strokes
+   with a shallow tonal range read as brushed at arm's length and
+   stay dead still while you look around. */
+function steelCanvas(base){
+  base = base || P.steel;
+  const w = 512, h = 512, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = base; g.fillRect(0,0,w,h);
+
+  const canBlur = (function(){ try{ g.filter = 'blur(1px)'; return g.filter !== 'none'; }
+                               catch(e){ return false; } })();
+  if(canBlur) g.filter = 'blur(2px)';
+  for(let i=0;i<420;i++){
+    g.strokeStyle = shift(base, (Math.random()-0.5)*0.05);
+    g.globalAlpha = 0.05 + Math.random()*0.06;
+    g.lineWidth = 4 + Math.random()*11;
+    const x = Math.random()*w;
+    g.beginPath(); g.moveTo(x, -24); g.lineTo(x + (Math.random()-0.5)*7, h+24); g.stroke();
+  }
+  if(canBlur) g.filter = 'none';
+  g.globalAlpha = 1;
+
+  /* broad sheen across the door — kept low-contrast so it never bands */
+  const grd = g.createLinearGradient(0,0,w,0);
+  grd.addColorStop(0,   'rgba(255,255,255,0.10)');
+  grd.addColorStop(0.22,'rgba(30,36,44,0.07)');
+  grd.addColorStop(0.48,'rgba(255,255,255,0.15)');
+  grd.addColorStop(0.72,'rgba(30,36,44,0.05)');
+  grd.addColorStop(1,   'rgba(255,255,255,0.07)');
+  g.fillStyle = grd; g.fillRect(0,0,w,h);
+  /* the ceiling, seen faintly in the door */
+  const vert = g.createLinearGradient(0,0,0,h);
+  vert.addColorStop(0,   'rgba(255,255,255,0.14)');
+  vert.addColorStop(0.32,'rgba(255,255,255,0.02)');
+  vert.addColorStop(0.84,'rgba(26,30,36,0.06)');
+  vert.addColorStop(1,   'rgba(26,30,36,0.13)');
+  g.fillStyle = vert; g.fillRect(0,0,w,h);
+  return c;
+}
+
+/* the roughness map: same coarse grain, and a narrow band of values.
+   A wide roughness swing on metal is what produces specular fireflies. */
+function steelRoughCanvas(){
+  const w = 256, h = 256, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = '#727272'; g.fillRect(0,0,w,h);
+  const canBlur = (function(){ try{ g.filter = 'blur(1px)'; return g.filter !== 'none'; }
+                               catch(e){ return false; } })();
+  if(canBlur) g.filter = 'blur(2.5px)';
+  for(let i=0;i<220;i++){
+    const v = 98 + Math.round(Math.random()*44);
+    g.strokeStyle = 'rgb(' + v + ',' + v + ',' + v + ')';
+    g.globalAlpha = 0.4;
+    g.lineWidth = 5 + Math.random()*14;
+    const x = Math.random()*w;
+    g.beginPath(); g.moveTo(x,-24); g.lineTo(x + (Math.random()-0.5)*6, h+24); g.stroke();
+  }
+  if(canBlur) g.filter = 'none';
+  g.globalAlpha = 1;
+  return c;
+}
+
+/* The fridge doors get their own map, and it contains no noise at all.
+   Per-pixel grain on a panel this large and this reflective lands under a
+   pixel and crawls — that is the static. What actually reads as stainless
+   at this size is the gradient: bright where the ceiling falls in it, dark
+   where the floor does, and one broad highlight down the face. */
+function steelPanelCanvas(base){
+  const w = 256, h = 512, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = base; g.fillRect(0,0,w,h);
+  const vert = g.createLinearGradient(0,0,0,h);        /* the room, reflected */
+  vert.addColorStop(0,    'rgba(255,255,255,0.30)');
+  vert.addColorStop(0.15, 'rgba(255,255,255,0.11)');
+  vert.addColorStop(0.50, 'rgba(255,255,255,0.00)');
+  vert.addColorStop(0.86, 'rgba(24,28,34,0.13)');
+  vert.addColorStop(1,    'rgba(24,28,34,0.27)');
+  g.fillStyle = vert; g.fillRect(0,0,w,h);
+  /* The metallic read comes from here: two broad highlights running the
+     height of the panel with dark between them. Wide gradients, so there
+     is nothing small enough to alias — it stays put as the camera moves. */
+  const sheen = g.createLinearGradient(0,0,w,0);
+  sheen.addColorStop(0,    'rgba(16,22,30,0.30)');
+  sheen.addColorStop(0.07, 'rgba(16,22,30,0.10)');
+  sheen.addColorStop(0.20, 'rgba(255,255,255,0.42)');   /* the near highlight */
+  sheen.addColorStop(0.32, 'rgba(255,255,255,0.10)');
+  sheen.addColorStop(0.46, 'rgba(16,22,30,0.16)');      /* the trough between */
+  sheen.addColorStop(0.62, 'rgba(255,255,255,0.16)');
+  sheen.addColorStop(0.72, 'rgba(255,255,255,0.30)');   /* the far highlight */
+  sheen.addColorStop(0.86, 'rgba(16,22,30,0.12)');
+  sheen.addColorStop(1,    'rgba(16,22,30,0.32)');
+  g.fillStyle = sheen; g.fillRect(0,0,w,h);
+  return c;
+}
+
+/* matte enamel for small appliance bodies */
+function enamelCanvas(base){
+  const w = 256, h = 256, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = base; g.fillRect(0,0,w,h);
+  blotch(g, w, h, base, 14, 0.9, 0.10);
+  speckle(g, w, h, 260, 0.02);
+  return c;
+}
+
+/* end-grain beech for the board and the spoon handles */
+function woodCanvas(){
+  const base = '#9a6b42';
+  const w = 256, h = 256, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = base; g.fillRect(0,0,w,h);
+  blotch(g, w, h, base, 16, 0.9, 0.18);
+  g.lineCap = 'round';
+  for(let i=0;i<70;i++){
+    g.strokeStyle = shift(base, (Math.random()-0.55)*0.16);
+    g.globalAlpha = 0.12 + Math.random()*0.25;
+    g.lineWidth = 0.8 + Math.random()*2.2;
+    const y = Math.random()*h;
+    g.beginPath(); g.moveTo(0,y);
+    g.bezierCurveTo(w*0.3, y+(Math.random()-0.5)*10, w*0.7, y+(Math.random()-0.5)*10, w, y+(Math.random()-0.5)*6);
+    g.stroke();
+  }
+  g.globalAlpha = 1;
+  speckle(g, w, h, 500, 0.04);
+  return c;
+}
+
+/* a waffle-weave tea towel: cream, with a stripe near each end */
+function towelCanvas(){
+  const w = 128, h = 256, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = '#f0ebdd'; g.fillRect(0,0,w,h);
+  for(let y=0;y<h;y+=2){
+    g.fillStyle = 'rgba(120,110,90,' + (0.03 + Math.random()*0.05).toFixed(3) + ')';
+    g.fillRect(0, y, w, 1);
+  }
+  [[18,'#a75c40'],[32,'#4a615c'],[h-38,'#4a615c'],[h-24,'#a75c40']].forEach(function(s){
+    g.globalAlpha = 0.85; g.fillStyle = s[1];
+    g.fillRect(0, s[0], w, 6);
+  });
+  g.globalAlpha = 1;
+  speckle(g, w, h, 300, 0.03);
+  return c;
+}
+
+/* the flat-weave runner in front of the sink. Drawn on a transparent
+   ground so the fringe can poke past the pile; the mesh discards the
+   clear pixels with alphaTest rather than blending them. */
+function rugCanvas(){
+  const w = 512, h = 288, c = cvs(w,h), g = c.getContext('2d');
+  const mx = 30, my = 12, x0 = mx, y0 = my, x1 = w - mx, y1 = h - my;
+  function pileEdge(){
+    const r = 10;
+    g.beginPath();
+    g.moveTo(x0 + r, y0);
+    g.lineTo(x1 - r, y0); g.quadraticCurveTo(x1, y0, x1, y0 + r);
+    g.lineTo(x1, y1 - r); g.quadraticCurveTo(x1, y1, x1 - r, y1);
+    g.lineTo(x0 + r, y1); g.quadraticCurveTo(x0, y1, x0, y1 - r);
+    g.lineTo(x0, y0 + r); g.quadraticCurveTo(x0, y0, x0 + r, y0);
+    g.closePath();
+  }
+  /* fringe first, so the pile lies over its roots */
+  g.strokeStyle = '#cfc3a6'; g.lineWidth = 2.4; g.lineCap = 'round';
+  [[x0, -1], [x1, 1]].forEach(function(end){
+    for(let i=0;i<34;i++){
+      const y = y0 + 4 + (i/33)*(y1 - y0 - 8);
+      g.globalAlpha = 0.7 + Math.random()*0.3;
+      g.beginPath(); g.moveTo(end[0], y);
+      g.lineTo(end[0] + end[1]*(15 + Math.random()*10), y + (Math.random()-0.5)*5);
+      g.stroke();
+    }
+  });
+  g.globalAlpha = 1;
+  /* the pile */
+  pileEdge();
+  g.fillStyle = '#d9cdb0'; g.fill();
+  g.save(); pileEdge(); g.clip();
+  /* banded ends, in the room's own colours */
+  [[0, 14, '#a75c40'], [22, 9, '#4a615c'], [38, 5, '#8a8062']].forEach(function(b){
+    g.globalAlpha = 0.9; g.fillStyle = b[2];
+    g.fillRect(x0 + b[0], y0, b[1], y1 - y0);
+    g.fillRect(x1 - b[0] - b[1], y0, b[1], y1 - y0);
+  });
+  /* a faint repeat across the field */
+  g.globalAlpha = 0.12; g.fillStyle = '#a75c40';
+  for(let x = x0 + 74; x < x1 - 74; x += 46) g.fillRect(x, y0, 10, y1 - y0);
+  g.globalAlpha = 1;
+  /* the weave itself, running across the width */
+  for(let y = y0; y < y1; y += 3){
+    g.fillStyle = 'rgba(70,58,40,' + (0.04 + Math.random()*0.06).toFixed(3) + ')';
+    g.fillRect(x0, y, x1 - x0, 1.4);
+  }
+  speckle(g, w, h, 700, 0.05);
+  g.restore();
+  g.strokeStyle = 'rgba(60,48,30,0.35)'; g.lineWidth = 3;
+  pileEdge(); g.stroke();
+  return c;
+}
+
+function radialCanvas(inner, mid){
+  const s = 256, c = cvs(s,s), g = c.getContext('2d');
+  const grd = g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+  grd.addColorStop(0, 'rgba(255,255,255,' + inner + ')');
+  grd.addColorStop(mid || 0.42, 'rgba(255,255,255,' + (inner*0.42) + ')');
+  grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd; g.fillRect(0,0,s,s);
+  return c;
+}
+
+/* a one-way fade, used for both the wash under a cabinet and the
+   occlusion that should sit in the same place */
+function washCanvas(){
+  const w = 8, h = 128, c = cvs(w,h), g = c.getContext('2d');
+  const grd = g.createLinearGradient(0,0,0,h);
+  grd.addColorStop(0,    'rgba(255,255,255,1)');
+  grd.addColorStop(0.28, 'rgba(255,255,255,0.52)');
+  grd.addColorStop(0.62, 'rgba(255,255,255,0.16)');
+  grd.addColorStop(1,    'rgba(255,255,255,0)');
+  g.fillStyle = grd; g.fillRect(0,0,w,h);
+  return c;
+}
+
+/* what you see through the opening: the garden at the side of the house —
+   sky down to a hedge and lawn, so the gap reads as a real outdoors.
+   this side of the house gets the cloudless day: a deep clear blue that
+   thins to haze at the ground, and a flower border running the hedge foot */
+function beyondCanvas(){
+  const w = 512, h = 512, c = cvs(w,h), g = c.getContext('2d');
+  const grd = g.createLinearGradient(0,0,0,h*0.55);
+  grd.addColorStop(0,    '#5893cc');
+  grd.addColorStop(0.45, '#8fb9de');
+  grd.addColorStop(0.80, '#cfe1ee');
+  grd.addColorStop(1,    '#ece8d4');
+  g.fillStyle = grd; g.fillRect(0,0,w,h*0.55);
+  /* a far tree line, blued by distance — crowns packed shoulder to
+     shoulder over a solid base band, so it reads as woodland not bubbles */
+  g.fillStyle = 'rgba(139,168,135,0.8)';
+  g.fillRect(0, h*0.515, w, h*0.04);
+  g.globalAlpha = 0.8;
+  for(let i=0;i<40;i++){
+    const tx = (i + Math.random()*0.8)*w/40, ty = h*(0.512 + Math.random()*0.012), tr = 5 + Math.random()*8;
+    g.fillStyle = shift('#8ba887', 0.03 - Math.random()*0.07, -0.10);
+    g.beginPath(); g.arc(tx, ty, tr, 0, Math.PI*2); g.fill();
+  }
+  g.globalAlpha = 1;
+  /* a far ridge of ground */
+  g.fillStyle = '#9db584';
+  g.beginPath(); g.moveTo(0, h*0.545);
+  g.quadraticCurveTo(w*0.3, h*0.505, w*0.6, h*0.535);
+  g.quadraticCurveTo(w*0.85, h*0.555, w, h*0.52);
+  g.lineTo(w, h*0.60); g.lineTo(0, h*0.60); g.closePath(); g.fill();
+  /* the hedge, its clipped top broken by hand */
+  g.beginPath(); g.moveTo(0, h*0.72);
+  for(let x=0; x<=w; x+=24)
+    g.lineTo(x, h*0.575 + Math.sin(x*0.05)*5 + (Math.random()-0.5)*7);
+  g.lineTo(w, h*0.72); g.closePath();
+  const hg = g.createLinearGradient(0, h*0.56, 0, h*0.72);
+  hg.addColorStop(0, '#6b8a4c'); hg.addColorStop(1, '#42592f');
+  g.fillStyle = hg; g.fill();
+  /* leaf speckle so the hedge face reads as foliage, not felt */
+  g.save();
+  g.beginPath(); g.rect(0, h*0.56, w, h*0.16); g.clip();
+  for(let i=0;i<260;i++){
+    const lx = Math.random()*w, ly = h*(0.58 + Math.random()*0.13);
+    g.fillStyle = 'rgba(' + (Math.random() < 0.5 ? '126,162,90' : '58,80,44') + ',0.5)';
+    g.beginPath(); g.arc(lx, ly, 1.5 + Math.random()*2.5, 0, Math.PI*2); g.fill();
+  }
+  g.restore();
+  /* the lawn running to the foot of the canvas */
+  const lg = g.createLinearGradient(0, h*0.70, 0, h);
+  lg.addColorStop(0, '#a9bd78'); lg.addColorStop(1, '#7c9955');
+  g.fillStyle = lg; g.fillRect(0, h*0.70, w, h*0.30);
+  g.globalAlpha = 0.25;
+  for(let i=0;i<420;i++){
+    g.strokeStyle = shift('#8aa763', (Math.random()-0.5)*0.2);
+    g.lineWidth = 1.4;
+    const x = Math.random()*w, y = h*0.72 + Math.random()*h*0.28;
+    g.beginPath(); g.moveTo(x,y); g.lineTo(x+(Math.random()-0.5)*4, y-4-Math.random()*7); g.stroke();
+  }
+  g.globalAlpha = 1;
+  /* the border at the hedge foot: white daisies, marigolds, one or two
+     poppies — kitchen-garden colours, nothing the sage would argue with */
+  for(let i=0;i<30;i++){
+    const x = Math.random()*w, y = h*(0.715 + Math.random()*0.045);
+    const kind = Math.random(), r = 2 + Math.random()*2.5;
+    if(kind < 0.5){                                    /* daisy */
+      for(let p=0;p<5;p++){
+        const a = p/5*Math.PI*2 + Math.random()*0.5;
+        g.fillStyle = 'rgba(249,247,240,0.9)';
+        g.beginPath();
+        g.ellipse(x + Math.cos(a)*r*0.6, y + Math.sin(a)*r*0.4, r*0.5, r*0.26, a, 0, Math.PI*2);
+        g.fill();
+      }
+      g.fillStyle = '#e0b544';
+      g.beginPath(); g.arc(x, y, r*0.3, 0, Math.PI*2); g.fill();
+    }else if(kind < 0.85){                             /* marigold */
+      g.fillStyle = shift('#dd9840', (Math.random()-0.5)*0.10);
+      g.beginPath(); g.arc(x, y, r*0.85, 0, Math.PI*2); g.fill();
+      g.fillStyle = 'rgba(180,105,40,0.75)';
+      g.beginPath(); g.arc(x, y, r*0.35, 0, Math.PI*2); g.fill();
+    }else{                                             /* poppy */
+      g.fillStyle = shift('#c2513e', (Math.random()-0.5)*0.08);
+      g.beginPath(); g.arc(x, y, r*0.9, 0, Math.PI*2); g.fill();
+      g.fillStyle = 'rgba(40,32,30,0.8)';
+      g.beginPath(); g.arc(x, y, r*0.28, 0, Math.PI*2); g.fill();
+    }
+  }
+  /* a few more daisies strayed out into the lawn, larger as they near */
+  for(let i=0;i<10;i++){
+    const t = Math.random();
+    const x = Math.random()*w, y = h*(0.78 + t*0.19), r = 2.5 + t*3.5;
+    for(let p=0;p<5;p++){
+      const a = p/5*Math.PI*2 + Math.random()*0.5;
+      g.fillStyle = 'rgba(249,247,240,0.88)';
+      g.beginPath();
+      g.ellipse(x + Math.cos(a)*r*0.6, y + Math.sin(a)*r*0.4, r*0.5, r*0.26, a, 0, Math.PI*2);
+      g.fill();
+    }
+    g.fillStyle = '#e0b544';
+    g.beginPath(); g.arc(x, y, r*0.3, 0, Math.PI*2); g.fill();
+  }
+  return c;
+}
+
+function waterCanvas(){
+  const w = 64, h = 256, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(0,0,w,h);
+  for(let i=0;i<160;i++){
+    g.strokeStyle = 'rgba(255,255,255,' + (0.1+Math.random()*0.55).toFixed(2) + ')';
+    g.lineWidth = 0.6 + Math.random()*2.4;
+    const x = Math.random()*w, y = Math.random()*h;
+    g.beginPath(); g.moveTo(x,y); g.lineTo(x + (Math.random()-0.5)*2, y + 8 + Math.random()*40); g.stroke();
+  }
+  return c;
+}
+
+/* ============================================================
+   4. MATERIALS
+   ============================================================ */
+const wallTex     = tex(plasterCanvas(1024, 512, {bottom:0.22, top:0.30}), 3, 1.4);
+const wallPlainTex= tex(plasterCanvas(512, 512, {top:0.30}), 2, 2);
+const trimTex     = tex(paintCanvas(256,256,P.trim), 3, 3);
+const cabTex      = tex(paintCanvas(512,512,P.cabinet));
+const cabRailTex  = tex(paintCanvas(256,256,P.cabRail), 2, 2);
+const floorTex    = tex(floorCanvas(), 5, 5);
+const stoneTex    = tex(stoneCanvas(), 3, 1);
+const tileTex     = tex(tileCanvas(), 6, 1);
+const steelTex    = tex(steelCanvas());
+const steelRough  = tex(steelRoughCanvas());
+const steelDarkTex= tex(steelCanvas(P.steelDark));
+const fridgeDoorTex = tex(steelPanelCanvas('#aeb3b8'));
+const fridgeCaseTex = tex(steelPanelCanvas('#8f959b'));
+const plasticTex  = tex(enamelCanvas('#33393d'));
+const plasticLightTex = tex(enamelCanvas('#dcd6c8'));
+const woodTex     = tex(woodCanvas());
+const towelTex    = tex(towelCanvas());
+/* the soft dark blob every heavy object sits in — shadow maps alone leave
+   furniture floating a few millimetres above the floor */
+const contactTex  = new THREE.CanvasTexture(radialCanvas(1, 0.52));
+const washTex     = new THREE.CanvasTexture(washCanvas());
+const waterTex    = tex(waterCanvas(), 1, 3);
+waterTex.wrapS = waterTex.wrapT = THREE.RepeatWrapping;
+
+const M = {
+  wall:    new THREE.MeshStandardMaterial({map:wallTex, bumpMap:wallTex, bumpScale:0.003, roughness:0.93}),
+  wallPlain:new THREE.MeshStandardMaterial({map:wallPlainTex, bumpMap:wallPlainTex, bumpScale:0.003, roughness:0.93}),
+  ceiling: new THREE.MeshStandardMaterial({color:P.ceiling, roughness:1}),
+  trim:    new THREE.MeshStandardMaterial({map:trimTex, bumpMap:trimTex, bumpScale:0.003, roughness:0.62}),
+  floor:   new THREE.MeshStandardMaterial({map:floorTex, bumpMap:floorTex, bumpScale:0.006,
+                                           roughness:0.55, metalness:0.02}),
+  cabinet: new THREE.MeshStandardMaterial({map:cabTex, bumpMap:cabTex, bumpScale:0.0025, roughness:0.58}),
+  cabRail: new THREE.MeshStandardMaterial({map:cabRailTex, bumpMap:cabRailTex, bumpScale:0.0025, roughness:0.56}),
+  carcass: new THREE.MeshStandardMaterial({map:cabRailTex, bumpMap:cabRailTex, bumpScale:0.002, roughness:0.6}),
+  toe:     new THREE.MeshStandardMaterial({color:P.toe, roughness:0.9}),
+  counter: new THREE.MeshStandardMaterial({map:stoneTex, bumpMap:stoneTex, bumpScale:0.002,
+                                           roughness:0.34, metalness:0.03}),
+  tile:    new THREE.MeshStandardMaterial({map:tileTex, bumpMap:tileTex, bumpScale:0.004, roughness:0.22}),
+  /* roughness sits well off a mirror: a tight highlight on a big flat
+     panel is what makes stainless sparkle and crawl at this scale */
+  steel:   new THREE.MeshStandardMaterial({map:steelTex, roughnessMap:steelRough,
+                                           roughness:0.38, metalness:0.86}),
+  steelDark:new THREE.MeshStandardMaterial({map:steelDarkTex, roughnessMap:steelRough,
+                                           roughness:0.46, metalness:0.78}),
+  chrome:  new THREE.MeshStandardMaterial({color:'#cfd4d8', roughness:0.20, metalness:0.92}),
+  /* no roughnessMap on these two: a varying roughness across a big metal
+     panel is the other half of the shimmer */
+  frDoor:  new THREE.MeshStandardMaterial({map:fridgeDoorTex, roughness:0.29, metalness:0.90}),
+  frCase:  new THREE.MeshStandardMaterial({map:fridgeCaseTex, roughness:0.42, metalness:0.74}),
+  plasticDark:new THREE.MeshStandardMaterial({map:plasticTex, bumpMap:plasticTex,
+                                           bumpScale:0.0015, roughness:0.52, metalness:0.06}),
+  plasticLight:new THREE.MeshStandardMaterial({map:plasticLightTex, bumpMap:plasticLightTex,
+                                           bumpScale:0.0015, roughness:0.46, metalness:0.05}),
+  glass:   new THREE.MeshStandardMaterial({color:'#e8f1f4', roughness:0.06, metalness:0.0,
+                                           transparent:true, opacity:0.28,
+                                           side:THREE.DoubleSide, depthWrite:false}),
+  polaroid:new THREE.MeshStandardMaterial({color:'#fbf8f1', roughness:0.62, metalness:0.0}),
+  gasket:  new THREE.MeshStandardMaterial({color:'#3a3d40', roughness:0.85}),
+  ucBody:  new THREE.MeshStandardMaterial({color:'#cfc8b8', roughness:0.6}),
+  ucLens:  new THREE.MeshStandardMaterial({color:'#fff6e4', roughness:0.35,
+                                           emissive:'#ffe6bd', emissiveIntensity:1.5}),
+  wood:    new THREE.MeshStandardMaterial({map:woodTex, bumpMap:woodTex, bumpScale:0.002, roughness:0.68}),
+  towel:   new THREE.MeshStandardMaterial({map:towelTex, bumpMap:towelTex, bumpScale:0.0015, roughness:0.92}),
+  terracotta:new THREE.MeshStandardMaterial({color:'#b06a48', roughness:0.88}),
+  soil:    new THREE.MeshStandardMaterial({color:'#3b2d20', roughness:1}),
+  leaf:    new THREE.MeshStandardMaterial({color:'#4c7a3d', roughness:0.75}),
+  ceramic: new THREE.MeshStandardMaterial({color:'#f4f0e6', roughness:0.25}),
+  brass:   new THREE.MeshStandardMaterial({color:P.brass, roughness:0.28, metalness:0.9}),
+  ringTrim:new THREE.MeshStandardMaterial({color:'#e9e4d8', roughness:0.5, metalness:0.1}),
+  lens:    new THREE.MeshStandardMaterial({color:'#fff4de', roughness:0.4,
+                                           emissive:P.glow, emissiveIntensity:1.6}),
+  switch:  new THREE.MeshStandardMaterial({color:'#f4efe3', roughness:0.4}),
+  /* toast, and what the blender makes. The juice is two materials because a
+     column of liquid seen through glass and the disc of its surface catch
+     the room completely differently — one is deep and dim, one is bright. */
+  bread:   new THREE.MeshStandardMaterial({color:'#bd8437', roughness:0.88}),
+  crust:   new THREE.MeshStandardMaterial({color:'#e2c493', roughness:0.92}),
+  juice:   new THREE.MeshStandardMaterial({color:'#e8862c', roughness:0.34,
+                                           transparent:true, opacity:0.95,
+                                           side:THREE.DoubleSide}),
+  juiceTop:new THREE.MeshStandardMaterial({color:'#f0a44a', roughness:0.28,
+                                           transparent:true, opacity:0.98})
+};
+
+/* ============================================================
+   5. HELPERS
+   ============================================================ */
+function box(w,h,d,mat,x,y,z){
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
+  m.position.set(x||0,y||0,z||0);
+  m.castShadow = true; m.receiveShadow = true;
+  return m;
+}
+function plate(w,h,mat,x,y,z){          /* flat, never casts */
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h), mat);
+  m.position.set(x||0,y||0,z||0);
+  m.receiveShadow = true;
+  return m;
+}
+
+/* ============================================================
+   6. JOINERY
+   ------------------------------------------------------------
+   Every unit is built in its own local frame: origin sits on the
+   floor, against the wall plane, and +Z runs out into the room.
+   A run is then dropped on a wall and rotated once.
+   ============================================================ */
+const CAB = {
+  baseH:0.90, baseD:0.60, counterT:0.045, counterD:0.66,
+  toe:0.11,  toeIn:0.075,
+  upY:1.52,  upH:0.92,  upD:0.34,
+  tallH:2.44, tallD:0.66,
+  reveal:0.014, frontT:0.036, rail:0.078
+};
+const COUNTER_Y = CAB.baseH + CAB.counterT;      /* 0.945 — the working height */
+
+/* a shaker front: recessed centre panel inside a frame stood proud of it */
+function shakerFront(w, h, opts){
+  opts = opts || {};
+  const g = new THREE.Group();
+  const t = CAB.frontT, r = Math.min(CAB.rail, w/2 - 0.02, h/2 - 0.02);
+  g.add(box(w, h, t, M.cabinet, 0, 0, 0));                       /* panel */
+  const ft = t + 0.024, fz = 0.012;                              /* frame, 24mm proud */
+  g.add(box(w, r, ft, M.cabRail, 0,  h/2 - r/2, fz));
+  g.add(box(w, r, ft, M.cabRail, 0, -h/2 + r/2, fz));
+  g.add(box(r, h - r*2, ft, M.cabRail, -w/2 + r/2, 0, fz));
+  g.add(box(r, h - r*2, ft, M.cabRail,  w/2 - r/2, 0, fz));
+  if(opts.knob) g.add(knob(0, 0, 0.044));
+  return g;
+}
+
+function barPull(len){
+  const g = new THREE.Group();
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, len, 10), M.brass);
+  bar.rotation.z = Math.PI/2; bar.position.z = 0.088;
+  bar.castShadow = true;
+  g.add(bar);
+  const postGeo = new THREE.CylinderGeometry(0.0085, 0.0085, 0.052, 8);
+  [-1, 1].forEach(function(s){
+    const p = new THREE.Mesh(postGeo, M.brass);
+    p.rotation.x = Math.PI/2;
+    p.position.set(s*(len/2 - 0.028), 0, 0.062);
+    p.castShadow = true;
+    g.add(p);
+  });
+  return g;
+}
+function knob(x, y, z){
+  const g = new THREE.Group();
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.03, 8), M.brass);
+  stem.rotation.x = Math.PI/2; stem.position.z = 0.015;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.019, 14, 10), M.brass);
+  head.position.z = 0.038;
+  head.scale.set(1, 1, 0.8);
+  g.add(stem, head);
+  g.position.set(x||0, y||0, z||0);
+  return g;
+}
+
+/* carcass + recessed kick, shared by every floor-standing unit */
+function carcass(w, h, d, withToe){
+  const g = new THREE.Group();
+  if(withToe){
+    g.add(box(w, CAB.toe, d - CAB.toeIn, M.toe, 0, CAB.toe/2, (d - CAB.toeIn)/2));
+    g.add(box(w, h - CAB.toe, d, M.carcass, 0, CAB.toe + (h - CAB.toe)/2, d/2));
+  } else {
+    g.add(box(w, h, d, M.carcass, 0, h/2, d/2));
+  }
+  return g;
+}
+
+/* n equal drawer fronts filling the space between the kick and the worktop */
+function baseDrawers(w, n){
+  const g = new THREE.Group();
+  g.add(carcass(w, CAB.baseH, CAB.baseD, true));
+  const y0 = CAB.toe, span = CAB.baseH - CAB.toe;
+  const fw = w - CAB.reveal*2;
+  const fh = (span - CAB.reveal*(n + 1)) / n;
+  for(let i=0;i<n;i++){
+    const y = y0 + CAB.reveal*(i+1) + fh*i + fh/2;
+    const f = shakerFront(fw, fh, {pull:false});
+    f.position.set(0, y, CAB.baseD + 0.018);
+    f.add(barPull(Math.min(0.30, fw*0.42)));
+    g.add(f);
+  }
+  return g;
+}
+
+/* the classic: one shallow drawer over a pair of doors */
+function baseDoors(w, n){
+  const g = new THREE.Group();
+  g.add(carcass(w, CAB.baseH, CAB.baseD, true));
+  const y0 = CAB.toe, span = CAB.baseH - CAB.toe;
+  const dh = 0.185, fw = w - CAB.reveal*2;
+  const dy = y0 + span - CAB.reveal - dh/2;
+  const drw = shakerFront(fw, dh, {pull:false});
+  drw.position.set(0, dy, CAB.baseD + 0.018);
+  drw.add(barPull(Math.min(0.30, fw*0.42)));
+  g.add(drw);
+
+  const doorH = span - dh - CAB.reveal*3;
+  const doorW = (fw - CAB.reveal*(n-1)) / n;
+  const dcy = y0 + CAB.reveal + doorH/2;
+  for(let i=0;i<n;i++){
+    const x = -fw/2 + doorW/2 + i*(doorW + CAB.reveal);
+    const d = shakerFront(doorW, doorH, {pull:false});
+    d.position.set(x, dcy, CAB.baseD + 0.018);
+    const p = barPull(Math.min(0.20, doorH*0.34));
+    p.rotation.z = Math.PI/2;                      /* pulls stand upright on a door */
+    p.position.set(n === 1 ? doorW/2 - 0.055 : (i === 0 ? doorW/2 - 0.055 : -doorW/2 + 0.055),
+                   doorH/2 - 0.20, 0);
+    d.add(p);
+    g.add(d);
+  }
+  return g;
+}
+
+/* full-height pantry: deep drawer at the floor, then two banks of doors */
+function tallPantry(w){
+  const g = new THREE.Group();
+  g.add(carcass(w, CAB.tallH, CAB.tallD, true));
+  const fw = w - CAB.reveal*2;
+  const drawH = 0.30, midH = 0.95;
+  let y = CAB.toe + CAB.reveal;
+
+  const dr = shakerFront(fw, drawH, {pull:false});
+  dr.position.set(0, y + drawH/2, CAB.tallD + 0.018);
+  dr.add(barPull(Math.min(0.34, fw*0.44)));
+  g.add(dr);
+  y += drawH + CAB.reveal;
+
+  function pair(h){
+    const dw = (fw - CAB.reveal)/2;
+    for(let i=0;i<2;i++){
+      const d = shakerFront(dw, h, {pull:false});
+      d.position.set(-fw/2 + dw/2 + i*(dw + CAB.reveal), y + h/2, CAB.tallD + 0.018);
+      const p = barPull(Math.min(0.30, h*0.30));
+      p.rotation.z = Math.PI/2;
+      p.position.set(i === 0 ? dw/2 - 0.055 : -dw/2 + 0.055, h/2 - 0.26, 0);
+      d.add(p);
+      g.add(d);
+    }
+    y += h + CAB.reveal;
+  }
+  pair(midH);
+  pair(CAB.tallH - y);
+  return g;
+}
+
+/* wall unit — n doors, hung at CAB.upY unless told otherwise */
+function upperUnit(w, h, n, yBase, depth){
+  const g = new THREE.Group();
+  h = h || CAB.upH; yBase = (yBase === undefined) ? CAB.upY : yBase;
+  depth = depth || CAB.upD;
+  const c = box(w, h, depth, M.carcass, 0, yBase + h/2, depth/2);
+  g.add(c);
+  const fw = w - CAB.reveal*2, doorH = h - CAB.reveal*2;
+  const doorW = (fw - CAB.reveal*(n-1)) / n;
+  for(let i=0;i<n;i++){
+    const d = shakerFront(doorW, doorH, {pull:false});
+    d.position.set(-fw/2 + doorW/2 + i*(doorW + CAB.reveal), yBase + h/2, depth + 0.018);
+    const p = barPull(Math.min(0.24, doorH*0.30));
+    p.rotation.z = Math.PI/2;
+    p.position.set(n === 1 ? doorW/2 - 0.055 : (i === 0 ? doorW/2 - 0.055 : -doorW/2 + 0.055),
+                   -doorH/2 + 0.20, 0);
+    d.add(p);
+    g.add(d);
+  }
+  return g;
+}
+
+/* worktop slab with a shadow line under its front lip */
+function worktop(w, d, x, z){
+  const g = new THREE.Group();
+  d = d || CAB.counterD;
+  g.add(box(w, CAB.counterT, d, M.counter, 0, CAB.baseH + CAB.counterT/2, d/2));
+  g.add(box(w, 0.016, 0.020, M.counter, 0, CAB.baseH - 0.008, d - 0.010));
+  g.position.set(x||0, 0, z||0);
+  return g;
+}
+
+/* splashback: tile from the worktop to the underside of the wall units */
+function splash(w, y0, y1, mat, repeatX){
+  const t = tileTex.clone();
+  t.needsUpdate = true;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(repeatX || w*1.9, (y1 - y0)*1.9);
+  const m = new THREE.MeshStandardMaterial({map:t, bumpMap:t, bumpScale:0.004, roughness:0.22});
+  const p = new THREE.Mesh(new THREE.PlaneGeometry(w, y1 - y0), m);
+  p.position.set(0, (y0 + y1)/2, 0.006);
+  p.receiveShadow = true;
+  return p;
+}
+
+/* ============================================================
+   7. THE FRIDGE — two doors, brushed, standing proud of the run
+   ============================================================ */
+/* American-style double door: roughly 1.6x the width and 1.2x the height of
+   the old cabinet-depth unit, which is about as tall as it can go before the
+   cornice. It now owns the wall rather than sitting in a row of joinery. */
+const FR = {w:1.80, h:2.42, d:0.88};
+FR.face = FR.d + 0.02;              /* the plane the door fronts sit on */
+function buildFridge(){
+  const g = new THREE.Group();
+  g.userData.name = 'Fridge';
+  g.userData.hoverable = true;
+
+  /* the box itself, darker so the doors read as the bright thing */
+  g.add(box(FR.w, FR.h, FR.d, M.frCase, 0, FR.h/2, FR.d/2));
+  /* The rubber seal you glimpse round the edge of each door.
+     It has to sit BEHIND the door fronts, not flush with them. Its front
+     face used to land on exactly the same plane as the door panels, and two
+     coplanar faces z-fight: head-on one of them wins consistently and it
+     looks fine, but the moment the camera turns, depth interpolation starts
+     flickering between them across the panel. That was the static. */
+  g.add(box(FR.w - 0.02, FR.h - 0.02, 0.03, M.gasket, 0, FR.h/2, FR.d - 0.012));
+
+  const gap = 0.016;
+  const dw = (FR.w - gap)/2 - 0.006;
+  const dh = FR.h - 0.10;
+  const dz = FR.face;                           /* front face of the doors */
+
+  [-1, 1].forEach(function(s){
+    const x = s * (dw/2 + gap/2);
+    const door = new THREE.Group();
+    door.add(box(dw, dh, 0.075, M.frDoor, 0, 0, -0.0375));
+    /* a soft chamfer down each outer edge catches the ceiling light —
+       stood 2 mm proud of the panel rather than flush with it, same reason */
+    door.add(box(0.016, dh, 0.06, M.frCase, s*(dw/2 - 0.008), 0, -0.028));
+    door.position.set(x, 0.05 + dh/2, dz);
+    g.add(door);
+
+    /* full-height bar handle, set just off the centre seam */
+    const hx = x - s*(dw/2 - 0.075);
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.021, 0.021, dh*0.66, 16), M.chrome);
+    bar.castShadow = true;
+    bar.position.set(hx, 0.05 + dh/2, dz + 0.070);
+    g.add(bar);
+    const bracket = new THREE.CylinderGeometry(0.018, 0.018, 0.070, 10);
+    [-1, 1].forEach(function(k){
+      const b = new THREE.Mesh(bracket, M.chrome);
+      b.rotation.x = Math.PI/2;
+      b.position.set(hx, 0.05 + dh/2 + k*(dh*0.66/2 - 0.035), dz + 0.035);
+      b.castShadow = true;
+      g.add(b);
+    });
+  });
+
+  /* centre seam, and the vented plinth under the doors */
+  g.add(box(gap + 0.004, dh, 0.02, M.gasket, 0, 0.05 + dh/2, dz - 0.05));
+  g.add(box(FR.w, 0.05, 0.03, M.frCase, 0, 0.025, dz - 0.01));
+  for(let i=0;i<7;i++){                                   /* louvres in the kick */
+    g.add(box(FR.w - 0.10, 0.004, 0.008, M.gasket, 0, 0.010 + i*0.006, dz + 0.004));
+  }
+  /* top return, so the eye reads a lid rather than a cut-off */
+  g.add(box(FR.w + 0.006, 0.018, FR.d + 0.014, M.frCase, 0, FR.h - 0.009, (FR.d + 0.014)/2));
+
+  /* the shadow it sits in. A shadow map alone leaves a big appliance
+     hovering; this is the dark line where the case meets the boards. */
+  const contact = new THREE.Mesh(new THREE.PlaneGeometry(FR.w + 0.55, FR.d + 0.55),
+    new THREE.MeshBasicMaterial({map:contactTex, color:0x1a1409, transparent:true,
+      opacity:0.42, depthWrite:false, fog:false}));
+  contact.rotation.x = -Math.PI/2;
+  contact.position.set(0, 0.006, FR.d/2 + 0.05);
+  contact.renderOrder = 1;
+  g.add(contact);
+
+  /* Nothing on the fridge receives a shadow. A 2.4 m vertical panel lit from
+     the ceiling meets the light at a grazing angle, and grazing incidence is
+     exactly where a shadow map self-shadows: fine stripes across the door
+     that crawl as the camera moves. That was the static. It still casts —
+     it just is not a surface anything needs to be shadowed onto. */
+  g.traverse(function(o){ if(o.isMesh) o.receiveShadow = false; });
+  contact.receiveShadow = false;
+  return g;
+}
+
+/* ============================================================
+   7b. MAGNETS AND POLAROIDS
+   ------------------------------------------------------------
+   Built in the fridge's own frame, so a photo's x/y in PHOTOS is
+   simply where it sits on the door. Deliberately oversized: a
+   real 88 mm print would be twenty-odd pixels across from the
+   arrival position, which is neither readable nor clickable.
+   ============================================================ */
+/* A print is cut to its photograph, not the photograph cropped to fit a
+   print: every image window keeps the same AREA and takes the picture's own
+   aspect. Constant area rather than constant width because a landscape and a
+   portrait then carry the same weight on the door — matching widths would
+   make every landscape shout and every portrait shrink. `edge` is the white
+   border on three sides, `foot` the deeper one below, the way a Polaroid is.
+
+   `area` is the one dial that resizes every print at once. Raising it needs
+   the x/y in PHOTOS re-checked: at 0.064 the nine of them clear each other,
+   the door edges and both handles by 23 mm at their most swollen — mid-pulse,
+   when all nine are scaled up together — and there is not much more room. */
+const POL = {area:0.0640, edge:0.020, foot:0.062, t:0.005};
+const MAG_R = 0.034;
+
+function polAspect(photo){ return (photo.ar > 0) ? photo.ar : 1; }
+function polSize(ar){
+  ar = (ar > 0) ? ar : 1;
+  const iw = Math.sqrt(POL.area * ar);
+  const ih = Math.sqrt(POL.area / ar);
+  return {iw:iw, ih:ih, w:iw + POL.edge*2, h:ih + POL.edge + POL.foot};
+}
+
+/* the blurred rectangle a polaroid casts on the door. A shadow map will not
+   do this: the door meets the ceiling lights at too grazing an angle and
+   self-shadows, which is what put stripes across the fridge in the first place */
+function softRectCanvas(){
+  const n = 128, c = cvs(n,n), g = c.getContext('2d');
+  const canBlur = (function(){ try{ g.filter = 'blur(1px)'; return g.filter !== 'none'; }
+                               catch(e){ return false; } })();
+  if(canBlur) g.filter = 'blur(10px)';
+  g.fillStyle = '#ffffff';
+  g.fillRect(n*0.17, n*0.17, n*0.66, n*0.66);
+  if(canBlur) g.filter = 'none';
+  return c;
+}
+
+/* what stands in for a photograph that has not been taken yet: a tint of the
+   magnet's colour and the universal "there is an image here" glyph. No text —
+   the words all live in the DOM, where they can be read and selected. */
+function photoPlaceholderCanvas(colour, ar){
+  ar = (ar > 0) ? ar : 1;
+  const n = 512, w = Math.round(ar >= 1 ? n : n*ar), h = Math.round(ar >= 1 ? n/ar : n);
+  const c = cvs(w,h), g = c.getContext('2d');
+  const grd = g.createLinearGradient(0,0,0,h);
+  grd.addColorStop(0, shift(colour,  0.30, -0.34));
+  grd.addColorStop(1, shift(colour,  0.09, -0.26));
+  g.fillStyle = grd; g.fillRect(0,0,w,h);
+  /* the glyph is drawn in a square of its own, centred — scaled with the
+     frame it would come out an oval, and a stretched icon reads as a bug */
+  const k = Math.min(w,h)/n;
+  g.translate((w - n*k)/2, (h - n*k)/2);
+  g.scale(k, k);
+  g.strokeStyle = 'rgba(255,255,255,0.5)';
+  g.lineWidth = 15; g.lineJoin = 'round'; g.lineCap = 'round';
+  g.beginPath(); g.arc(n*0.33, n*0.33, n*0.082, 0, Math.PI*2); g.stroke();
+  g.beginPath();
+  g.moveTo(n*0.11, n*0.75); g.lineTo(n*0.36, n*0.47); g.lineTo(n*0.55, n*0.65);
+  g.lineTo(n*0.70, n*0.52); g.lineTo(n*0.90, n*0.75);
+  g.stroke();
+  return c;
+}
+
+/* ---- the magnet shapes ---- */
+function starShape(r, points){
+  const sh = new THREE.Shape(), n = points*2;
+  for(let i=0;i<n;i++){
+    const rr = (i % 2 === 0) ? r : r*0.46;
+    const a  = (i/n)*Math.PI*2 - Math.PI/2;
+    const x = Math.cos(a)*rr, y = Math.sin(a)*rr;
+    if(i === 0) sh.moveTo(x,y); else sh.lineTo(x,y);
+  }
+  sh.closePath();
+  return sh;
+}
+function heartShape(r){
+  const sh = new THREE.Shape(), k = r*1.05;
+  sh.moveTo(0, -0.95*k);
+  sh.bezierCurveTo(-0.62*k, -0.26*k, -1.10*k, 0.46*k, -0.55*k, 0.86*k);
+  sh.bezierCurveTo(-0.26*k,  1.06*k,  0.00*k, 0.76*k,  0.00*k, 0.55*k);
+  sh.bezierCurveTo( 0.00*k,  0.76*k,  0.26*k, 1.06*k,  0.55*k, 0.86*k);
+  sh.bezierCurveTo( 1.10*k,  0.46*k,  0.62*k,-0.26*k,  0.00*k,-0.95*k);
+  return sh;
+}
+function flowerShape(r, petals){
+  const sh = new THREE.Shape(), steps = petals*22;
+  for(let i=0;i<=steps;i++){
+    const t  = (i/steps)*Math.PI*2;
+    const rr = r*(0.60 + 0.40*Math.cos(petals*t));
+    const x = Math.cos(t)*rr, y = Math.sin(t)*rr;
+    if(i === 0) sh.moveTo(x,y); else sh.lineTo(x,y);
+  }
+  sh.closePath();
+  return sh;
+}
+function pillShape(r){
+  const sh = new THREE.Shape(), w = r*1.5, h = r*0.72;
+  sh.moveTo(-w, -h);
+  sh.lineTo(w, -h);
+  sh.absarc(w, 0, h, -Math.PI/2, Math.PI/2, false);
+  sh.lineTo(-w, h);
+  sh.absarc(-w, 0, h, Math.PI/2, Math.PI*1.5, false);
+  return sh;
+}
+function moonShape(r){
+  /* the outer arc of one circle and the inner arc of another, offset —
+     the two angle constants are where those circles actually cross */
+  const sh = new THREE.Shape(), a = 0.845, b = 1.483;
+  sh.absarc(0, 0, r, a, Math.PI*2 - a, false);
+  sh.absarc(0.6*r, 0, 0.75*r, -b, b, true);
+  return sh;
+}
+function dropShape(r){
+  const sh = new THREE.Shape();
+  sh.moveTo(0, r*1.15);
+  sh.quadraticCurveTo(r*0.62, r*0.45, r*0.66, -r*0.20);
+  sh.absarc(0, -r*0.20, r*0.66, 0, -Math.PI, true);
+  sh.quadraticCurveTo(-r*0.62, r*0.45, 0, r*1.15);
+  return sh;
+}
+
+const MAG_EXTRUDE = {depth:0.013, bevelEnabled:true, bevelSize:0.0028,
+                     bevelThickness:0.0028, bevelSegments:2, curveSegments:14};
+function buildMagnet(kind, colour){
+  const mat = new THREE.MeshStandardMaterial({color:colour, roughness:0.31, metalness:0.03});
+  /* a turned disc is cheaper than an extruded circle, and fewer sides make
+     a hexagon, a triangle, a diamond, a square — and, squashed, an oval —
+     out of the same primitive */
+  const TURNED = {disc:26, hexagon:6, triangle:3, diamond:4, square:4, oval:26};
+  let mesh;
+  if(TURNED[kind]){
+    const theta = (kind === 'square') ? Math.PI/4 : 0;
+    mesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(MAG_R, MAG_R*0.94, 0.014, TURNED[kind], 1, false, theta), mat);
+    mesh.rotation.x = Math.PI/2;                 /* the turned axis points at the room */
+    mesh.position.z = 0.007;
+    if(kind === 'oval') mesh.scale.set(1.45, 1, 0.72);
+    if(kind === 'triangle' || kind === 'diamond') mesh.scale.set(1.25, 1, 1.25);
+  } else if(kind === 'ring'){
+    mesh = new THREE.Mesh(new THREE.TorusGeometry(MAG_R*0.80, MAG_R*0.34, 10, 26), mat);
+    mesh.position.z = 0.010;
+  } else {
+    const shape = (kind === 'star')  ? starShape(MAG_R*1.15, 5)
+                : (kind === 'heart') ? heartShape(MAG_R)
+                : (kind === 'pill')  ? pillShape(MAG_R*0.88)
+                : (kind === 'moon')  ? moonShape(MAG_R*1.12)
+                : (kind === 'drop')  ? dropShape(MAG_R)
+                :                      flowerShape(MAG_R*1.08, 6);
+    mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, MAG_EXTRUDE), mat);
+  }
+  mesh.castShadow = false; mesh.receiveShadow = false;
+  const g = new THREE.Group();
+  g.add(mesh);
+  g.userData.material = mat;
+  return g;
+}
+
+/* ---- the print the magnet is holding up ---- */
+const softRectTex = new THREE.CanvasTexture(softRectCanvas());
+function buildPolaroid(photo, index){
+  const g = new THREE.Group();
+  g.userData.name      = photo.name;
+  g.userData.hoverable = true;
+  g.userData.clickable = true;
+  g.userData.photo     = index;
+  g.userData.hover     = 0;
+
+  /* the drop shadow, first and furthest back */
+  const sh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({map:softRectTex, color:0x1a1610, transparent:true,
+      opacity:0.34, depthWrite:false, fog:false}));
+  sh.position.set(0.006, -0.008, -0.0022);
+  g.add(sh);
+  g.userData.shadow = sh;
+
+  /* the card. Its own material per print, so hovering one can lift one. */
+  const cardMat = M.polaroid.clone();
+  const card = box(1, 1, POL.t, cardMat, 0, 0, POL.t/2);
+  g.add(card);
+  g.userData.cardMat = cardMat;
+
+  /* the image, stood a whisker proud of the card so the two never share a plane */
+  const imgMat = new THREE.MeshStandardMaterial({
+    map: tex(photoPlaceholderCanvas(photo.colour, photo.ar)), roughness:0.42, metalness:0.0});
+  const img = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), imgMat);
+  g.add(img);
+  g.userData.imgMat = imgMat;
+
+  const mag = buildMagnet(photo.magnet, photo.colour);
+  g.add(mag);
+  g.userData.magnetMat = mag.userData.material;
+
+  /* Everything above is built at unit size and then cut to an aspect here, so
+     that the one arithmetic that decides how big a print is lives in one
+     place — and can be run a second time, unchanged, when the photograph
+     itself turns up and tells us the ratio it actually has. */
+  g.userData.cut = function(ar){
+    const S = polSize(ar);
+    g.userData.size = S;
+    sh.geometry.dispose();
+    sh.geometry = new THREE.PlaneGeometry(S.w*1.30, S.h*1.26);
+    card.geometry.dispose();
+    card.geometry = new THREE.BoxGeometry(S.w, S.h, POL.t);
+    img.geometry.dispose();
+    img.geometry = new THREE.PlaneGeometry(S.iw, S.ih);
+    img.position.set(0, S.h/2 - POL.edge - S.ih/2, POL.t + 0.0013);
+    mag.position.set(0, S.h/2 - 0.030, POL.t + 0.003);
+  };
+  g.userData.cut(photo.ar);
+
+  /* and the real photograph, if there is one yet. The file is the authority on
+     its own shape: if `ar` in PHOTOS disagrees with the pixels, the pixels win
+     and the print is re-cut, so a swapped photo is never squashed to fit the
+     one it replaced. */
+  if(photo.src){
+    /* preload.js has almost always finished with this one before the
+       fridge is even built — in that case the texture is handed over
+       decoded and this runs synchronously, with no second fetch and
+       no half-second of blank photo paper. */
+    const dress = function(t){
+      t.encoding = THREE.sRGBEncoding;
+      t.anisotropy = ANISO;
+      imgMat.map = t;
+      imgMat.needsUpdate = true;
+      const real = t.image && t.image.height ? t.image.width / t.image.height : 0;
+      if(real && Math.abs(real - polAspect(photo)) > polAspect(photo)*0.01) g.userData.cut(real);
+    };
+    if(window.HOUSE_PRELOAD) HOUSE_PRELOAD.texture(THREE, photo.src, dress);
+    else new THREE.TextureLoader().load(photo.src, dress);
+  }
+
+  /* nothing here casts or receives: see the note on softRectCanvas above */
+  g.traverse(function(o){ if(o.isMesh){ o.castShadow = false; o.receiveShadow = false; } });
+  return g;
+}
+
+/* ============================================================
+   8. SINK AND TAP
+   ============================================================ */
+const SINK = {w:0.84, len:0.50, deep:0.24, t:0.014};
+function buildSink(){
+  /* built in the left run's local frame: +X along the wall, +Z out from it.
+     the rim sits flush with the worktop; everything below is one pressed bowl. */
+  const g = new THREE.Group();
+  g.userData.name = 'Sink';
+  g.userData.hoverable = true;
+  const y = COUNTER_Y, W = SINK.w, L = SINK.len, D = SINK.deep, t = SINK.t;
+
+  /* rim, sitting on top of the stone all the way round the cut-out */
+  const rim = 0.026;
+  [[0, -L/2 - rim/2, W + rim*2, rim], [0, L/2 + rim/2, W + rim*2, rim]].forEach(function(a){
+    g.add(box(a[2], 0.008, a[3], M.steel, a[0], y + 0.004, a[1]));
+  });
+  [[-W/2 - rim/2, 0], [W/2 + rim/2, 0]].forEach(function(a){
+    g.add(box(rim, 0.008, L, M.steel, a[0], y + 0.004, a[1]));
+  });
+
+  /* bowl */
+  g.add(box(W, t, L, M.steel, 0, y - D + t/2, 0));                       /* base */
+  g.add(box(W, D, t, M.steel, 0, y - D/2, -L/2 + t/2));                  /* back */
+  g.add(box(W, D, t, M.steel, 0, y - D/2,  L/2 - t/2));                  /* front */
+  g.add(box(t, D, L, M.steel, -W/2 + t/2, y - D/2, 0));
+  g.add(box(t, D, L, M.steel,  W/2 - t/2, y - D/2, 0));
+
+  /* waste */
+  const waste = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.012, 18), M.steelDark);
+  waste.position.set(0, y - D + 0.014, 0);
+  g.add(waste);
+  const grate = new THREE.Mesh(new THREE.CylinderGeometry(0.030, 0.030, 0.006, 18), M.gasket);
+  grate.position.set(0, y - D + 0.021, 0);
+  g.add(grate);
+  return g;
+}
+
+function buildTap(){
+  /* a gooseneck drawn as a tube along a curve, so the bend stays round */
+  const g = new THREE.Group();
+  g.userData.name = 'Tap';
+  g.userData.hoverable = true;
+  g.userData.isTap = true;
+
+  const pts = [
+    new THREE.Vector3(0, 0.00, 0),
+    new THREE.Vector3(0, 0.20, 0),
+    new THREE.Vector3(0, 0.33, 0.015),
+    new THREE.Vector3(0, 0.405, 0.085),
+    new THREE.Vector3(0, 0.375, 0.185),
+    new THREE.Vector3(0, 0.275, 0.238),
+    new THREE.Vector3(0, 0.205, 0.243)
+  ];
+  const curve = new THREE.CatmullRomCurve3(pts);
+  const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 48, 0.019, 12, false), M.steel);
+  tube.castShadow = true;
+  g.add(tube);
+
+  /* escutcheon on the stone, spout collar, and a single lever */
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.040, 0.022, 20), M.steel);
+  base.position.y = 0.011; base.castShadow = true;
+  g.add(base);
+  const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.022, 16), M.steel);
+  collar.position.set(0, 0.212, 0.243);
+  g.add(collar);
+
+  const lever = new THREE.Group();
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.021, 0.021, 0.036, 14), M.steel);
+  hub.rotation.z = Math.PI/2; hub.position.set(0.026, 0, 0);
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.013, 0.115, 12), M.steel);
+  arm.rotation.z = Math.PI/2; arm.position.set(0.098, 0.014, 0);
+  arm.rotation.y = 0;
+  lever.add(hub, arm);
+  lever.position.set(0.014, 0.235, 0.005);
+  lever.rotation.x = -0.30;
+  g.add(lever);
+  g.userData.lever = lever;
+
+  /* the stream — hidden until the tap is turned on */
+  const streamH = 0.44;
+  const stream = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.0075, 0.0115, streamH, 12, 1, true),
+    new THREE.MeshStandardMaterial({map:waterTex, color:0xdff0ff, transparent:true, opacity:0,
+      roughness:0.06, metalness:0.0, side:THREE.DoubleSide, depthWrite:false}));
+  stream.position.set(0, 0.205 - streamH/2, 0.243);
+  g.add(stream);
+  g.userData.stream = stream;
+
+  /* and the disturbance it makes at the bottom of the bowl */
+  const splashTex = new THREE.CanvasTexture(radialCanvas(1, 0.30));
+  const splashRing = new THREE.Mesh(new THREE.PlaneGeometry(0.20, 0.20),
+    new THREE.MeshBasicMaterial({map:splashTex, color:0xffffff, transparent:true,
+      opacity:0, depthWrite:false}));
+  splashRing.rotation.x = -Math.PI/2;
+  splashRing.position.set(0, 0.205 - streamH + 0.006, 0.243);
+  g.add(splashRing);
+  g.userData.splash = splashRing;
+  return g;
+}
+
+/* ============================================================
+   8b. THE SMALL APPLIANCES
+   ------------------------------------------------------------
+   Both are built standing on the worktop: local origin sits on the
+   stone, +Z runs out into the room, same convention as the joinery.
+   ============================================================ */
+function applianceShadow(w, d, opacity){
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d),
+    new THREE.MeshBasicMaterial({map:contactTex, color:0x241c10, transparent:true,
+      opacity:opacity, depthWrite:false, fog:false}));
+  m.rotation.x = -Math.PI/2;
+  m.position.y = 0.004;
+  m.renderOrder = 1;
+  return m;
+}
+
+const TOAST = {w:0.31, h:0.185, d:0.175};
+function buildToaster(){
+  const g = new THREE.Group();
+  g.userData.name = 'Toaster';
+  g.userData.hoverable = true;
+  const W = TOAST.w, H = TOAST.h, D = TOAST.d;
+
+  /* body, with the top drawn as a half-cylinder so it reads as pressed steel
+     rather than a cardboard box */
+  g.add(box(W, H - 0.035, D, M.chrome, 0, (H - 0.035)/2, 0));
+  const dome = new THREE.Mesh(new THREE.CylinderGeometry(D/2, D/2, W, 24, 1, false,
+                                                         0, Math.PI), M.chrome);
+  dome.rotation.z = -Math.PI/2;
+  dome.rotation.y = Math.PI/2;
+  dome.position.y = H - 0.035;
+  dome.scale.set(1, 1, 0.50);          /* squashed: a shallow crown, not a tube */
+  dome.castShadow = true; dome.receiveShadow = true;
+  g.add(dome);
+
+  /* two slots, recessed and dark, with the element glow buried out of sight */
+  [-1, 1].forEach(function(k){
+    g.add(box(W - 0.085, 0.012, 0.030, M.gasket, 0, H - 0.006, k*0.036));
+    g.add(box(W - 0.095, 0.055, 0.020, M.gasket, 0, H - 0.035, k*0.036));
+  });
+
+  /* two slices, parked out of sight down the slots. They ride straight up
+     on press, so the geometry that matters is the travel: `down` is far
+     enough under the crown to be hidden, `up` clears the slot by a crust. */
+  const TOAST_W = W - 0.115, TOAST_T = 0.016, TOAST_H = 0.115;
+  /* [+x, -x, +y, -y, +z, -z] — the two big faces are the toasted ones, the
+     four edges are crust. A slice that is one colour all over reads as a
+     block of butter; the pale rim is the whole difference. */
+  const toastMats = [M.crust, M.crust, M.crust, M.crust, M.bread, M.bread];
+  const toasts = [];
+  [-1, 1].forEach(function(k){
+    const t = new THREE.Mesh(new THREE.BoxGeometry(TOAST_W, TOAST_H, TOAST_T), toastMats);
+    t.castShadow = true;
+    t.userData.down = H - 0.048 - TOAST_H/2;      /* crown hides it */
+    t.userData.up   = H + 0.044;
+    t.position.set(0, t.userData.down, k*0.036);
+    g.add(t);
+    toasts.push(t);
+  });
+  g.userData.toasts = toasts;
+
+  /* lever in its slot, dial, and the seam of the crumb tray */
+  g.add(box(0.010, 0.078, 0.010, M.gasket, W/2 - 0.028, H*0.56, D/2 + 0.002));
+  const lever = box(0.030, 0.020, 0.016, M.plasticDark, W/2 - 0.028, H*0.40, D/2 + 0.010);
+  lever.userData.down = H*0.40;                   /* pushed in, toasting */
+  lever.userData.up   = H*0.66;                   /* sprung, toast is out */
+  g.add(lever);
+  g.userData.lever = lever;
+  const dial = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.014, 20), M.plasticDark);
+  dial.rotation.x = Math.PI/2;
+  dial.position.set(-W/2 + 0.075, H*0.45, D/2 + 0.007);
+  dial.castShadow = true;
+  g.add(dial);
+  g.add(box(0.006, 0.006, 0.012, M.chrome, -W/2 + 0.075, H*0.45 + 0.013, D/2 + 0.010));
+  g.add(box(W - 0.02, 0.004, 0.004, M.steelDark, 0, 0.026, D/2 + 0.001));
+
+  /* four rubber feet, so it stands on the stone rather than in it */
+  [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(function(a){
+    g.add(box(0.026, 0.010, 0.020, M.gasket, a[0]*(W/2 - 0.035), 0.005, a[1]*(D/2 - 0.028)));
+  });
+
+  g.add(applianceShadow(W + 0.24, D + 0.24, 0.34));
+  return g;
+}
+
+const BLEND = {baseR:0.098, baseH:0.145, jugH:0.255, jugR0:0.088, jugR1:0.064};
+function buildBlender(){
+  const g = new THREE.Group();
+  g.userData.name = 'Blender';
+  g.userData.hoverable = true;
+  const B = BLEND;
+
+  /* motor housing: wider at the foot, control face angled to the room */
+  const base = new THREE.Mesh(
+    new THREE.CylinderGeometry(B.baseR*0.82, B.baseR, B.baseH, 28), M.plasticDark);
+  base.position.y = B.baseH/2;
+  base.castShadow = true; base.receiveShadow = true;
+  g.add(base);
+  const collar = new THREE.Mesh(
+    new THREE.CylinderGeometry(B.jugR0*0.86, B.baseR*0.82, 0.022, 28), M.chrome);
+  collar.position.y = B.baseH + 0.010;
+  collar.castShadow = true;
+  g.add(collar);
+
+  /* control panel and two buttons */
+  const panelFace = box(0.088, 0.062, 0.010, M.chrome, 0, B.baseH*0.52, B.baseR*0.94);
+  panelFace.rotation.x = -0.12;
+  g.add(panelFace);
+  [-0.020, 0.020].forEach(function(x){
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.010, 14), M.plasticLight);
+    b.rotation.x = Math.PI/2 - 0.12;
+    b.position.set(x, B.baseH*0.52, B.baseR*0.99);
+    g.add(b);
+  });
+
+  /* the jug: an open-ended tapered tube, so you see through both walls */
+  const y0 = B.baseH + 0.021;
+  const jug = new THREE.Mesh(
+    new THREE.CylinderGeometry(B.jugR1, B.jugR0, B.jugH, 32, 1, true), M.glass);
+  jug.position.y = y0 + B.jugH/2;
+  jug.renderOrder = 4;
+  g.add(jug);
+  /* rim and a spout notch */
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(B.jugR1, 0.005, 8, 32), M.glass);
+  rim.rotation.x = Math.PI/2;
+  rim.position.y = y0 + B.jugH;
+  rim.renderOrder = 4;
+  g.add(rim);
+  const spout = box(0.030, 0.014, 0.026, M.glass, 0, y0 + B.jugH - 0.004, B.jugR1 + 0.006);
+  spout.renderOrder = 4;
+  g.add(spout);
+
+  /* blade assembly, sitting in the bottom of the jug. The two blades live on
+     a group of their own so the jug can be spun without spinning the glass */
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.020, 0.028, 14), M.steelDark);
+  hub.position.y = y0 + 0.016;
+  g.add(hub);
+  const blades = new THREE.Group();
+  blades.position.y = y0 + 0.026;
+  [0, Math.PI/2].forEach(function(r){
+    const bl = box(0.086, 0.003, 0.014, M.chrome, 0, 0, 0);
+    bl.rotation.y = r;
+    bl.rotation.z = 0.22;
+    blades.add(bl);
+  });
+  g.add(blades);
+  g.userData.blades = blades;
+
+  /* the juice. A tapered tube of its own that follows the jug's own taper,
+     grown from the bottom by scaling in y — the top disc rides with it so
+     the surface stays where the liquid actually ends. Both start at nothing
+     and are hidden outright at rest, so an empty jug is properly empty. */
+  const FILL_H = B.jugH*0.66;
+  const fillR1 = B.jugR0 + (B.jugR1 - B.jugR0)*(FILL_H/B.jugH);
+  const juice = new THREE.Group();
+  juice.position.y = y0 + 0.004;
+  const col = new THREE.Mesh(
+    new THREE.CylinderGeometry(fillR1 - 0.004, B.jugR0 - 0.004, FILL_H, 32, 1, true), M.juice);
+  col.position.y = FILL_H/2;
+  col.renderOrder = 3;
+  juice.add(col);
+  const top = new THREE.Mesh(new THREE.CircleGeometry(fillR1 - 0.004, 32), M.juiceTop);
+  top.rotation.x = -Math.PI/2;
+  top.position.y = FILL_H;
+  top.renderOrder = 3;
+  juice.add(top);
+  juice.scale.y = 0.0001;
+  juice.visible = false;
+  g.add(juice);
+  g.userData.juice = juice;
+
+  /* lid, and a handle standing off the side of the jug */
+  const lid = new THREE.Mesh(new THREE.CylinderGeometry(B.jugR1 + 0.008, B.jugR1 + 0.004, 0.026, 28),
+                             M.plasticDark);
+  lid.position.y = y0 + B.jugH + 0.013;
+  lid.castShadow = true;
+  g.add(lid);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.026, 0.016, 18), M.plasticDark);
+  cap.position.set(0, y0 + B.jugH + 0.032, 0);
+  g.add(cap);
+
+  const handle = new THREE.Group();
+  const grip = box(0.020, B.jugH*0.62, 0.030, M.plasticDark, 0, 0, 0);
+  grip.position.set(B.jugR0 + 0.052, y0 + B.jugH*0.52, 0);
+  handle.add(grip);
+  [0.31, -0.31].forEach(function(f){
+    const arm = box(0.062, 0.018, 0.026, M.plasticDark,
+                    B.jugR0 + 0.022, y0 + B.jugH*0.52 + B.jugH*f, 0);
+    handle.add(arm);
+  });
+  g.add(handle);
+
+  g.add(applianceShadow(B.baseR*2 + 0.26, B.baseR*2 + 0.26, 0.36));
+  return g;
+}
+
+/* ============================================================
+   8c. WORKTOP DRESSING — the clutter that makes it lived-in
+   ------------------------------------------------------------
+   Same convention as the appliances: each prop stands on the
+   stone, origin on the surface, +Z out into the room.
+   ============================================================ */
+function buildFruitBowl(){
+  const g = new THREE.Group();
+  g.userData.name = 'Fruit bowl';
+  g.userData.hoverable = true;
+
+  const bowlMat = M.ceramic.clone();
+  bowlMat.side = THREE.DoubleSide;                /* you see into it from here */
+  const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.155, 0.082, 0.085, 26, 1, true), bowlMat);
+  bowl.position.y = 0.0525; bowl.castShadow = true;
+  g.add(bowl);
+  const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.088, 0.02, 20), M.ceramic);
+  foot.position.y = 0.01; foot.castShadow = true;
+  g.add(foot);
+
+  const orange = new THREE.MeshStandardMaterial({color:'#dd8a2f', roughness:0.65});
+  const apple  = new THREE.MeshStandardMaterial({color:'#a83a30', roughness:0.42});
+  const lemon  = new THREE.MeshStandardMaterial({color:'#dfc23d', roughness:0.55});
+  function fruit(mat, r, x, y, z){
+    const f = new THREE.Mesh(new THREE.SphereGeometry(r, 18, 14), mat);
+    f.position.set(x, y, z);
+    f.castShadow = true;
+    g.add(f);
+    return f;
+  }
+  fruit(orange, 0.047, -0.052, 0.078,  0.020);
+  fruit(apple,  0.045,  0.058, 0.078,  0.028).scale.y = 0.92;
+  const lm = fruit(lemon, 0.046, 0.006, 0.078, -0.052);
+  lm.scale.set(1.15, 0.78, 0.78); lm.rotation.y = 0.7;   /* lying on its side */
+  fruit(orange, 0.047,  0.004, 0.150,  0.000);           /* the one on top */
+  const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.002, 0.003, 0.018, 6), M.soil);
+  stalk.position.set(0.058, 0.125, 0.028);
+  g.add(stalk);
+
+  g.add(applianceShadow(0.44, 0.44, 0.34));
+  return g;
+}
+
+function buildCrock(){
+  const g = new THREE.Group();
+  const potMat = M.ceramic.clone();
+  potMat.color = new THREE.Color('#d8d2c2');
+  potMat.side = THREE.DoubleSide;
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.048, 0.135, 20, 1, true), potMat);
+  pot.position.y = 0.0675; pot.castShadow = true;
+  g.add(pot);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.050, 0.012, 20), potMat);
+  base.position.y = 0.006;
+  g.add(base);
+
+  /* the handles of whatever is standing in it */
+  [[0.24, -0.20,  0.02], [0.27, 0.15, -0.12], [0.21, 0.02, 0.16]].forEach(function(a){
+    const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.0065, 0.008, a[0], 8), M.wood);
+    stick.position.set(a[1]*0.12, 0.06 + a[0]/2, a[2]*0.12);
+    stick.rotation.z = a[1];
+    stick.rotation.x = a[2];
+    stick.castShadow = true;
+    g.add(stick);
+  });
+  const paddle = box(0.048, 0.075, 0.008, M.wood, 0.055, 0.30, -0.036);
+  paddle.rotation.z = 0.15; paddle.rotation.x = -0.12;
+  g.add(paddle);
+
+  g.add(applianceShadow(0.24, 0.24, 0.32));
+  return g;
+}
+
+function buildBoard(){
+  /* leans against the splashback; the tilt happens at placement */
+  const g = new THREE.Group();
+  g.add(box(0.34, 0.44, 0.018, M.wood, 0, 0.22, 0));
+  g.add(applianceShadow(0.42, 0.18, 0.26));
+  return g;
+}
+
+
+/* ------------------------------------------------------------
+   THE MENU ON THE COUNTER
+   A card folded once and stood up, the way a menu stands on a
+   table. The face is printed with the *shape* of a menu and
+   nothing else — no letters are baked into the texture, because
+   every word a visitor has to read lives in the DOM overlay this
+   opens, where it can be selected, copied and read out.
+   ------------------------------------------------------------ */
+const MEN = {w:0.215, h:0.285, lean:0.17, t:0.004};
+
+function menuCardCanvas(){
+  const w = 320, h = Math.round(w * MEN.h / MEN.w);
+  const c = cvs(w, h), g = c.getContext('2d');
+
+  g.fillStyle = '#fbf7ec'; g.fillRect(0, 0, w, h);
+
+  /* the hairline border a printed card has, inset from the paper edge */
+  g.strokeStyle = 'rgba(96,86,66,.34)';
+  g.lineWidth = 1.4;
+  g.strokeRect(w*0.075, h*0.055, w*0.85, h*0.89);
+
+  /* the heading: one dark bar, centred, with a rule under it */
+  g.fillStyle = 'rgba(44,39,30,.80)';
+  g.fillRect(w*0.26, h*0.115, w*0.48, h*0.030);
+  g.fillStyle = 'rgba(96,86,66,.42)';
+  g.fillRect(w*0.34, h*0.170, w*0.32, h*0.008);
+
+  /* three courses. Each is a short dark line for the name, a dotted
+     leader running out to a short line for the address, and a paler
+     line under the pair for the description */
+  const rows = [h*0.285, h*0.470, h*0.655];
+  rows.forEach(function(y){
+    g.fillStyle = 'rgba(44,39,30,.68)';
+    g.fillRect(w*0.135, y, w*0.20, h*0.017);
+
+    g.strokeStyle = 'rgba(96,86,66,.34)';
+    g.lineWidth = 1.2;
+    g.setLineDash([2.2, 4]);
+    g.beginPath();
+    g.moveTo(w*0.355, y + h*0.012);
+    g.lineTo(w*0.585, y + h*0.012);
+    g.stroke();
+    g.setLineDash([]);
+
+    g.fillStyle = 'rgba(44,39,30,.56)';
+    g.fillRect(w*0.605, y, w*0.26, h*0.017);
+
+    g.fillStyle = 'rgba(96,86,66,.30)';
+    g.fillRect(w*0.135, y + h*0.048, w*0.66, h*0.012);
+    g.fillRect(w*0.135, y + h*0.076, w*0.44, h*0.012);
+  });
+
+  /* the footer rule, and the little centred mark under it */
+  g.fillStyle = 'rgba(96,86,66,.30)';
+  g.fillRect(w*0.135, h*0.845, w*0.73, h*0.006);
+  g.fillRect(w*0.415, h*0.882, w*0.17, h*0.011);
+
+  speckle(g, w, h, 340, 0.05);
+  return c;
+}
+
+function buildMenu(){
+  const g = new THREE.Group();
+  g.userData.name = 'The menu';
+  g.userData.hoverable = true;
+
+  const paper = new THREE.MeshStandardMaterial({color:'#f6f1e4', roughness:0.76});
+  const face  = new THREE.MeshStandardMaterial({map:tex(menuCardCanvas()), roughness:0.78});
+
+  const a = MEN.lean, W = MEN.w, H = MEN.h, t = MEN.t;
+  const cy = H*Math.cos(a)/2, cz = H*Math.sin(a)/2;
+
+  /* the printed leaf, leaning back at the top so its face tilts up towards
+     the room rather than staring at the splashback */
+  const leaf = new THREE.Group();
+  leaf.rotation.x = -a;
+  leaf.position.set(0, cy, cz);
+  leaf.add(box(W, H, t, paper));
+  leaf.add(plate(W - 0.007, H - 0.007, face, 0, 0, t/2 + 0.0007));
+  g.add(leaf);
+
+  /* the blank leaf behind, and the fold across the top where they meet */
+  const back = new THREE.Group();
+  back.rotation.x = a;
+  back.position.set(0, cy, -cz);
+  back.add(box(W, H, t, paper));
+  g.add(back);
+  g.add(box(W, t*1.7, cz*2, paper, 0, H*Math.cos(a), 0));
+
+  g.add(applianceShadow(W + 0.09, cz*4 + 0.09, 0.30));
+
+  /* what the loop animates: the whole card lifts and warms very slightly
+     on hover, the same gesture the prints on the fridge use */
+  g.userData.hover = 0;
+  g.userData.faceMats = [paper, face];
+  return g;
+}
+
+function buildHerbPot(){
+  const g = new THREE.Group();
+  g.userData.name = 'Herbs';
+  g.userData.hoverable = true;
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.040, 0.105, 18), M.terracotta);
+  pot.position.y = 0.0525; pot.castShadow = true;
+  g.add(pot);
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.056, 0.056, 0.020, 18), M.terracotta);
+  rim.position.y = 0.105; rim.castShadow = true;
+  g.add(rim);
+  const soil = new THREE.Mesh(new THREE.CylinderGeometry(0.047, 0.047, 0.008, 18), M.soil);
+  soil.position.y = 0.113;
+  g.add(soil);
+  for(let i=0;i<7;i++){
+    const a    = (i/7)*Math.PI*2 + Math.random()*0.8;
+    const lean = 0.15 + Math.random()*0.35;
+    const len  = 0.10 + Math.random()*0.07;
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.0016, 0.0022, len, 6), M.leaf);
+    stem.position.set(Math.cos(a)*0.018, 0.115 + len/2, Math.sin(a)*0.018);
+    stem.rotation.z = Math.cos(a)*lean;
+    stem.rotation.x = Math.sin(a)*lean;
+    g.add(stem);
+    const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.014, 8, 6), M.leaf);
+    leaf.position.set(stem.position.x + Math.cos(a)*lean*len*0.5,
+                      stem.position.y + len*0.45,
+                      stem.position.z + Math.sin(a)*lean*len*0.5);
+    leaf.scale.set(1, 1.4, 0.5);
+    leaf.rotation.y = -a;
+    g.add(leaf);
+  }
+  g.add(applianceShadow(0.20, 0.20, 0.30));
+  return g;
+}
+
+function buildTowel(){
+  /* origin sits on the front lip of the worktop, at counter height */
+  const g = new THREE.Group();
+  const w = 0.235;
+  g.add(box(w, 0.007, 0.150, M.towel, 0,  0.0035, -0.078));   /* the part on the stone */
+  g.add(box(w, 0.012, 0.028, M.towel, 0,  0.000,  -0.002));   /* rolled over the lip */
+  g.add(box(w, 0.295, 0.008, M.towel, 0, -0.148,   0.010));   /* the hanging fall */
+  g.rotation.y = 0.04;                        /* nothing hangs perfectly square */
+  return g;
+}
+
+function buildSoap(){
+  const g = new THREE.Group();
+  const glass = new THREE.MeshStandardMaterial({color:'#b98040', roughness:0.22,
+                                                transparent:true, opacity:0.85});
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.030, 0.034, 0.115, 18), glass);
+  body.position.y = 0.0575; body.castShadow = true;
+  g.add(body);
+  const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.030, 12), M.chrome);
+  collar.position.y = 0.128;
+  g.add(collar);
+  g.add(box(0.020, 0.012, 0.052, M.chrome, 0, 0.148, 0.012));   /* the pump head */
+  return g;
+}
+
+function buildSponge(){
+  const g = new THREE.Group();
+  g.add(box(0.092, 0.030, 0.064,
+    new THREE.MeshStandardMaterial({color:'#dcb93c', roughness:1}), 0, 0.015, 0));
+  g.add(box(0.092, 0.010, 0.064,
+    new THREE.MeshStandardMaterial({color:'#3f6b4f', roughness:1}), 0, 0.035, 0));
+  g.rotation.y = -0.35;
+  return g;
+}
+
+/* ============================================================
+   9. THE SHELL — floor, ceiling, three walls and one wide gap
+   ============================================================ */
+const OUT_X = SIDE_X + 3.4;                 /* the floor keeps going past the opening */
+const FLOOR_W = OUT_X + SIDE_X, FLOOR_D = FRONT_Z - BACK_Z;
+const FLOOR_CX = (OUT_X - SIDE_X)/2, FLOOR_CZ = (BACK_Z + FRONT_Z)/2;
+
+const floor = plate(FLOOR_W, FLOOR_D, M.floor, FLOOR_CX, 0, FLOOR_CZ);
+floor.rotation.x = -Math.PI/2;
+floor.material.map.repeat.set(FLOOR_W/2.1, FLOOR_D/2.1);
+scene.add(floor);
+
+const ceil = plate(FLOOR_W, FLOOR_D, M.ceiling, FLOOR_CX, WALL_H, FLOOR_CZ);
+ceil.rotation.x = Math.PI/2;
+scene.add(ceil);
+
+/* back wall */
+scene.add(box(SIDE_X*2, WALL_H, WALL_T, M.wall, 0, WALL_H/2, BACK_Z - WALL_T/2));
+/* left wall */
+const leftWall = box(FLOOR_D, WALL_H, WALL_T, M.wall, 0, 0, 0);
+leftWall.rotation.y = Math.PI/2;
+leftWall.position.set(-SIDE_X - WALL_T/2, WALL_H/2, FLOOR_CZ);
+scene.add(leftWall);
+/* front wall, behind the camera — only ever seen as bounce */
+const frontWall = box(SIDE_X*2, WALL_H, WALL_T, M.wallPlain, 0, WALL_H/2, FRONT_Z + WALL_T/2);
+scene.add(frontWall);
+
+/* right wall: two returns and a header, leaving a 4.6 m gap onto the rest of it */
+function rightPanel(z0, z1, y0, y1){
+  const p = box(z1 - z0, y1 - y0, WALL_T, M.wall, 0, 0, 0);
+  p.rotation.y = Math.PI/2;
+  p.position.set(SIDE_X + WALL_T/2, (y0 + y1)/2, (z0 + z1)/2);
+  scene.add(p);
+  return p;
+}
+rightPanel(BACK_Z, OPEN_Z0, 0, WALL_H);
+rightPanel(OPEN_Z1, FRONT_Z, 0, WALL_H);
+rightPanel(OPEN_Z0, OPEN_Z1, OPEN_H, WALL_H);
+
+/* the casing round the opening — the one piece of joinery that says "through here" */
+(function(){
+  const t = 0.09, d = WALL_T + 0.05;
+  [OPEN_Z0, OPEN_Z1].forEach(function(z){
+    const j = box(t, OPEN_H + t, d, M.trim, 0, 0, 0);
+    j.rotation.y = Math.PI/2;
+    j.position.set(SIDE_X + WALL_T/2, (OPEN_H + t)/2, z + (z === OPEN_Z0 ? -t/2 : t/2));
+    scene.add(j);
+  });
+  const head = box(OPEN_Z1 - OPEN_Z0 + t*2, t, d, M.trim, 0, 0, 0);
+  head.rotation.y = Math.PI/2;
+  head.position.set(SIDE_X + WALL_T/2, OPEN_H + t/2, (OPEN_Z0 + OPEN_Z1)/2);
+  scene.add(head);
+  /* reveal: the thickness of the wall you see edge-on standing in the gap */
+  [[OPEN_Z0, -1], [OPEN_Z1, 1]].forEach(function(a){
+    const r = box(WALL_T, OPEN_H, 0.02, M.trim, 0, 0, 0);
+    r.position.set(SIDE_X + WALL_T/2, OPEN_H/2, a[0] + a[1]*0.01);
+    scene.add(r);
+  });
+})();
+
+/* beyond the opening: the garden backdrop, and a terrace floor to meet it */
+(function(){
+  const t = new THREE.CanvasTexture(beyondCanvas());
+  t.encoding = THREE.sRGBEncoding;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(20, 12),
+    new THREE.MeshBasicMaterial({map:t, fog:false}));
+  m.rotation.y = -Math.PI/2;
+  m.position.set(OUT_X - 0.3, 3.2, (OPEN_Z0 + OPEN_Z1)/2);
+  scene.add(m);
+  /* the ground out there: warm stone fading into the lawn at the hedge */
+  const fc = cvs(256, 256), fg = fc.getContext('2d');
+  const fgr = fg.createLinearGradient(0, 0, 256, 0);
+  fgr.addColorStop(0, '#c6bda9'); fgr.addColorStop(0.7, '#b3af92');
+  fgr.addColorStop(1, '#94a86e');
+  fg.fillStyle = fgr; fg.fillRect(0, 0, 256, 256);
+  blotch(fg, 256, 256, '#bcb29c', 20, 0.8, 0.3);
+  const ft = new THREE.CanvasTexture(fc);
+  ft.encoding = THREE.sRGBEncoding;
+  const f = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 12),
+    new THREE.MeshBasicMaterial({map:ft, transparent:true, opacity:0.85, fog:false,
+                                 depthWrite:false}));
+  f.rotation.x = -Math.PI/2;
+  f.position.set(SIDE_X + 1.8, 0.004, (OPEN_Z0 + OPEN_Z1)/2);
+  f.renderOrder = 2;
+  scene.add(f);
+})();
+
+/* skirting and cornice */
+(function(){
+  const sk = 0.10, sd = 0.020, co = 0.075, cd = 0.055;
+  function run(len, rotY, x, z, y, h, d){
+    const b = box(len, h, d, M.trim, 0, 0, 0);
+    b.rotation.y = rotY; b.position.set(x, y, z);
+    scene.add(b);
+  }
+  run(SIDE_X*2, 0, 0, BACK_Z + sd/2, sk/2, sk, sd);
+  run(FLOOR_D, Math.PI/2, -SIDE_X + sd/2, FLOOR_CZ, sk/2, sk, sd);
+  run(OPEN_Z0 - BACK_Z, Math.PI/2, SIDE_X - sd/2, (BACK_Z + OPEN_Z0)/2, sk/2, sk, sd);
+  run(FRONT_Z - OPEN_Z1, Math.PI/2, SIDE_X - sd/2, (OPEN_Z1 + FRONT_Z)/2, sk/2, sk, sd);
+  run(SIDE_X*2, 0, 0, FRONT_Z - sd/2, sk/2, sk, sd);
+
+  run(SIDE_X*2, 0, 0, BACK_Z + cd/2, WALL_H - co/2, co, cd);
+  run(FLOOR_D, Math.PI/2, -SIDE_X + cd/2, FLOOR_CZ, WALL_H - co/2, co, cd);
+  run(FLOOR_D, Math.PI/2, SIDE_X - cd/2, FLOOR_CZ, WALL_H - co/2, co, cd);
+  run(SIDE_X*2, 0, 0, FRONT_Z - cd/2, WALL_H - co/2, co, cd);
+})();
+
+/* ============================================================
+   10. THE BACK RUN — the wall the visitor arrives facing
+   ------------------------------------------------------------
+   Fridge dead centre, sink to its left, worktop appliances to its
+   right. Everything the camera is allowed to see lives here.
+   ============================================================ */
+const hoverables = [];
+const backRun = new THREE.Group();
+backRun.position.set(0, 0, BACK_Z);
+scene.add(backRun);
+
+const fridge = buildFridge();
+fridge.position.set(0, 0, 0.006);
+backRun.add(fridge);
+hoverables.push(fridge);
+
+/* the photos, hung on the doors. Added after buildFridge rather than inside
+   it so PHOTOS stays the single thing anyone has to edit. */
+const polaroids = [];
+PHOTOS.forEach(function(photo, i){
+  const pol = buildPolaroid(photo, i);
+  pol.position.set(photo.x, photo.y, FR.face + 0.004);
+  pol.rotation.z = (photo.tilt || 0) * Math.PI/180;
+  pol.userData.baseZ = pol.position.z;
+  fridge.add(pol);
+  polaroids.push(pol);
+  hoverables.push(pol);
+});
+
+/* bridging cupboard over the fridge, set back to the depth of the joinery —
+   the fridge is deeper than the units, so it steps forward out of the wall */
+const overFridge = upperUnit(FR.w + 0.06, 0.40, 2, FR.h + 0.06, CAB.tallD);
+backRun.add(overFridge);
+
+/* The two runs either side. One set of numbers, mirrored.
+   Four units each: the second one in carries the sink, the other three
+   split what is left equally, so the rhythm holds however wide the wall is. */
+const RUN_IN = FR.w/2 + 0.04, RUN_OUT = SIDE_X - 0.04;
+const RUN_W  = RUN_OUT - RUN_IN;
+const RUN_CX = (RUN_IN + RUN_OUT)/2;
+const SINK_UNIT = 1.00, FILL_W = (RUN_W - SINK_UNIT)/3;
+const SEG = (function(){
+  const out = [], w = [FILL_W, SINK_UNIT, FILL_W, FILL_W];
+  let x = RUN_IN;
+  w.forEach(function(u){ out.push([u, x + u/2]); x += u; });
+  return out;
+})();
+
+/* --- left of the fridge: the sink --- */
+const SINK_X = -SEG[1][1];        /* second unit in from the fridge */
+const HOLE_W = SINK.w + 0.04, HOLE_Z0 = 0.08, HOLE_Z1 = HOLE_Z0 + SINK.len + 0.02;
+const HOLE_X0 = SINK_X - HOLE_W/2, HOLE_X1 = SINK_X + HOLE_W/2;
+
+/* doors under the sink and either end of it, drawers where you would
+   actually want them: beside the fridge and out at the far end */
+const SEG_KIND = ['drawers', 'doors', 'doors', 'drawers'];
+[-1, 1].forEach(function(s){
+  SEG.forEach(function(seg, i){
+    const kind = (s > 0 && i === 1) ? 'drawers' : SEG_KIND[i];
+    const unit = (kind === 'doors') ? baseDoors(seg[0], 2) : baseDrawers(seg[0], 3);
+    unit.position.x = s*seg[1];
+    backRun.add(unit);
+  });
+  /* tiled splashback the length of the run */
+  const sp = splash(RUN_W, COUNTER_Y, CAB.upY, null, RUN_W*2.0);
+  sp.position.x = s*RUN_CX;
+  backRun.add(sp);
+});
+
+/* worktop: continuous on the right, cut round the bowl on the left */
+function slabB(w, d, x, z){
+  backRun.add(box(w, CAB.counterT, d, M.counter, x, CAB.baseH + CAB.counterT/2, z));
+}
+/* right-hand run */
+slabB(RUN_W, CAB.counterD, RUN_CX, CAB.counterD/2);
+/* left-hand run, in four pieces around the cut-out */
+slabB(HOLE_X0 - (-RUN_OUT), CAB.counterD, (-RUN_OUT + HOLE_X0)/2, CAB.counterD/2);
+slabB((-RUN_IN) - HOLE_X1,  CAB.counterD, (HOLE_X1 - RUN_IN)/2,   CAB.counterD/2);
+slabB(HOLE_W, HOLE_Z0, SINK_X, HOLE_Z0/2);
+slabB(HOLE_W, CAB.counterD - HOLE_Z1, SINK_X, (HOLE_Z1 + CAB.counterD)/2);
+/* the shadow line under the front lip of both runs */
+[-1, 1].forEach(function(s){
+  backRun.add(box(RUN_W, 0.016, 0.020, M.counter,
+                  s*RUN_CX, CAB.baseH - 0.008, CAB.counterD - 0.010));
+});
+
+const sink = buildSink();
+sink.position.set(SINK_X, 0, (HOLE_Z0 + HOLE_Z1)/2);
+backRun.add(sink);
+hoverables.push(sink);
+
+const tap = buildTap();
+tap.position.set(SINK_X, COUNTER_Y, 0.052);
+backRun.add(tap);
+hoverables.push(tap);
+
+/* the flat-weave runner on the boards in front of the bowl */
+(function(){
+  const rugTex = tex(rugCanvas());
+  const rug = new THREE.Mesh(new THREE.PlaneGeometry(1.08, 0.60),
+    new THREE.MeshStandardMaterial({map:rugTex, bumpMap:rugTex,
+      bumpScale:0.004, transparent:true, alphaTest:0.4, roughness:0.96}));
+  rug.rotation.x = -Math.PI/2;
+  rug.rotation.z = 0.035;                     /* nobody squares a rug to the units */
+  rug.position.set(SINK_X, 0.012, CAB.baseD + 0.37);
+  rug.receiveShadow = true;
+  rug.renderOrder = 2;                        /* over the contact shadow under the run */
+  backRun.add(rug);
+})();
+
+/* What actually lives round a sink. Both sit on the fridge side of the
+   basin now: the run outboard of it is the blender's, and the only stretch
+   of stone out there wide enough for a blender is the stretch the soap used
+   to be standing on. */
+const soap = buildSoap();
+soap.position.set(SINK_X + 0.62, COUNTER_Y, 0.15);
+backRun.add(soap);
+
+const sponge = buildSponge();
+sponge.position.set(SINK_X + 0.54, COUNTER_Y, 0.36);
+backRun.add(sponge);
+
+const towel = buildTowel();
+towel.position.set(SINK_X + 0.60, COUNTER_Y, CAB.counterD);
+backRun.add(towel);
+
+/* the blender, on the run to the left of the sink. It lives beside the
+   basin because that is where a jug gets rinsed, and it keeps the stretch
+   of worktop out past the soap from reading as empty joinery. Turned a few
+   degrees back towards the room so its control face is not edge-on. */
+const blender = buildBlender();
+blender.position.set(SINK_X - 0.58, COUNTER_Y, 0.30);
+blender.rotation.y = -0.24;
+backRun.add(blender);
+hoverables.push(blender);
+
+const herbA = buildHerbPot();
+herbA.position.set(-(RUN_IN + 0.48), COUNTER_Y, 0.30);
+backRun.add(herbA);
+hoverables.push(herbA);
+
+const herbB = buildHerbPot();
+herbB.position.set(-(RUN_IN + 0.72), COUNTER_Y, 0.19);
+herbB.scale.setScalar(0.85);
+backRun.add(herbB);
+hoverables.push(herbB);
+
+/* the wall units run unbroken across both sides, sink included */
+const UPPERS = [];
+[-1, 1].forEach(function(s){
+  SEG.forEach(function(seg, i){
+    const u = upperUnit(seg[0], CAB.upH, seg[0] > 0.75 ? 2 : 1);
+    u.position.x = s*seg[1];
+    backRun.add(u);
+    UPPERS.push([seg[0], s*seg[1]]);
+  });
+});
+
+/* --- under-cabinet lighting -------------------------------------------
+   The single cue that reads most strongly as "a real kitchen": a warm
+   line under the wall units, the wash it leaves down the tile, and the
+   pool it leaves on the stone. All three fade with the light switch. --- */
+const ucWashes = [];
+function underLight(w, x){
+  const zf = CAB.upD - 0.085;                    /* set back behind the door line */
+  backRun.add(box(w - 0.10, 0.020, 0.060, M.ucBody, x, CAB.upY - 0.010, zf));
+  const lens = box(w - 0.15, 0.008, 0.042, M.ucLens, x, CAB.upY - 0.023, zf);
+  lens.castShadow = false;
+  backRun.add(lens);
+
+  function wash(geo, mat, rx, px, py, pz, ry){
+    const m = new THREE.Mesh(geo, mat);
+    m.rotation.x = rx; if(ry) m.rotation.z = ry;
+    m.position.set(px, py, pz);
+    m.renderOrder = 3;
+    ucWashes.push(m);
+    backRun.add(m);
+    return m;
+  }
+  const mat = function(op){
+    return new THREE.MeshBasicMaterial({map:washTex, color:0xffdcaa, transparent:true,
+      opacity:op, blending:THREE.AdditiveBlending, depthWrite:false, fog:false});
+  };
+  /* down the splashback */
+  const hWall = CAB.upY - COUNTER_Y;
+  const wallWash = wash(new THREE.PlaneGeometry(w - 0.06, hWall), mat(0.30),
+                        0, x, COUNTER_Y + hWall/2, 0.014);
+  wallWash.userData.baseOpacity = 0.30;
+  /* and along the stone */
+  const topWash = wash(new THREE.PlaneGeometry(w - 0.06, CAB.counterD*0.92), mat(0.20),
+                       -Math.PI/2, x, COUNTER_Y + 0.006, CAB.counterD*0.46);
+  topWash.userData.baseOpacity = 0.20;
+  wallWash.userData.baseOpacity = 0.30;
+}
+UPPERS.forEach(function(u){ underLight(u[0], u[1]); });
+
+/* the occlusion that belongs in the same corner: a soft dark band where the
+   wall units meet the tile, which no single shadow map is going to give us */
+[-1, 1].forEach(function(s){
+  const h = 0.34;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(RUN_W, h),
+    new THREE.MeshBasicMaterial({map:washTex, color:0x2a2317, transparent:true,
+      opacity:0.20, depthWrite:false, fog:false}));
+  m.position.set(s*RUN_CX, CAB.upY - h/2, 0.012);
+  m.renderOrder = 2;
+  backRun.add(m);
+});
+
+/* --- right of the fridge: what actually lives on the worktop --- */
+const toaster = buildToaster();
+toaster.position.set(RUN_IN + 0.56, COUNTER_Y, 0.30);
+toaster.rotation.y = -0.16;
+backRun.add(toaster);
+hoverables.push(toaster);
+
+/* and the rest of the clutter a used worktop collects */
+const crock = buildCrock();
+crock.position.set(RUN_IN + 1.00, COUNTER_Y, 0.20);
+backRun.add(crock);
+
+const fruitBowl = buildFruitBowl();
+fruitBowl.position.set(RUN_IN + 2.12, COUNTER_Y, 0.33);
+backRun.add(fruitBowl);
+hoverables.push(fruitBowl);
+
+/* The menu stands in the gap between the crock and the blender, out near
+   the front lip where a menu is actually left — far enough right of the
+   fridge that its case never comes between it and the camera, and inside
+   the frame at both ends of the dolly. Turned a few degrees towards the
+   room, because nobody squares a menu to the units either. */
+const menu = buildMenu();
+menu.position.set(RUN_IN + 1.20, COUNTER_Y, 0.50);
+menu.rotation.y = 0.14;
+menu.userData.baseY = menu.position.y;
+backRun.add(menu);
+hoverables.push(menu);
+
+const board = buildBoard();
+board.position.set(RUN_IN + 2.62, COUNTER_Y, 0.085);
+board.rotation.x = -0.16;                     /* leant back against the tile */
+board.rotation.y = -0.06;
+backRun.add(board);
+
+/* a soft dark line where the whole run meets the floor */
+[-1, 1].forEach(function(s){
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(RUN_W + 0.3, CAB.baseD + 0.5),
+    new THREE.MeshBasicMaterial({map:contactTex, color:0x1d1710, transparent:true,
+      opacity:0.30, depthWrite:false, fog:false}));
+  m.rotation.x = -Math.PI/2;
+  m.position.set(s*RUN_CX, 0.005, CAB.baseD/2);
+  m.renderOrder = 1;
+  backRun.add(m);
+});
+
+/* ============================================================
+   11. THE LEFT RUN — joinery only; the bowl moved to the back wall
+   ============================================================ */
+const LRUN = {len:5.44, z0:-4.84, z1:0.60};
+const leftRun = new THREE.Group();
+leftRun.position.set(-SIDE_X, 0, (LRUN.z0 + LRUN.z1)/2);
+leftRun.rotation.y = Math.PI/2;             /* local +X runs back, local +Z into the room */
+scene.add(leftRun);
+
+[[1.38, 'doors', -2.03, 2], [0.62, 'drawers', -1.03, 3], [0.70, 'drawers', -0.37, 2],
+ [0.96, 'doors', 0.46, 2], [0.90, 'doors', 1.39, 2], [0.88, 'drawers', 2.28, 3]
+].forEach(function(u){
+  const unit = (u[1] === 'doors') ? baseDoors(u[0], u[3]) : baseDrawers(u[0], u[3]);
+  unit.position.x = u[2];
+  leftRun.add(unit);
+});
+
+leftRun.add(box(LRUN.len, CAB.counterT, CAB.counterD, M.counter,
+                0, CAB.baseH + CAB.counterT/2, CAB.counterD/2));
+leftRun.add(box(LRUN.len, 0.016, 0.020, M.counter, 0, CAB.baseH - 0.008, CAB.counterD - 0.010));
+
+const lsp = splash(LRUN.len, COUNTER_Y, CAB.upY, null, 11);
+leftRun.add(lsp);
+
+const upA = upperUnit(2.70, CAB.upH, 3);  upA.position.x = -1.37;
+const upB = upperUnit(1.78, CAB.upH, 2);  upB.position.x =  1.83;
+leftRun.add(upA, upB);
+
+/* ============================================================
+   12. THE SWITCH — on the return by the opening
+   ============================================================ */
+const switchPlate = (function(){
+  const g = new THREE.Group();
+  g.userData.name = 'Lights';
+  g.userData.hoverable = true;
+  g.userData.isSwitch = true;
+  g.add(box(0.088, 0.130, 0.012, M.switch, 0, 0, 0.006));
+  const rockers = [];
+  [-1, 1].forEach(function(s){
+    const r = box(0.030, 0.052, 0.010, M.switch, s*0.019, 0, 0.014);
+    rockers.push(r);
+    g.add(r);
+  });
+  g.userData.rockers = rockers;
+  /* on the splashback beside the fridge — the old position on the right-hand
+     return is outside the frame the camera is now held inside */
+  g.position.set(-(RUN_IN + 0.12), 1.21, BACK_Z + 0.016);
+  scene.add(g);
+  return g;
+})();
+hoverables.push(switchPlate);
+
+/* ============================================================
+   13. LIGHT — it all comes down from the ceiling
+   ------------------------------------------------------------
+   Nine recessed fittings are modelled; three of them carry an
+   actual spot. The rest are geometry plus a glare disc, which is
+   what sells a ceiling of downlights without nine shadow maps.
+   ============================================================ */
+const glareTex = new THREE.CanvasTexture(radialCanvas(1, 0.28));
+const lenses = [], halos = [], pools = [];
+
+function downlight(x, z){
+  const g = new THREE.Group();
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.086, 0.078, 0.026, 20), M.ringTrim);
+  ring.position.y = WALL_H - 0.013;
+  const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.064, 0.064, 0.010, 20), M.lens);
+  lens.position.y = WALL_H - 0.030;
+  g.add(ring, lens);
+  lenses.push(lens);
+
+  const halo = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.62),
+    new THREE.MeshBasicMaterial({map:glareTex, color:0xffe3b4, transparent:true,
+      opacity:0.32, blending:THREE.AdditiveBlending, depthWrite:false, fog:false}));
+  halo.rotation.x = Math.PI/2;
+  halo.position.y = WALL_H - 0.042;
+  halo.renderOrder = 3;
+  g.add(halo);
+  halos.push(halo);
+
+  g.position.set(x, 0, z);
+  scene.add(g);
+}
+
+const LIGHT_X = [-4.16, -2.08, 0, 2.08, 4.16], LIGHT_Z = [-4.25, -2.0, 0.4];
+LIGHT_Z.forEach(function(z){ LIGHT_X.forEach(function(x){ downlight(x, z); }); });
+
+/* the wash each fitting leaves on the floor */
+function pool(size, opacity, x, z){
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size),
+    new THREE.MeshBasicMaterial({map:glareTex, color:0xffdba6, transparent:true,
+      opacity:opacity, blending:THREE.AdditiveBlending, depthWrite:false, fog:false}));
+  m.rotation.x = -Math.PI/2;
+  m.position.set(x, 0.014, z);
+  m.renderOrder = 3;
+  m.userData.baseOpacity = opacity;
+  pools.push(m);
+  scene.add(m);
+}
+LIGHT_Z.forEach(function(z){ LIGHT_X.forEach(function(x){ pool(2.15, 0.038, x, z); }); });
+
+/* kept low on purpose: a bright hemisphere fills the shadows back in and
+   the room goes flat again */
+const hemi = new THREE.HemisphereLight(0xfff4e2, 0x9d937b, 0.30);
+scene.add(hemi);
+
+const spots = [];
+function spot(x, z, tx, ty, tz, intensity, shadow){
+  const s = new THREE.SpotLight(0xfff0d6, intensity, 13, 0.92, 0.86, 1.1);
+  s.position.set(x, WALL_H - 0.04, z);
+  s.target.position.set(tx, ty, tz);
+  if(shadow){
+    s.castShadow = true;
+    s.shadow.mapSize.set(shadow === 2 ? 2048 : 1024, shadow === 2 ? 2048 : 1024);
+    s.shadow.camera.near = 0.5;
+    s.shadow.camera.far = 8;
+    s.shadow.bias = -0.0004;
+    s.shadow.normalBias = 0.05;    /* generous: the room is all flat panels */
+    s.shadow.radius = 4;
+  }
+  scene.add(s); scene.add(s.target);
+  s.userData.base = intensity;
+  spots.push(s);
+  return s;
+}
+/* the three shadow casters all sit in the row over the worktops and rake
+   down the back wall — that raking is what gives the fridge its form */
+spot( 0.00, -4.25,  0.00, 1.35, -5.20, 1.45, 2);     /* key, down the fridge */
+spot(-2.08, -4.25, -2.55, 1.00, -5.10, 1.20, 1);     /* over the sink */
+spot( 2.08, -4.25,  1.95, 1.00, -5.10, 1.20, 1);     /* over the appliances */
+/* fills further into the room: no shadow maps, just something to stand in */
+spot(-4.16, -4.25, -4.30, 0.90, -5.10, 0.70, false);
+spot( 4.16, -4.25,  4.30, 0.90, -5.10, 0.70, false);
+spot(-2.08, -2.0, -2.40, 0.00, -1.70, 0.58, false);
+spot( 2.08, -2.0,  2.40, 0.00, -1.70, 0.58, false);
+spot( 0.00,  0.4,  0.10, 0.00,  1.10, 0.44, false);
+
+/* a little light leaning in from the opening, so the gap reads as a source */
+const throughGap = new THREE.DirectionalLight(0xfff1dc, 0.30);
+throughGap.position.set(9, 2.6, -1.5);
+throughGap.target.position.set(-1, 1.1, -3.0);
+scene.add(throughGap); scene.add(throughGap.target);
+
+/* a stand-in interior, pre-filtered — this is what the stainless reflects */
+try{
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const env = new THREE.Scene();
+  env.add(new THREE.Mesh(new THREE.BoxGeometry(10,10,10),
+    new THREE.MeshBasicMaterial({color:0xbdb49f, side:THREE.BackSide})));
+  const lid = new THREE.Mesh(new THREE.PlaneGeometry(10,10),
+    new THREE.MeshBasicMaterial({color:0xfff6e6}));
+  lid.rotation.x = Math.PI/2; lid.position.y = 4.9; env.add(lid);
+  const gap = new THREE.Mesh(new THREE.PlaneGeometry(5.5,4.6),
+    new THREE.MeshBasicMaterial({color:0xfff3e2}));
+  gap.rotation.y = -Math.PI/2; gap.position.set(4.9, 0.4, 0); env.add(gap);
+  const gnd = new THREE.Mesh(new THREE.PlaneGeometry(10,10),
+    new THREE.MeshBasicMaterial({color:0x7d6549}));
+  gnd.rotation.x = -Math.PI/2; gnd.position.y = -4.9; env.add(gnd);
+  scene.environment = pmrem.fromScene(env, 0.04).texture;
+  pmrem.dispose();
+  scene.traverse(function(o){
+    if(o.isMesh && o.material && o.material.isMeshStandardMaterial){
+      o.material.envMapIntensity = o.material.metalness > 0.5 ? 1.05 : 0.35;
+    }
+  });
+  /* the fridge leans on the environment harder than anything else: it is
+     the only large flat metal in the room, and reflection is what makes a
+     flat grey panel read as steel rather than card */
+  M.frDoor.envMapIntensity = 1.9;
+  M.frCase.envMapIntensity = 1.5;
+  M.chrome.envMapIntensity = 1.6;
+}catch(e){ /* environment is a bonus, not a requirement */ }
+
+/* ============================================================
+   14. INTERACTION
+   ============================================================ */
+const dom = renderer.domElement;
+const pointer = new THREE.Vector2(0,0);
+const look = {x:0, y:0}, target = {x:0, y:0};
+let yaw = 0, yawT = 0, pitch = 0, pitchT = 0;
+let dolly = 0, dollyT = 0;
+let dragging = false, dragged = false, lastX = 0, lastY = 0;
+
+const raycaster = new THREE.Raycaster();
+let hovered = null;
+
+let openIndex = -1, lastFocus = null;        /* which photo is open, if any */
+let menuOpen = false;                        /* and whether the menu is up */
+let waterOn = false, waterLevel = 0;
+let lightsOn = true, lightLevel = 1;
+/* the two appliances. `level` is what the loop actually draws — it chases
+   `on`, so both of them ease rather than snap, and both survive a press
+   landing halfway through the last one. */
+let toastOn = false, toastLevel = 0;
+let blendOn = false, blendLevel = 0, bladeSpin = 0;
+
+function toggleWater(){
+  waterOn = !waterOn;
+  waterSound(waterOn);
+}
+function toggleLights(){
+  lightsOn = !lightsOn;
+}
+function toggleToast(){
+  toastOn = !toastOn;
+}
+function toggleBlender(){
+  blendOn = !blendOn;
+}
+dom.style.cursor = 'default';
+/* `dragging` no longer turns the room — it only remembers that a press is in
+   flight, so a press that slides off its mark can be told from a click */
+dom.addEventListener('pointerdown', function(e){
+  dragging = true; dragged = false;
+  lastX = e.clientX; lastY = e.clientY;
+  if(dom.setPointerCapture) dom.setPointerCapture(e.pointerId);
+});
+dom.addEventListener('pointermove', function(e){
+  pointer.x =  (e.clientX/innerWidth)*2 - 1;
+  pointer.y = -(e.clientY/innerHeight)*2 + 1;
+  target.x = pointer.x; target.y = pointer.y;
+  /* the room does not follow a held press. all that is left to measure is
+     whether the press wandered far enough to stop being a click */
+  if(dragging && Math.abs(e.clientX - lastX) + Math.abs(e.clientY - lastY) > 12){
+    dragged = true;
+  }
+});
+function endDrag(){
+  if(!dragging) return;
+  dragging = false;
+  dom.style.cursor = hovered && hovered.userData.clickable ? 'pointer' : 'default';
+  if(dragged || !hovered) return;
+  if(hovered.userData.photo !== undefined) openPhoto(hovered.userData.photo);
+  else if(hovered.userData.isTap) toggleWater();
+  else if(hovered.userData.isSwitch) toggleLights();
+  else if(hovered.userData.isToaster) toggleToast();
+  else if(hovered.userData.isBlender) toggleBlender();
+  else if(hovered.userData.isMenu) openMenu();
+}
+dom.addEventListener('pointerup', endDrag);
+dom.addEventListener('pointercancel', endDrag);
+dom.addEventListener('wheel', function(e){
+  /* forward only, and not far: the fridge wall is the whole show */
+  dollyT = THREE.MathUtils.clamp(dollyT - e.deltaY*0.0020, 0, 2.55);
+}, {passive:true});
+
+tap.userData.clickable = true;
+switchPlate.userData.clickable = true;
+toaster.userData.clickable = true;
+toaster.userData.isToaster = true;
+blender.userData.clickable = true;
+blender.userData.isBlender = true;
+menu.userData.clickable = true;
+menu.userData.isMenu = true;
+
+function updateHover(){
+  if(openIndex >= 0 || menuOpen){ hovered = null; return; }
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObjects(hoverables, true)[0];
+  let group = null;
+  if(hit){
+    let o = hit.object;
+    while(o && !o.userData.hoverable) o = o.parent;
+    group = o;
+    /* only the things that answer to a press carry a tag — the kettle,
+       the crockery and the rest of the dressing stay quiet */
+    if(group && !group.userData.clickable) group = null;
+  }
+  if(group !== hovered){
+    hovered = group;
+    dom.style.cursor = hovered && hovered.userData.clickable ? 'pointer' : 'default';
+  }
+}
+
+/* ------------------------------------------------------------
+   THE OPENED PHOTO
+   The picture is an <img> and the caption is real text in the
+   DOM, not geometry — so both can be selected, copied, zoomed by
+   the browser and read out by a screen reader.
+   ------------------------------------------------------------ */
+const lb      = document.getElementById('lb');
+const lbImg   = document.getElementById('lb-img');
+const lbTitle = document.getElementById('lb-title');
+const lbCap   = document.getElementById('lb-cap');
+const lbCount = document.getElementById('lb-count');
+
+/* the placeholder the fridge is showing, reused here so the two never
+   disagree about what a photo looks like before it exists */
+const placeholderURL = PHOTOS.map(function(ph){
+  return photoPlaceholderCanvas(ph.colour, ph.ar).toDataURL();
+});
+
+function showPhoto(i){
+  const n = PHOTOS.length;
+  openIndex = ((i % n) + n) % n;
+  const ph = PHOTOS[openIndex];
+  lbImg.src = ph.src || placeholderURL[openIndex];
+  lbImg.alt = ph.src ? ph.name : (ph.name + ' — photograph to come');
+  lbTitle.textContent = ph.name;
+  lbCap.innerHTML     = ph.caption;
+  lbCount.textContent = (openIndex + 1) + ' / ' + n;
+  lb.setAttribute('aria-label', ph.name);
+}
+function openPhoto(i){
+  lastFocus = document.activeElement;
+  showPhoto(i);
+  lb.classList.add('open');
+  lb.setAttribute('aria-hidden', 'false');
+  dragging = false;
+  dom.style.cursor = 'default';
+  document.getElementById('lb-next').focus();
+}
+function closePhoto(){
+  if(openIndex < 0) return;
+  openIndex = -1;
+  lb.classList.remove('open');
+  lb.setAttribute('aria-hidden', 'true');
+  if(lastFocus && lastFocus.focus) lastFocus.focus();
+}
+function stepPhoto(d){ if(openIndex >= 0) showPhoto(openIndex + d); }
+
+/* anywhere on the overlay closes it — except the two arrows */
+lb.addEventListener('click', closePhoto);
+[['lb-prev', -1], ['lb-next', 1]].forEach(function(a){
+  document.getElementById(a[0]).addEventListener('click', function(e){
+    e.stopPropagation();
+    stepPhoto(a[1]);
+  });
+});
+
+/* a keyboard route in, since a plane in a WebGL canvas cannot be tabbed to */
+(function(){
+  const host = document.getElementById('photo-links');
+  PHOTOS.forEach(function(ph, i){
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sr-only';
+    b.textContent = 'Open photo: ' + ph.name;
+    b.addEventListener('click', function(){ openPhoto(i); });
+    host.appendChild(b);
+  });
+})();
+
+
+/* ------------------------------------------------------------
+   THE MENU, OPENED
+   The card on the worktop is a picture of a menu; this is the
+   menu. Every course is written into the DOM from MENU above,
+   so the addresses can be selected and copied, the two links
+   are real links, and the whole thing is one Tab away whether
+   or not a pointer ever touches the card.
+   ------------------------------------------------------------ */
+const mn      = document.getElementById('mn');
+const mnList  = document.getElementById('mn-list');
+const mnClose = document.getElementById('mn-close');
+let mnFocus = null;
+
+/* built once, from the data, rather than written twice in two places */
+MENU.forEach(function(item){
+  const li = document.createElement('li');
+  const row = document.createElement('div');
+  row.className = 'mn-row';
+
+  const what = document.createElement('span');
+  what.className = 'mn-what';
+  what.textContent = item.what;
+
+  const leader = document.createElement('span');
+  leader.className = 'mn-leader';
+  leader.setAttribute('aria-hidden', 'true');
+
+  /* a line with somewhere to go is an anchor; one without is plain text.
+     Nothing here is a button dressed up as a link. */
+  const where = document.createElement(item.href ? 'a' : 'span');
+  where.className = 'mn-where';
+  where.textContent = item.where;
+  if(item.href){
+    where.href = item.href;
+    /* the two profiles open away from the room so the tour survives the
+       detour; mail is left to the mail client, which never navigates */
+    if(item.href.indexOf('mailto:') !== 0){
+      where.target = '_blank';
+      where.rel = 'noopener me';
+    } else {
+      where.rel = 'me';
+    }
+  }
+
+  row.appendChild(what);
+  row.appendChild(leader);
+  row.appendChild(where);
+  li.appendChild(row);
+
+  if(item.note){
+    const note = document.createElement('p');
+    note.className = 'mn-note';
+    note.textContent = item.note;
+    li.appendChild(note);
+  }
+  mnList.appendChild(li);
+});
+
+function openMenu(){
+  if(menuOpen) return;
+  mnFocus = document.activeElement;
+  menuOpen = true;
+  mn.classList.add('open');
+  mn.setAttribute('aria-hidden', 'false');
+  dragging = false;
+  dom.style.cursor = 'default';
+  mnClose.focus();
+}
+function closeMenu(){
+  if(!menuOpen) return;
+  menuOpen = false;
+  mn.classList.remove('open');
+  mn.setAttribute('aria-hidden', 'true');
+  if(mnFocus && mnFocus.focus) mnFocus.focus();
+}
+mnClose.addEventListener('click', closeMenu);
+/* the backdrop closes it; a press on the card itself does not, because the
+   card is full of text somebody may well be trying to select */
+mn.addEventListener('click', function(e){
+  if(e.target === mn) closeMenu();
+});
+
+addEventListener('keydown', function(e){
+  /* while a photo is open the keyboard belongs to the photo */
+  if(openIndex >= 0){
+    if(e.key === 'Escape'){ closePhoto(); return; }
+    if(e.key === 'ArrowLeft'  || e.key === ',' || e.key === '<'){ stepPhoto(-1); e.preventDefault(); return; }
+    if(e.key === 'ArrowRight' || e.key === '.' || e.key === '>'){ stepPhoto( 1); e.preventDefault(); return; }
+    return;
+  }
+  if(menuOpen){
+    if(e.key === 'Escape') closeMenu();
+    return;
+  }
+  if(e.key === 'l' || e.key === 'L') toggleLights();
+});
+
+/* --- audio: the tap --- */
+let actx = null, waterGain = null;
+function ensureAudio(){
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC) return null;
+  if(!actx) actx = new AC();
+  if(actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function noiseBuffer(ctx){
+  const n = ctx.sampleRate * 2;
+  const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for(let i=0;i<n;i++) d[i] = Math.random()*2 - 1;
+  return buf;
+}
+function waterSound(on){
+  const ctx = ensureAudio(); if(!ctx) return;
+  if(!waterGain){
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer(ctx); src.loop = true;
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2400; bp.Q.value = 0.7;
+    const g = ctx.createGain(); g.gain.value = 0;
+    src.connect(hp); hp.connect(bp); bp.connect(g); g.connect(ctx.destination);
+    src.start();
+    waterGain = g;
+  }
+  waterGain.gain.linearRampToValueAtTime(on ? 0.055 : 0, ctx.currentTime + 0.18);
+}
+/* ============================================================
+   14b. THE TAP BADGES
+   A baked room looks exactly as pressable as a photograph, and
+   the name tag only turns up once the cursor is already on the
+   thing. The fridge door is what this room is for, so one print
+   — the one nearest the middle of it — wears the hand, and
+   everything else that answers wears the quiet plus. It is also
+   the keyboard's only route into a WebGL canvas.
+   ============================================================ */
+const hints = TapHints.init({
+  THREE: THREE, camera: camera,
+  /* an opened overlay owns the screen — the badges stand down */
+  enabled: function(){ return openIndex < 0 && !menuOpen; }
+});
+
+/* the hand sits at the dead centre of the door, not on a print. The badge
+   is teaching one thing — "the fridge answers to a press" — and the middle
+   of a two-metre steel panel is where the eye already is. It also stops the
+   badge covering the very photograph it is pointing at.
+
+   What it opens is whichever print is nearest that centre, worked out from
+   the same numbers that place them, so moving a photo in PHOTOS moves the
+   badge's answer with it and nobody has to remember an index. */
+const FRIDGE_MID_Y = FR.h/2;
+let mainPhoto = 0;
+PHOTOS.forEach(function(ph, i){
+  const d  = ph.x*ph.x + (ph.y - FRIDGE_MID_Y)*(ph.y - FRIDGE_MID_Y);
+  const d0 = PHOTOS[mainPhoto].x*PHOTOS[mainPhoto].x +
+             (PHOTOS[mainPhoto].y - FRIDGE_MID_Y)*(PHOTOS[mainPhoto].y - FRIDGE_MID_Y);
+  if(d < d0) mainPhoto = i;
+});
+
+/* only the one. The prints are all the same kind of thing, so a badge on
+   each would be thirteen announcements of a single idea. The hand teaches
+   the gesture once; the standing hint says the rest. It opens the gallery
+   rather than one picture — hence the plural label, which is also the only
+   honest thing a badge sitting on bare steel can say. */
+hints.add({
+  kind: 'tap',
+  object: fridge,
+  local: [0, FRIDGE_MID_Y, FR.face + 0.08],
+  label: 'About Me',
+  onActivate: function(){ openPhoto(mainPhoto); }
+});
+
+/* off to the right of the spout, not over it. The stream falls at the tap's
+   own centre line, so a badge there — and the name tag that drops out of it
+   on hover — hid the one thing turning the tap on is for. */
+const tapHint = hints.add({
+  object: tap, offset: [0.26, 0.10, 0.12],
+  label: 'Run the water',
+  onActivate: function(){ toggleWater(); }
+});
+
+const switchHint = hints.add({
+  object: switchPlate, offset: [0, 0, 0.10],
+  label: 'Lights off',
+  onActivate: function(){ toggleLights(); }
+});
+
+/* the two on the worktop. Both badges sit at the foot of the appliance,
+   just forward of it on the stone — below the thing rather than above it,
+   so the badge never covers the toast coming up or the jug filling, which
+   is the whole of what pressing it is for. */
+const toastHint = hints.add({
+  object: toaster, offset: [0, -0.09, 0.20],
+  label: 'Pop the toast',
+  onActivate: function(){ toggleToast(); }
+});
+
+const blendHint = hints.add({
+  object: blender, offset: [0, -0.21, 0.20],
+  label: 'Blend a juice',
+  onActivate: function(){ toggleBlender(); }
+});
+
+/* The menu is the one thing in this kitchen that opens a way to reach me,
+   so it wears the pen rather than the plain circle — the drawing is the
+   difference between "this answers to a press" and "pressing this gets you
+   somewhere to write". It sits just above the fold, clear of the printed
+   face so the badge never covers the card it is pointing at. */
+const menuHint = hints.add({
+  kind: 'write',
+  object: menu,
+  offset: [0, 0.20, 0.05],
+  label: "What's on the menu",
+  onActivate: function(){ openMenu(); }
+});
+
+/* the badges, the HUD buttons and the room are three handles on one state,
+   so the labels are painted from that state in the loop rather than being
+   hand-synced by whoever happened to do the toggling */
+function paintHints(){
+  tapHint.label(waterOn ? 'Turn it off' : 'Run the water');
+  switchHint.label(lightsOn ? 'Lights off' : 'Lights on');
+  toastHint.label(toastOn ? 'Put it back' : 'Pop the toast');
+  blendHint.label(blendOn ? 'Empty the jug' : 'Blend a juice');
+}
+
+/* ============================================================
+   15. LOOP
+   ============================================================ */
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clock = new THREE.Clock();
+const fwd = new THREE.Vector3(), lookAt = new THREE.Vector3();
+
+function tick(){
+  requestAnimationFrame(tick);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.getElapsedTime();
+  const k = Math.min(1, dt*4.2);
+
+  look.x  += (target.x - look.x)*Math.min(1, dt*3.0);
+  look.y  += (target.y - look.y)*Math.min(1, dt*3.0);
+  yaw     += (yawT - yaw)*k;
+  pitch   += (pitchT - pitch)*k;
+  dolly   += (dollyT - dolly)*Math.min(1, dt*3.2);
+
+  /* re-clamp as the dolly moves: pulling back tightens how far you may turn */
+  const yl = yawLimit(HOME.z - dollyT);
+  yawT = THREE.MathUtils.clamp(yawT, -yl, yl);
+
+  const ey = yaw   - look.x*YAW_DRIFT;         /* the cursor does all the turning: right
+                                                 exposes the right of the room, not the left */
+  const ep = pitch + look.y*0.022;
+  camera.position.set(
+    HOME.x + look.x*0.060,
+    HOME.y + look.y*0.022 + Math.sin(t*0.42)*0.008,
+    HOME.z - dolly
+  );
+  const cp = Math.cos(ep);
+  fwd.set(-Math.sin(ey)*cp, Math.sin(ep), -Math.cos(ey)*cp);
+  lookAt.copy(camera.position).addScaledVector(fwd, 8);
+  camera.lookAt(lookAt);
+
+  updateHover();
+  paintHints();
+  hints.update();
+
+  /* the lights come up and go down rather than snapping */
+  lightLevel += ((lightsOn ? 1 : 0) - lightLevel) * Math.min(1, dt*4.5);
+  const L = lightLevel;
+  spots.forEach(function(s){ s.intensity = s.userData.base * (0.03 + 0.97*L); });
+  hemi.intensity = 0.11 + 0.19*L;
+  throughGap.intensity = 0.30 + 0.10*(1 - L);   /* the gap matters more in the dark */
+  M.lens.emissiveIntensity = 0.04 + 1.75*L;
+  M.ucLens.emissiveIntensity = 0.03 + 1.55*L;
+  ucWashes.forEach(function(w){ w.material.opacity = w.userData.baseOpacity * L; });
+  const flick = 1 + Math.sin(t*7.3)*0.006;
+  halos.forEach(function(h){ h.material.opacity = 0.34*L*flick; });
+  pools.forEach(function(p){ p.material.opacity = p.userData.baseOpacity * L; });
+
+  /* the tap */
+  waterLevel += ((waterOn ? 1 : 0) - waterLevel) * Math.min(1, dt*9);
+  const st = tap.userData.stream, sp = tap.userData.splash;
+  st.visible = waterLevel > 0.02;
+  sp.visible = st.visible;
+  st.material.opacity = 0.62 * waterLevel;
+  st.material.map.offset.y -= dt*5.2;
+  sp.material.opacity = (0.30 + Math.sin(t*11)*0.05) * waterLevel;
+  sp.scale.setScalar(0.85 + waterLevel*0.25 + Math.sin(t*9)*0.03);
+  tap.userData.lever.rotation.x = -0.30 - waterLevel*0.42;
+
+  /* The prints lift towards you on hover and glow very slightly, and every
+     one of them lifts once a couple of seconds after arrival — a room where
+     nothing looks clickable is the standard way a 3D page fails. */
+  const settling = REDUCED ? 0 : Math.max(0, Math.sin((t - 1.0) * Math.PI / 1.30));
+  const pulse = (t > 1.0 && t < 2.30) ? settling : 0;
+  polaroids.forEach(function(pl){
+    const want = (hovered === pl) ? 1 : 0;
+    pl.userData.hover += (want - pl.userData.hover) * Math.min(1, dt*7);
+    const lift = Math.max(pl.userData.hover, pulse*0.55);
+    pl.position.z = pl.userData.baseZ + lift*0.020;
+    pl.scale.setScalar(1 + lift*0.045);
+    pl.userData.cardMat.emissive.setRGB(lift*0.09, lift*0.085, lift*0.072);
+    pl.userData.shadow.material.opacity = 0.34 + lift*0.16;
+    pl.userData.shadow.scale.setScalar(1 + lift*0.10);
+  });
+
+  /* The menu lifts the way the prints do, and takes the same turn in the
+     opening pulse — a card standing on a worktop among five other props is
+     exactly the thing a visitor's eye slides straight over. */
+  (function(){
+    const want = (hovered === menu) ? 1 : 0;
+    menu.userData.hover += (want - menu.userData.hover) * Math.min(1, dt*7);
+    const lift = Math.max(menu.userData.hover, pulse*0.55);
+    menu.position.y = menu.userData.baseY + lift*0.012;
+    menu.userData.faceMats.forEach(function(m){
+      m.emissive.setRGB(lift*0.075, lift*0.070, lift*0.058);
+    });
+  })();
+
+  /* the switch rockers tip over with the lights */
+  switchPlate.userData.rockers.forEach(function(r){
+    r.rotation.x = (0.16 - 0.32*L);
+  });
+
+  /* --- the toaster ------------------------------------------------------
+     Coming up is a spring and going down is not: real toast is thrown out
+     and then lowered by hand. So the rise overshoots and settles, and the
+     fall is a plain ease. Both slices ride the same number — a toaster that
+     popped one slice before the other would only look broken. */
+  toastLevel += ((toastOn ? 1 : 0) - toastLevel) * Math.min(1, dt*(toastOn ? 11 : 7));
+  const springT = REDUCED ? toastLevel
+                          : toastLevel + Math.sin(toastLevel*Math.PI)*0.16*(toastOn ? 1 : 0);
+  toaster.userData.toasts.forEach(function(tt){
+    tt.position.y = tt.userData.down + (tt.userData.up - tt.userData.down)*springT;
+    /* an unpopped slice is inside a closed steel box: drawing it there only
+       risks it poking through the crown on a low camera */
+    tt.visible = toastLevel > 0.004;
+  });
+  const lv = toaster.userData.lever;
+  lv.position.y = lv.userData.down + (lv.userData.up - lv.userData.down)*toastLevel;
+
+  /* --- the blender ------------------------------------------------------
+     The blades run while the jug is filling and for a moment after, then
+     wind down. Filling is slower than emptying for the same reason a jug
+     empties faster than it fills. */
+  blendLevel += ((blendOn ? 1 : 0) - blendLevel) * Math.min(1, dt*(blendOn ? 2.6 : 4.4));
+  const juice = blender.userData.juice;
+  juice.visible = blendLevel > 0.004;
+  juice.scale.y = Math.max(0.0001, blendLevel);
+  /* it spins hardest while the level is actually moving, so the motor reads
+     as doing the work rather than as a decoration that never stops */
+  const work = Math.abs((blendOn ? 1 : 0) - blendLevel);
+  const spinTarget = REDUCED ? 0 : (blendOn ? 6 + work*54 : work*40);
+  bladeSpin += (spinTarget - bladeSpin) * Math.min(1, dt*5);
+  blender.userData.blades.rotation.y += bladeSpin*dt;
+  /* pale and frothy on the way up, then settling to the colour of the fruit.
+     It is read through two walls of glass against a white splashback, which
+     lifts everything — hence a darker landing point than looks right here. */
+  M.juice.color.setHSL(0.072, 0.70 + 0.22*blendLevel, 0.62 - 0.20*blendLevel);
+  M.juiceTop.color.setHSL(0.078, 0.64 + 0.24*blendLevel, 0.70 - 0.16*blendLevel);
+
+  renderer.render(scene, camera);
+}
+tick();
+
+addEventListener('resize', function(){
+  renderer.setSize(innerWidth, innerHeight);
+  frameCamera();
+});
+
+/* Lift on a composited frame rather than on a guessed delay. Two rAFs
+   deep, so the first render has actually been painted and not merely
+   queued — the veil comes off a finished picture, never a half-built
+   one, and it comes off the instant that picture exists. */
+requestAnimationFrame(function(){ requestAnimationFrame(function(){
+  fadeEl.classList.add('hidden');
+}); });
+
+})();
+</script>
+<script src="house-nav.js"></script>
+</body>
+</html>

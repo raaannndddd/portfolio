@@ -49,3 +49,6 @@ build/
 Thumbs.db
 
 .claude/
+# Full-size originals of the room photographs. The served copies in
+# images/ are resized from these; keep these, but never ship them.
+images/_originals/

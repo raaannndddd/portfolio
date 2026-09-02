@@ -1,0 +1,2289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Rand Halasa</title>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c1a17;
+    --card:#fffdf9;
+    --shadow:0 8px 30px rgba(28,22,14,.20);
+    --hand:'Caveat', ui-rounded, cursive;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;width:100%;margin:0;padding:0;background:#0e0c09;overflow:hidden}
+  body{
+    font-family:"Helvetica Neue",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+    color:var(--ink);-webkit-font-smoothing:antialiased;
+  }
+  #stage{position:fixed;inset:0;width:100vw;height:100vh}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+
+  /* lens pass */
+  .lens{position:fixed;inset:0;pointer-events:none;z-index:3}
+  #vignette{background:radial-gradient(122% 92% at 50% 46%,
+      rgba(0,0,0,0) 40%, rgba(34,26,16,.18) 73%, rgba(22,16,9,.46) 100%);}
+  #bloom{background:radial-gradient(62% 72% at 6% 16%, rgba(255,226,182,.17), rgba(255,226,182,0) 60%);
+         mix-blend-mode:screen;}
+  #grain{opacity:.05;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>");}
+
+  /* hud */
+  .hud{position:fixed;inset:0;pointer-events:none;z-index:5}
+  .hud > *{pointer-events:auto}
+  .pill{
+    position:absolute;background:var(--card);border-radius:var(--radius);
+    box-shadow:var(--shadow);border:0;color:var(--ink);
+    display:flex;align-items:center;gap:10px;
+    font-size:15px;letter-spacing:.01em;font-family:inherit;
+    padding:12px 16px;cursor:pointer;
+    transition:transform .25s cubic-bezier(.2,.8,.2,1);
+  }
+  .pill:hover{transform:translateY(-2px)}
+  .pill:active{transform:translateY(0)}
+  .pill:focus-visible{outline:2px solid #1c1a17;outline-offset:3px}
+  .square{padding:12px;width:46px;height:46px;justify-content:center}
+
+  #plaque{top:22px;left:22px;cursor:default}
+  #plaque:hover{transform:none}
+  #plaque b{font-weight:600}
+  #plaque span{color:#8c8375}
+  #back{bottom:22px;left:50%;transform:translateX(-50%);opacity:0;pointer-events:none;
+        transition:opacity .3s, transform .25s cubic-bezier(.2,.8,.2,1)}
+  #back.show{opacity:1;pointer-events:auto}
+  #back.show:hover{transform:translateX(-50%) translateY(-2px)}
+
+
+
+
+  /* the call — the telephone itself, stood up to take it. same bakelite set
+     as the one on the table; the contact lines are written on its face. */
+  #call{
+    position:absolute;left:50%;top:50%;
+    transform:translate(-50%,-44%) scale(.97);
+    width:min(380px, calc(100vw - 40px), calc((100vh - 90px)*.623));
+    aspect-ratio:380/610;
+    z-index:7;opacity:0;pointer-events:none;
+    filter:drop-shadow(0 30px 54px rgba(20,16,10,.55));
+    transition:opacity .3s, transform .3s cubic-bezier(.2,.8,.2,1);
+  }
+  #call.open{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
+  #call .set{position:absolute;inset:0;width:100%;height:100%;display:block}
+  #call .float{animation:handset-float 3.4s ease-in-out infinite alternate}
+  @keyframes handset-float{from{transform:translateY(0)}to{transform:translateY(-5px)}}
+  #call .kicker{
+    position:absolute;left:50%;top:35.4%;transform:translate(-50%,-50%);
+    margin:0;font-size:8px;letter-spacing:.24em;text-transform:uppercase;
+    color:rgba(236,229,214,.72);white-space:nowrap;
+  }
+  #call h2{
+    position:absolute;left:50%;top:38.7%;transform:translate(-50%,-50%);
+    margin:0;font-family:Georgia,"Times New Roman",serif;
+    font-weight:600;font-size:15.5px;letter-spacing:.01em;color:#ece5d6;
+    white-space:nowrap;text-shadow:0 1px 2px rgba(23,29,34,.4);
+  }
+  #call nav{
+    position:absolute;left:16.8%;top:71.5%;width:66.3%;height:19.3%;
+    display:flex;flex-direction:column;justify-content:space-evenly;
+    padding:2px 0;box-sizing:border-box;
+  }
+  #call a > span{display:block;line-height:1.2}
+  #call a{
+    display:flex;align-items:center;gap:10px;
+    padding:3px 10px;border-radius:8px;font-size:12px;
+    color:#e7eef2;text-decoration:none;transition:background .22s;
+  }
+  #call a:hover{background:rgba(255,255,255,.08)}
+  #call a:focus-visible{outline:2px solid #ece5d6;outline-offset:-2px}
+  #call a svg{flex:none;color:#b8cdd8}
+  #call .what{font-weight:600;font-size:12px}
+  #call .where{font-size:10.5px;color:rgba(231,238,242,.62)}
+  #call .hang{
+    position:absolute;left:50%;top:95.1%;transform:translate(-50%,-50%);
+    padding:8px 18px;border:0;border-radius:999px;
+    background:rgba(21,19,15,.72);color:rgba(236,229,214,.85);
+    font-family:inherit;font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+    cursor:pointer;transition:color .2s, background .2s;
+  }
+  #call .hang:hover{background:rgba(21,19,15,.9);color:#fff}
+  #call .hang:focus-visible{outline:2px solid #ece5d6;outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){#call .float{animation:none}}
+
+  /* the welcome — a few pages held up in front of the doors as you arrive,
+     the same notepaper and hand as the notebook in the office */
+  #welcome{position:fixed;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;
+    padding:20px;background:rgba(16,12,7,.45);
+    opacity:0;pointer-events:none;transition:opacity .45s}
+  #welcome.show{opacity:1;pointer-events:auto}
+  #wNote{display:flex;flex-direction:column;align-items:center}
+  .wPage{--r:0deg;--x:0px;
+    position:relative;width:min(420px, calc(100vw - 44px));
+    transform:translateX(var(--x)) rotate(var(--r));
+    background:#f4efe2;border-radius:4px 12px 12px 4px;
+    padding:16px 26px 18px 44px;
+    box-shadow:0 16px 44px rgba(20,14,6,.38), inset 14px 0 20px -16px rgba(60,50,36,.30);
+    background-image:
+      linear-gradient(to right, transparent 31px, rgba(190,120,110,.34) 31px,
+                      rgba(190,120,110,.34) 32px, transparent 32px),
+      repeating-linear-gradient(to bottom,
+        transparent 0, transparent 27px, rgba(126,146,158,.17) 27px, rgba(126,146,158,.17) 28px)}
+  .wPage + .wPage{margin-top:-8px}
+  .wPage.w1{--r:-1.8deg;--x:-14px}
+  .wPage.w2{--r:1.4deg;--x:16px}
+  .wPage.w3{--r:-.9deg;--x:-6px}
+  .wPage p{margin:0;font-family:var(--hand);line-height:1.18;color:#26313d}
+  .wPage.w1 p{font-size:37px;font-weight:700}
+  .wPage.w2 p,.wPage.w3 p{font-size:26px;font-weight:500;color:#3d4a58}
+  #wIn{--r:-1.2deg;--x:0px;
+    margin-top:16px;border:0;cursor:pointer;
+    background:#f4efe2;border-radius:10px;padding:5px 20px 8px;
+    font-family:var(--hand);font-size:24px;font-weight:600;color:#26313d;
+    box-shadow:0 12px 30px rgba(20,14,6,.34);
+    transform:translateX(var(--x)) rotate(var(--r));
+    transition:transform .2s cubic-bezier(.2,.8,.2,1), background .2s}
+  #wIn:hover{transform:translateX(var(--x)) rotate(var(--r)) translateY(-2px);background:#f9f4e8}
+  #wIn:focus-visible{outline:2px solid #334a44;outline-offset:3px}
+  @keyframes wDrop{
+    from{opacity:0;transform:translateX(var(--x,0px)) translateY(-30px) rotate(calc(var(--r,0deg)*2))}
+    to{opacity:1;transform:translateX(var(--x,0px)) translateY(0) rotate(var(--r,0deg))}
+  }
+  #welcome.show .wPage, #welcome.show #wIn{animation:wDrop .55s cubic-bezier(.2,.8,.2,1) backwards}
+  #welcome.show .w1{animation-delay:.1s}
+  #welcome.show .w2{animation-delay:.38s}
+  #welcome.show .w3{animation-delay:.66s}
+  #welcome.show #wIn{animation-delay:.98s}
+
+  #fade{position:fixed;inset:0;background:#0e0c09;z-index:9;
+        transition:opacity .45s ease;pointer-events:none}
+  #fade.hidden{opacity:0}
+
+  @media (max-width:820px){
+    #plaque{top:14px;left:14px;font-size:13px}
+    .wPage{padding:14px 20px 16px 38px}
+    .wPage.w1 p{font-size:31px}
+    .wPage.w2 p,.wPage.w3 p{font-size:23px}
+    #wIn{font-size:22px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important;
+    animation-duration:.01ms !important;animation-delay:0s !important}}
+  /* ============================================================
+     THE BOOT SCREEN
+     This page pulls three.js off a CDN, waits on a webfont, then
+     builds a whole room out of JavaScript. On a cold cache that is
+     a few seconds of nothing at all, and nothing reads as a broken
+     link — so the visitor gets a lit doorway to wait in instead,
+     and it does not lift until the first frame has actually been
+     drawn.
+
+     Declared in <head> with no external dependency, so it paints
+     off the first chunk of HTML rather than after the CDN answers.
+     Same #0e0c09 as #fade and as the departure veil in house-nav.js,
+     so arriving from another room is one continuous dark rather
+     than two dissolves stacked on each other.
+     ============================================================ */
+  #boot{
+    /* above house-nav's pill bar (40) so the room's furniture doesn't
+       pop in over the loading screen, below its departure veil (80) */
+    position:fixed;inset:0;z-index:60;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:26px;padding:24px;
+    background:#0e0c09;
+    transition:opacity .7s ease;
+  }
+  /* the hall lamp, warming up behind the words */
+  #boot::before{
+    content:"";position:absolute;left:50%;top:50%;
+    width:min(78vw,560px);height:min(78vw,560px);transform:translate(-50%,-50%);
+    background:radial-gradient(closest-side,
+      rgba(195,147,56,.17), rgba(195,147,56,0) 70%);
+    animation:bootLamp 3.2s ease-in-out infinite alternate;
+    pointer-events:none;
+  }
+  @keyframes bootLamp{from{opacity:.4}to{opacity:1}}
+
+  #bootWord{
+    position:relative;margin:0;
+    font-family:var(--hand);
+    font-size:clamp(27px,4.6vw,40px);line-height:1.12;
+    color:rgba(240,232,216,.9);text-align:center;
+  }
+  #bootSub{
+    position:relative;margin:0;
+    font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;
+    color:rgba(236,229,214,.4);
+  }
+  /* the fill is honest — it only moves when a real piece of the page
+     has finished, and it cannot reach the end before the room does */
+  #bootRule{
+    position:relative;width:min(64vw,240px);height:2px;border-radius:2px;
+    background:rgba(236,229,214,.13);overflow:hidden;
+  }
+  #bootFill{
+    display:block;height:100%;width:0;border-radius:2px;
+    background:linear-gradient(90deg, rgba(195,147,56,.5), #c39338);
+    transition:width .45s cubic-bezier(.2,.8,.2,1);
+  }
+  #boot.done{opacity:0;pointer-events:none}
+
+  @media (prefers-reduced-motion:reduce){
+    #boot::before{animation:none;opacity:.85}
+  }
+
+</style>
+<!-- the whole house's pictures, started before anything else asks for them -->
+<script src="preload.js"></script>
+</head>
+<body>
+
+<div id="boot" role="status" aria-live="polite">
+  <p id="bootWord">one moment &mdash;<br>turning the lights on</p>
+  <div id="bootRule" aria-hidden="true"><i id="bootFill"></i></div>
+  <p id="bootSub">the front room</p>
+</div>
+
+<script>
+/* ============================================================
+   BOOT — the loading screen's own small state machine.
+
+   Deliberately the first script on the page: it starts before
+   three.js has even been requested, so the rule is already
+   filling while the CDN is still thinking about it.
+
+   Progress is milestone-based rather than invented. Each step
+   lands only when the thing it names has genuinely finished,
+   and the last one is the first composited frame — the only
+   honest definition of "the room is ready to be looked at".
+   ============================================================ */
+(function(){
+"use strict";
+var boot = document.getElementById('boot');
+var fill = document.getElementById('bootFill');
+if(!boot) return;
+
+/* what each milestone is worth. three.js is the big download and
+   the house's photographs are the long tail, so those two carry
+   most of the bar between them. */
+var STEPS = {start:.06, three:.34, fonts:.44, built:.62, assets:.92, frame:1};
+
+var at = 0, opened = false, asked = false, waiting = [];
+var startedAt = new Date().getTime();
+var MIN_MS    = 550;    /* don't let it strobe on a warm cache */
+var SAFETY_MS = 12000;  /* and never hold the door shut on a bad day */
+
+function mark(step){
+  var v = STEPS[step] || 0;
+  if(v <= at) return;
+  at = v;
+  fill.style.width = (at*100).toFixed(1) + '%';
+}
+
+/* The room being drawn is no longer the last thing that has to
+   happen. Every photograph in the house is fetched and decoded
+   behind this screen too, so that walking into a room later —
+   or back into one — never waits on a picture. The loading
+   screen is the right place to spend that time; a room that is
+   already open is not.
+
+   `open` is what the room calls when it has painted. `lift` is
+   what actually raises the screen, and only the safety timeout
+   is allowed to call it early. */
+function open(){
+  if(asked) return;
+  asked = true;
+  mark('built');
+
+  var pictures = window.HOUSE_PRELOAD && window.HOUSE_PRELOAD.all;
+  if(pictures && pictures.then){
+    pictures.then(function(){ mark('assets'); lift(); },
+                  function(){ mark('assets'); lift(); });
+  } else {
+    lift();
+  }
+}
+
+/* the handoff. #boot is opaque and sits above #fade, so the arrival
+   veil is snapped away underneath rather than dissolved as well —
+   one fade on one colour, not two compounding. */
+function lift(){
+  if(opened) return;
+  opened = true;
+  mark('frame');
+  var wait = Math.max(0, MIN_MS - (new Date().getTime() - startedAt));
+  setTimeout(function(){
+    var fade = document.getElementById('fade');
+    if(fade){ fade.style.transition = 'none'; fade.classList.add('hidden'); }
+    boot.classList.add('done');
+    setTimeout(function(){ boot.style.display = 'none'; }, 900);
+    for(var i=0;i<waiting.length;i++){ try{ waiting[i](); }catch(e){} }
+    waiting.length = 0;
+  }, wait);
+}
+
+mark('start');
+
+/* the webfont the whole house is lettered in */
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ mark('fonts'); });
+else mark('fonts');
+
+/* nothing should ever be stuck at the door: if the CDN never answers,
+   or WebGL is having a day, the screen lifts anyway and the DOM
+   welcome note still greets whoever is behind it */
+setTimeout(lift, SAFETY_MS);
+
+window.HouseBoot = {
+  mark: mark,
+  open: open,
+  /* raise the screen now, pictures or no pictures. For the paths
+     where waiting would be pointless — no WebGL, no three.js —
+     rather than holding a dark screen for assets the visitor is
+     never going to be shown in 3D. */
+  lift: lift,
+  /* run something the moment the screen starts lifting */
+  whenOpen: function(fn){ opened ? fn() : waiting.push(fn); }
+};
+})();
+</script>
+
+<div id="stage"></div>
+<div class="lens" id="vignette"></div>
+<div class="lens" id="bloom"></div>
+<div class="lens" id="grain"></div>
+
+<div class="hud">
+  <div class="pill" id="plaque">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1c1a17" stroke-width="1.7" stroke-linecap="round">
+      <rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/>
+    </svg>
+    <b>Welcome</b>
+  </div>
+
+  <button class="pill" id="back">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1c1a17" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 6 4 12l6 6"/><path d="M4 12h16"/>
+    </svg>
+    Step back
+  </button>
+
+
+  <div id="call" role="dialog" aria-label="Contact me" aria-hidden="true">
+    <!-- the same bakelite desk set as on the table, drawn front-on -->
+    <svg class="set" viewBox="0 0 380 610" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="bakeV" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#7ea8bf"/>
+          <stop offset=".42" stop-color="#5f8ea8"/>
+          <stop offset="1" stop-color="#49718a"/>
+        </linearGradient>
+        <linearGradient id="bakeH" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#84adc3"/>
+          <stop offset="1" stop-color="#527e97"/>
+        </linearGradient>
+        <linearGradient id="chromeG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#f0f4f6"/>
+          <stop offset=".5" stop-color="#aeb9bf"/>
+          <stop offset="1" stop-color="#e2e8ea"/>
+        </linearGradient>
+        <radialGradient id="sheen" cx=".5" cy=".22" r=".85">
+          <stop offset="0" stop-color="rgba(255,255,255,.22)"/>
+          <stop offset=".55" stop-color="rgba(255,255,255,0)"/>
+        </radialGradient>
+      </defs>
+
+      <!-- coiled cord, handset to case -->
+      <path d="M102 112 a9 9 0 1 1 -3 16 a9 9 0 1 1 -3 16 a9 9 0 1 1 -3 16 a9 9 0 1 1 -3 16 a9 9 0 1 1 -3 16 a9 9 0 1 1 -3 16 q2 20 16 32"
+            fill="none" stroke="#3d6579" stroke-width="4.6" stroke-linecap="round"/>
+
+      <!-- handset, lifted off the cradle -->
+      <g transform="translate(190 84) rotate(-5)">
+        <g class="float">
+          <path d="M-86 10 Q0 -36 86 10" fill="none" stroke="url(#bakeH)" stroke-width="25" stroke-linecap="round"/>
+          <ellipse cx="-88" cy="14" rx="28" ry="24" fill="url(#bakeH)"/>
+          <ellipse cx="88" cy="14" rx="28" ry="24" fill="url(#bakeH)"/>
+          <circle cx="-88" cy="20" r="13.5" fill="#2c3a42"/>
+          <circle cx="88" cy="20" r="13.5" fill="#2c3a42"/>
+          <path d="M-84 6 Q0 -33 84 6" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="4" stroke-linecap="round"/>
+        </g>
+      </g>
+
+      <!-- case: square at the base, drawing in and doming over the top -->
+      <path d="M52 556 Q40 556 42 540 C46 480 60 336 90 262 C110 224 148 204 190 204 C232 204 270 224 290 262 C320 336 334 480 338 540 Q340 556 328 556 Z"
+            fill="url(#bakeV)"/>
+      <path d="M52 556 Q40 556 42 540 C46 480 60 336 90 262 C110 224 148 204 190 204 C232 204 270 224 290 262 C320 336 334 480 338 540 Q340 556 328 556 Z"
+            fill="url(#sheen)"/>
+
+      <!-- cradle: two moulded humps, plungers up with the handset gone -->
+      <rect x="106" y="192" width="20" height="24" rx="7" fill="#2c3a42"/>
+      <rect x="254" y="192" width="20" height="24" rx="7" fill="#2c3a42"/>
+      <ellipse cx="116" cy="222" rx="27" ry="15" fill="url(#bakeH)"/>
+      <ellipse cx="264" cy="222" rx="27" ry="15" fill="url(#bakeH)"/>
+
+      <!-- the dial -->
+      <g transform="translate(190 344)">
+        <circle r="99" fill="#4a7288"/>
+        <circle r="93" fill="#ece5d6"/>
+        <circle r="86.5" fill="none" stroke="rgba(30,24,16,.16)" stroke-width="13"/>
+        <g fill="#2b2822" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600" text-anchor="middle" dominant-baseline="central">
+          <text x="-8.9" y="-84.5">1</text><text x="33.9" y="-78">2</text>
+          <text x="67.9" y="-51.2">3</text><text x="84.3" y="-11.1">4</text>
+          <text x="78.8" y="31.8">5</text><text x="52.9" y="66.5">6</text>
+          <text x="13.3" y="84">7</text><text x="-29.8" y="79.6">8</text>
+          <text x="-65.1" y="54.6">9</text><text x="-83.6" y="15.5">0</text>
+        </g>
+        <circle r="73" fill="#232120"/>
+        <g fill="#0b0b0a" stroke="rgba(255,255,255,.13)" stroke-width="1.5">
+          <circle cx="-5.4" cy="-51.7" r="10.5"/><circle cx="20.7" cy="-47.7" r="10.5"/>
+          <circle cx="41.5" cy="-31.3" r="10.5"/><circle cx="51.6" cy="-6.8" r="10.5"/>
+          <circle cx="48.2" cy="19.5" r="10.5"/><circle cx="32.4" cy="40.7" r="10.5"/>
+          <circle cx="8.1" cy="51.4" r="10.5"/><circle cx="-18.2" cy="48.7" r="10.5"/>
+          <circle cx="-39.8" cy="33.4" r="10.5"/><circle cx="-51.1" cy="9.5" r="10.5"/>
+        </g>
+        <circle r="20" fill="#171614"/>
+        <circle r="5.5" fill="#3a3733"/>
+        <g transform="rotate(28)"><rect x="82" y="-6" width="24" height="12" rx="6" fill="url(#chromeG)"/></g>
+      </g>
+
+      <!-- the plate the contact lines sit on, moulded into the base -->
+      <rect x="64" y="436" width="252" height="118" rx="12" fill="rgba(22,34,42,.5)"/>
+      <rect x="64" y="436" width="252" height="118" rx="12" fill="none" stroke="rgba(255,255,255,.08)"/>
+    </svg>
+
+    <!-- <p class="kicker">Line open</p> -->
+    <h2>Contact me</h2>
+    <nav aria-label="Ways to reach me">
+      <a href="mailto:hello@randhalasa.com">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>
+        </svg>
+        <span><span class="what">Email</span><br /><span class="where">hello@randhalasa.com</span></span>
+      </a>
+      <a href="https://linkedin.com/in/randhalasa" target="_blank" rel="me noopener">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4V8h4v2a5 5 0 0 1 2-2z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/>
+        </svg>
+        <span><span class="what">LinkedIn</span><br /><span class="where">linkedin.com/in/randhalasa</span></span>
+      </a>
+      <a href="https://github.com/raaannndddd" target="_blank" rel="me noopener">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/>
+        </svg>
+        <span><span class="what">GitHub</span><br /><span class="where">github.com/raaannndddd</span></span>
+      </a>
+    </nav>
+    <button class="hang" type="button" id="hang">Hang up</button>
+  </div>
+</div>
+
+<div id="welcome" aria-hidden="true">
+  <div id="wNote" role="dialog" aria-label="A note from Rand">
+    <div class="wPage w1"><p>Welcome to my website.</p></div>
+    <div class="wPage w2"><p>My name is Rand, and I&rsquo;m a software engineer.</p></div>
+    <div class="wPage w3"><p>Enjoy the journey, and discover the quirks of my place.</p></div>
+    <button id="wIn" type="button">come on in &rarr;</button>
+  </div>
+</div>
+
+<div id="fade"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>if(window.HouseBoot && window.THREE) HouseBoot.mark('three');</script>
+<script src="tap-hints.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   0. HUD
+   ============================================================ */
+const fadeEl = document.getElementById('fade');
+const backBtn= document.getElementById('back');
+
+/* --- the welcome note: a few pages held up as you first come in.
+       pure DOM, wired before the 3D so it greets even if WebGL is having a day --- */
+const welcomeEl = document.getElementById('welcome');
+const wIn = document.getElementById('wIn');
+function closeWelcome(){
+  if(!welcomeEl.classList.contains('show')) return false;
+  welcomeEl.classList.remove('show');
+  welcomeEl.setAttribute('aria-hidden','true');
+  return true;
+}
+welcomeEl.addEventListener('click', function(e){
+  if(e.target === welcomeEl || e.target.id === 'wNote') closeWelcome();
+});
+wIn.addEventListener('click', closeWelcome);
+function showWelcome(){
+  welcomeEl.classList.add('show');
+  welcomeEl.removeAttribute('aria-hidden');
+  try{ wIn.focus({preventScroll:true}); }catch(_){}
+}
+/* held back until the loading screen starts lifting, otherwise the pages
+   drop into place behind it and are already sitting there, finished, by
+   the time anyone can see them */
+if(window.HouseBoot) window.HouseBoot.whenOpen(function(){ setTimeout(showWelcome, 420); });
+else setTimeout(showWelcome, 700);
+
+/* No three.js, no room. Bail out *here* rather than at the top of the
+   file, so the welcome note above is already wired and still greets
+   whoever is standing behind the door — and lift the loading screen at
+   once, since nothing further is coming to wait for. */
+if(!window.THREE){ if(window.HouseBoot) window.HouseBoot.lift(); return; }
+
+/* ============================================================
+   1. PALETTE
+   ============================================================ */
+/*  >>> EVERY COLOUR IN THE ROOM IS SET HERE. Edit a hex, reload. <<<
+    Nothing below this block hard-codes a room colour — they all read from P. */
+const P = {
+  /* --- walls, top half (above the chair rail) --- */
+  plaster:  '#f4EDE0',   // light upper wall
+  trim:     '#efe7d6',   // cornice + crown moulding at the ceiling
+
+  /* --- walls, bottom half (the panelled / "squares" band) --- */
+  dado:     '#33474a',   // dark panelled band
+  dadoTrim: '#25363a',   // the square frames, chair rail + skirting on that band
+
+  /* --- door frames (architraves) — kept distinct from the walls --- */
+  casing:   '#3c545a',   // frame face  (dark, so it separates from the wall)
+  casingEdge:'#2b3d42',  // edges of the door slab itself
+
+  ceiling:  '#f7f2e6',
+
+  /* --- floor --- */
+  carpet:   '#b9aa8d',   // wall-to-wall carpet under everything
+  rug: {                 // the patterned area rug in the middle of the room
+    field:  '#4e1513',   // main body colour   (these read ~2x lighter once lit)
+    border: '#102226',   // outer border band
+    motif:  '#a3742a',   // the gold geometry / medallion
+    accent: '#b5a37c'    // pale outlines and the fringe
+  },
+
+  /* --- objects --- */
+  wood:     '#6b4a33',
+  doors:    ['#4f7f74', '#b0513a', '#2f4f6d', '#c39338', '#8a5a72']
+  /*         ^Door 2     ^Door 3     ^Door 4    ^Door 1    ^Door 5
+             (the first three are the back wall, left to right) */
+};
+
+/* ============================================================
+   2. RENDERER / CAMERA
+   ============================================================ */
+const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.95;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.getElementById('stage').appendChild(renderer.domElement);
+const ANISO = renderer.capabilities.getMaxAnisotropy();
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#e6dcc9');
+scene.fog = new THREE.Fog(0xe9dfcb, 28, 66);
+
+const BACK_Z = -7, SIDE_X = 6, WALL_H = 6.6, FRONT_Z = 9;
+const SIDE_LEN = FRONT_Z - BACK_Z, SIDE_MID = (BACK_Z + FRONT_Z)/2;
+const HOME = new THREE.Vector3(0, 1.85, 7.2);
+
+const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 200);
+camera.position.copy(HOME);
+
+const H_HALF = 30 * Math.PI/180;                 /* constant horizontal FOV */
+function frameCamera(){
+  camera.aspect = innerWidth / innerHeight;
+  const v = 2 * Math.atan(Math.tan(H_HALF) / camera.aspect) * 180/Math.PI;
+  camera.fov = THREE.MathUtils.clamp(v, 24, 54);
+  camera.updateProjectionMatrix();
+}
+frameCamera();
+
+/* ============================================================
+   3. TEXTURE FOUNDRY
+   ============================================================ */
+function cvs(w,h){ const c = document.createElement('canvas'); c.width=w; c.height=h; return c; }
+function tex(canvas, rx, ry){
+  const t = new THREE.CanvasTexture(canvas);
+  t.encoding = THREE.sRGBEncoding;
+  t.anisotropy = ANISO;
+  if(rx){ t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry || rx); }
+  return t;
+}
+function shift(hex, dL, dS){
+  const c = new THREE.Color(hex), hsl = {};
+  c.getHSL(hsl);
+  c.setHSL(hsl.h, THREE.MathUtils.clamp(hsl.s + (dS||0), 0, 1),
+                  THREE.MathUtils.clamp(hsl.l + dL, 0.02, 0.98));
+  return '#' + c.getHexString();
+}
+function rgba(hex, a){
+  const c = new THREE.Color(hex);
+  return 'rgba(' + Math.round(c.r*255) + ',' + Math.round(c.g*255) + ',' + Math.round(c.b*255) + ',' + a + ')';
+}
+function blotch(g, w, h, base, count, spread, alpha){
+  for(let i=0;i<count;i++){
+    const x = Math.random()*w, y = Math.random()*h;
+    const r = (0.04 + Math.random()*0.22) * Math.max(w,h) * spread;
+    const c = shift(base, (Math.random()-0.5)*0.10, (Math.random()-0.5)*0.06);
+    const grd = g.createRadialGradient(x,y,0,x,y,r);
+    grd.addColorStop(0, rgba(c, alpha));
+    grd.addColorStop(1, rgba(c, 0));
+    g.fillStyle = grd; g.fillRect(x-r, y-r, r*2, r*2);
+  }
+}
+function speckle(g, w, h, count, alpha){
+  for(let i=0;i<count;i++){
+    g.fillStyle = 'rgba(50,40,26,' + (Math.random()*alpha).toFixed(3) + ')';
+    g.fillRect(Math.random()*w, Math.random()*h, 1.6, 1.1);
+  }
+}
+/* linear black gradient, used to bake occlusion into a map */
+function ao(g, w, h, x0,y0,x1,y1, a){
+  const d = g.createLinearGradient(x0,y0,x1,y1);
+  d.addColorStop(0, 'rgba(44,32,18,' + a + ')');
+  d.addColorStop(1, 'rgba(44,32,18,0)');
+  g.fillStyle = d; g.fillRect(0,0,w,h);
+}
+
+function plasterCanvas(w, h, o){
+  o = o || {};
+  const c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = P.plaster; g.fillRect(0,0,w,h);
+  blotch(g, w, h, P.plaster, 95, 1.0, 0.5);
+  blotch(g, w, h, shift(P.plaster,-0.05), 45, 0.5, 0.3);
+  g.globalAlpha = 0.06; g.lineCap = 'round';
+  for(let i=0;i<70;i++){                                   /* trowel drag */
+    g.strokeStyle = shift(P.plaster, (Math.random()-0.5)*0.14);
+    g.lineWidth = 2 + Math.random()*14;
+    const x = Math.random()*w, y = Math.random()*h;
+    g.beginPath(); g.moveTo(x,y);
+    g.lineTo(x + (Math.random()-0.5)*w*0.28, y + (Math.random()-0.5)*h*0.12); g.stroke();
+  }
+  g.globalAlpha = 1;
+  speckle(g, w, h, Math.round(w*h/900), 0.045);
+  if(o.bottom) ao(g, w, h, 0, h, 0, h*(1-o.bottom), 0.36);
+  if(o.top)    ao(g, w, h, 0, 0, 0, h*o.top, 0.32);
+  if(o.left)   ao(g, w, h, 0, 0, w*o.left, 0, 0.38);
+  if(o.right)  ao(g, w, h, w, 0, w*(1-o.right), 0, 0.38);
+  return c;
+}
+
+/* dado carries the shadow the chair rail throws down its face */
+function dadoCanvas(){
+  const w = 512, h = 256, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = P.dado; g.fillRect(0,0,w,h);
+  blotch(g, w, h, P.dado, 50, 0.8, 0.45);
+  blotch(g, w, h, shift(P.dado, 0.07), 26, 0.6, 0.30);   /* keeps a dark band alive */
+  speckle(g, w, h, 900, 0.05);
+  ao(g, w, h, 0, 0, 0, h*0.26, 0.40);        /* under the rail */
+  ao(g, w, h, 0, h, 0, h*0.80, 0.22);        /* at the skirting */
+  return c;
+}
+
+function trimCanvas(base){
+  base = base || P.trim;
+  const w = 256, h = 256, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = base; g.fillRect(0,0,w,h);
+  blotch(g, w, h, base, 34, 0.8, 0.5);
+  g.globalAlpha = 0.14;                      /* faint brush lay-off */
+  for(let i=0;i<90;i++){
+    g.strokeStyle = shift(base, (Math.random()-0.5)*0.12);
+    g.lineWidth = 0.8 + Math.random()*3;
+    const y = Math.random()*h;
+    g.beginPath(); g.moveTo(0,y); g.lineTo(w, y + (Math.random()-0.5)*6); g.stroke();
+  }
+  g.globalAlpha = 1;
+  speckle(g, w, h, 700, 0.05);
+  return c;
+}
+
+function carpetCanvas(){
+  const w = 512, h = 512, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = P.carpet; g.fillRect(0,0,w,h);
+  blotch(g, w, h, P.carpet, 60, 0.7, 0.4);
+  g.globalAlpha = 0.10;
+  for(let i=0;i<3000;i++){
+    g.strokeStyle = shift(P.carpet, (Math.random()-0.5)*0.22);
+    g.lineWidth = 1 + Math.random()*1.6;
+    const x = Math.random()*w, y = Math.random()*h;
+    g.beginPath(); g.moveTo(x,y); g.lineTo(x + (Math.random()-0.5)*7, y + (Math.random()-0.5)*7); g.stroke();
+  }
+  g.globalAlpha = 1;
+  speckle(g, w, h, 2400, 0.05);
+  return c;
+}
+
+/* the area rug: a woven field, a Greek-key border and a centre medallion.
+   drawn once at 1024 so the motifs stay crisp under a grazing camera. */
+function rugCanvas(){
+  const S = 1024, c = cvs(S,S), g = c.getContext('2d');
+  const R = P.rug;
+
+  /* --- field ------------------------------------------------------- */
+  g.fillStyle = R.field; g.fillRect(0,0,S,S);
+  blotch(g, S, S, R.field, 70, 0.7, 0.35);
+
+  /* --- concentric border bands ------------------------------------- */
+  function band(inset, thick, colour){
+    g.strokeStyle = colour; g.lineWidth = thick;
+    g.strokeRect(inset + thick/2, inset + thick/2, S - (inset + thick/2)*2, S - (inset + thick/2)*2);
+  }
+  band(0,   S*0.055, R.border);
+  band(S*0.055, S*0.010, R.motif);
+  band(S*0.082, S*0.006, R.accent);
+  band(S*0.115, S*0.030, R.border);
+  band(S*0.150, S*0.007, R.motif);
+
+  /* --- Greek key running inside the outer band --------------------- */
+  (function(){
+    const inset = S*0.055, step = S*0.0455, u = step/5;
+    g.strokeStyle = R.motif; g.lineWidth = u*0.72; g.lineCap = 'butt';
+    for(let side=0; side<4; side++){
+      g.save();
+      g.translate(S/2, S/2); g.rotate(side*Math.PI/2); g.translate(-S/2, -S/2);
+      for(let x = inset; x < S - inset - step; x += step){
+        const y = inset*0.52;
+        g.beginPath();
+        g.moveTo(x,        y + u*2);
+        g.lineTo(x,        y - u*1.4);
+        g.lineTo(x + u*3,  y - u*1.4);
+        g.lineTo(x + u*3,  y + u*1.2);
+        g.lineTo(x + u*1.4,y + u*1.2);
+        g.lineTo(x + u*1.4,y - u*0.2);
+        g.stroke();
+      }
+      g.restore();
+    }
+  })();
+
+  /* --- lattice of small diamonds over the open field --------------- */
+  (function(){
+    const n = 9, cell = (S*0.70)/n, o = S*0.15;
+    for(let i=0;i<n;i++) for(let j=0;j<n;j++){
+      const x = o + cell*(i+0.5), y = o + cell*(j+0.5);
+      const r = cell*((i+j)%2 ? 0.17 : 0.26);
+      g.beginPath();
+      g.moveTo(x, y-r); g.lineTo(x+r, y); g.lineTo(x, y+r); g.lineTo(x-r, y);
+      g.closePath();
+      g.globalAlpha = 0.55;
+      g.fillStyle = (i+j)%2 ? R.accent : R.motif;
+      g.fill();
+      g.globalAlpha = 0.7;
+      g.strokeStyle = R.border; g.lineWidth = cell*0.045; g.stroke();
+      g.globalAlpha = 1;
+    }
+  })();
+
+  /* --- centre medallion -------------------------------------------- */
+  (function(){
+    const cx = S/2, cy = S/2, r = S*0.215;
+    g.globalAlpha = 0.92;
+    g.fillStyle = R.border;
+    g.beginPath(); g.arc(cx, cy, r, 0, Math.PI*2); g.fill();
+    g.globalAlpha = 1;
+
+    g.beginPath(); g.arc(cx, cy, r*0.92, 0, Math.PI*2); g.stroke();
+    g.strokeStyle = R.accent; g.lineWidth = S*0.004;
+    g.beginPath(); g.arc(cx, cy, r*0.80, 0, Math.PI*2); g.stroke();
+    
+    /* sixteen petals */
+    for(let i=0;i<16;i++){
+      const a = i * Math.PI/8;
+      g.save(); g.translate(cx, cy); g.rotate(a);
+      g.fillStyle = i%2 ? R.motif : R.accent;
+      g.globalAlpha = i%2 ? 0.95 : 0.7;
+      g.beginPath();
+      g.moveTo(0, -r*0.20);
+      g.quadraticCurveTo(r*0.16, -r*0.48, 0, -r*0.74);
+      g.quadraticCurveTo(-r*0.16, -r*0.48, 0, -r*0.20);
+      g.fill();
+      g.restore();
+    }
+    g.globalAlpha = 1;
+    g.fillStyle = R.field;
+    g.beginPath(); g.arc(cx, cy, r*0.17, 0, Math.PI*2); g.fill();
+    g.strokeStyle = R.motif; g.lineWidth = S*0.006;
+    g.beginPath(); g.arc(cx, cy, r*0.17, 0, Math.PI*2); g.stroke();
+    g.strokeStyle = R.motif; g.lineWidth = S*0.008;
+  })();
+
+  /* --- corner spandrels --------------------------------------------- */
+  [[0,0],[1,0],[0,1],[1,1]].forEach(function(q){
+    const x = S*0.185 + q[0]*S*0.63, y = S*0.185 + q[1]*S*0.63, r = S*0.075;
+    g.globalAlpha = 0.8;
+    g.fillStyle = R.motif;
+    g.beginPath();
+    for(let i=0;i<8;i++){
+      const a = i*Math.PI/4, rr = i%2 ? r*0.42 : r;
+      g[i?'lineTo':'moveTo'](x + Math.cos(a)*rr, y + Math.sin(a)*rr);
+    }
+    g.closePath(); g.fill();
+    g.globalAlpha = 1;
+  });
+
+  /* --- pile: short strokes over everything so it reads woven -------- */
+  g.globalAlpha = 0.06;
+  for(let i=0;i<9000;i++){
+    const x = Math.random()*S, y = Math.random()*S;
+    g.strokeStyle = Math.random() < 0.62 ? '#000' : '#fff';
+    g.lineWidth = 1 + Math.random()*1.4;
+    g.beginPath(); g.moveTo(x,y); g.lineTo(x + (Math.random()-0.5)*8, y + (Math.random()-0.5)*8); g.stroke();
+  }
+  g.globalAlpha = 1;
+  speckle(g, S, S, 3000, 0.05);
+
+  /* --- wear: the walked lane down the middle, and edge grime -------- */
+  const lane = g.createLinearGradient(0, 0, 0, S);
+  lane.addColorStop(0,   'rgba(255,248,232,0.05)');
+  lane.addColorStop(0.5, 'rgba(20,14,8,0.05)');
+  lane.addColorStop(1,   'rgba(20,14,8,0.16)');
+  g.fillStyle = lane; g.fillRect(0,0,S,S);
+  return c;
+}
+
+function woodCanvas(){
+  const w = 512, h = 512, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = P.wood; g.fillRect(0,0,w,h);
+  for(let i=0;i<150;i++){
+    g.strokeStyle = shift(P.wood, (Math.random()-0.5)*0.16);
+    g.globalAlpha = 0.16 + Math.random()*0.3;
+    g.lineWidth = 0.7 + Math.random()*3.2;
+    const y = Math.random()*h;
+    g.beginPath(); g.moveTo(0,y);
+    g.bezierCurveTo(w*0.33, y+(Math.random()-0.5)*26, w*0.66, y+(Math.random()-0.5)*26, w, y+(Math.random()-0.5)*14);
+    g.stroke();
+  }
+  g.globalAlpha = 1;
+  return c;
+}
+
+function paintCanvas(w, h, color){
+  const c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = shift(color, -0.14); g.fillRect(0,0,w,h);   /* primer showing through */
+  speckle(g, w, h, Math.round(w*h/260), 0.05);
+  const pad = Math.min(w,h)*0.07;
+  g.lineCap = 'round';
+  for(let i=0, n=Math.max(60, Math.round(w*h/1800)); i<n; i++){
+    const x  = pad + Math.random()*(w - pad*2);
+    const y0 = pad*0.3 + Math.random()*(h - pad);
+    const len = h*0.08 + Math.random()*h*0.44;
+    const y1 = Math.min(h - pad*0.3, y0 + len);
+    const j = function(){ return (Math.random()-0.5)*w*0.03; };
+    g.globalAlpha = 0.13 + Math.random()*0.5;
+    g.strokeStyle = shift(color, (Math.random()-0.5)*0.17, (Math.random()-0.5)*0.12);
+    g.lineWidth = w*0.03 + Math.random()*w*0.09;
+    g.beginPath(); g.moveTo(x + j(), y0);
+    g.bezierCurveTo(x + j(), y0 + len*0.33, x + j(), y0 + len*0.66, x + j(), y1);
+    g.stroke();
+  }
+  for(let i=0, n=Math.max(5, Math.round(w/56)); i<n; i++){
+    const x = Math.random()*w;
+    g.globalAlpha = 0.10 + Math.random()*0.24;
+    g.strokeStyle = shift(color, 0.14);
+    g.lineWidth = w*0.012 + Math.random()*w*0.045;
+    g.beginPath(); g.moveTo(x, Math.random()*h*0.4);
+    g.lineTo(x + (Math.random()-0.5)*w*0.1, h*(0.5 + Math.random()*0.5)); g.stroke();
+  }
+  g.globalAlpha = 1;
+  const foot = g.createLinearGradient(0, h, 0, h*0.8);
+  foot.addColorStop(0, 'rgba(48,36,22,.3)'); foot.addColorStop(1, 'rgba(48,36,22,0)');
+  g.fillStyle = foot; g.fillRect(0,0,w,h);
+  return c;
+}
+
+function radialCanvas(inner, mid){
+  const s = 256, c = cvs(s,s), g = c.getContext('2d');
+  const grd = g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+  grd.addColorStop(0, 'rgba(255,255,255,' + inner + ')');
+  grd.addColorStop(mid || 0.45, 'rgba(255,255,255,' + (inner*0.5) + ')');
+  grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd; g.fillRect(0,0,s,s);
+  return c;
+}
+
+function goboCanvas(){
+  const w = 512, h = 512, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0,0,w,h);
+  g.filter = 'blur(16px)'; g.fillStyle = '#fff';
+  const px = 54, py = 74, pw = (w - px*2 - 26)/2, ph = h - py*2;
+  g.fillRect(px, py, pw, ph);
+  g.fillRect(px + pw + 26, py, pw, ph);
+  g.filter = 'none';
+  const grd = g.createRadialGradient(w/2,h/2,w*0.18,w/2,h/2,w*0.56);
+  grd.addColorStop(0,'rgba(0,0,0,0)'); grd.addColorStop(1,'rgba(0,0,0,1)');
+  g.globalCompositeOperation = 'multiply';
+  g.fillStyle = grd; g.fillRect(0,0,w,h);
+  return c;
+}
+
+/* ============================================================
+   4. MATERIALS
+   ============================================================ */
+const carpetTex = tex(carpetCanvas(), 14, 14);
+const woodTex   = tex(woodCanvas());
+const trimTex   = tex(trimCanvas(P.trim), 3, 3);          /* cornice, light */
+const dadoTrimTex = tex(trimCanvas(P.dadoTrim), 3, 3);    /* rail, skirting, square frames */
+const casingTex = tex(trimCanvas(P.casing), 3, 3);        /* door architraves */
+const casingEdgeTex = tex(trimCanvas(P.casingEdge), 2, 2);/* edges of the door slab */
+const dadoTex   = tex(dadoCanvas());
+const rugTex    = tex(rugCanvas());
+
+const M = {
+  trim:    new THREE.MeshStandardMaterial({map:trimTex, bumpMap:trimTex, bumpScale:0.004, roughness:0.84}),
+  dadoTrim:new THREE.MeshStandardMaterial({map:dadoTrimTex, bumpMap:dadoTrimTex, bumpScale:0.004, roughness:0.7}),
+  casing:  new THREE.MeshStandardMaterial({map:casingTex, bumpMap:casingTex, bumpScale:0.004, roughness:0.7}),
+  casingEdge:new THREE.MeshStandardMaterial({map:casingEdgeTex, roughness:0.8}),
+  dado:    new THREE.MeshStandardMaterial({map:dadoTex, bumpMap:dadoTex, bumpScale:0.005, roughness:0.95}),
+  rug:     new THREE.MeshStandardMaterial({map:rugTex, bumpMap:rugTex, bumpScale:0.011,
+                                           roughness:0.97, metalness:0}),
+  carpet:  new THREE.MeshStandardMaterial({map:carpetTex, bumpMap:carpetTex, bumpScale:0.014,
+                                           roughnessMap:carpetTex, roughness:1}),
+  ceiling: new THREE.MeshStandardMaterial({color:P.ceiling, roughness:1}),
+  wood:    new THREE.MeshStandardMaterial({map:woodTex, bumpMap:woodTex, bumpScale:0.004,
+                                           roughness:0.4, metalness:0.05}),
+  brass:   new THREE.MeshStandardMaterial({color:'#c9a763', roughness:0.26, metalness:0.92}),
+  shade:   new THREE.MeshStandardMaterial({color:'#a5382f', roughness:0.9, side:THREE.DoubleSide,
+                                           emissive:'#c2492f', emissiveIntensity:0.8}),
+  phone:   new THREE.MeshStandardMaterial({color:'#5f8ea8', roughness:0.34})
+};
+
+/* ============================================================
+   5. HELPERS
+   ============================================================ */
+function box(w,h,d,mat,x,y,z){
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
+  m.position.set(x||0,y||0,z||0);
+  m.castShadow = true; m.receiveShadow = true;
+  return m;
+}
+function roundedGeo(w,h,d,r){
+  r = Math.min(r, w/2-0.002, h/2-0.002);
+  const s = new THREE.Shape(), x = -w/2, y = -h/2;
+  s.moveTo(x+r,y);
+  s.lineTo(x+w-r,y);   s.quadraticCurveTo(x+w,y,x+w,y+r);
+  s.lineTo(x+w,y+h-r); s.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  s.lineTo(x+r,y+h);   s.quadraticCurveTo(x,y+h,x,y+h-r);
+  s.lineTo(x,y+r);     s.quadraticCurveTo(x,y,x+r,y);
+  const g = new THREE.ExtrudeGeometry(s,{depth:Math.max(0.02,d-0.05), bevelEnabled:true,
+    bevelSize:0.022, bevelThickness:0.022, bevelSegments:3, curveSegments:6});
+  g.center();
+  return g;
+}
+function soft(w,h,d,r,mat,x,y,z){
+  const m = new THREE.Mesh(roundedGeo(w,h,d,r), mat);
+  m.position.set(x||0,y||0,z||0);
+  m.castShadow = true; m.receiveShadow = true;
+  return m;
+}
+function moulding(w,h,t,d,mat){
+  const g = new THREE.Group();
+  g.add(box(w,t,d,mat,0, h/2-t/2,0));
+  g.add(box(w,t,d,mat,0,-h/2+t/2,0));
+  g.add(box(t,h-t*2,d,mat,-w/2+t/2,0,0));
+  g.add(box(t,h-t*2,d,mat, w/2-t/2,0,0));
+  return g;
+}
+function contact(size, opacity, x, z){
+  const t = new THREE.CanvasTexture(radialCanvas(1, 0.20));
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(size,size),
+    new THREE.MeshBasicMaterial({map:t, color:0x2a1f12, transparent:true,
+      opacity:opacity, depthWrite:false}));
+  m.rotation.x = -Math.PI/2;
+  m.position.set(x, 0.012, z);
+  m.renderOrder = 2;
+  m.userData.baseOpacity = opacity;
+  return m;
+}
+
+/* ============================================================
+   6. DOORS — larger, and set proud of every wall band
+   ============================================================ */
+const DOOR_W = 1.46, DOOR_H = 3.62, CASE_T = 0.18, REVEAL = 0.045;
+const DOOR_HALF = DOOR_W/2 + REVEAL + CASE_T;
+/* the leaf hangs on its own back hinge-stile corner — pivot anywhere further
+   back and the stile sweeps into the jamb as it opens */
+const HINGE_X = -DOOR_W/2, HINGE_Z = 0.07;
+const AJAR = 0.30;                             /* how far it comes open, radians */
+const BANNER_Y = DOOR_H + REVEAL + CASE_T + 0.48;
+
+function paintedSlab(w,h,d,color){
+  const th = THREE.MathUtils.clamp(Math.round(384*h/w), 96, 1200);
+  const map = tex(paintCanvas(384, th, color));
+  const face = new THREE.MeshStandardMaterial({map:map, bumpMap:map, bumpScale:0.007, roughness:0.7});
+  const edge = new THREE.MeshStandardMaterial({map:casingEdgeTex, roughness:0.86});
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), [edge,edge,edge,edge,face,edge]);
+  m.castShadow = true; m.receiveShadow = true;
+  m.userData.face = face;
+  return m;
+}
+
+/* ---- the banner over each door ---------------------------------------- */
+/* the room name is painted on a plate rather than modelled: it has to stay
+   crisp at the distance the visitor first reads it from. */
+const BANNER_PX_W = 640, BANNER_PX_H = 200;
+
+/* one type size serves every plate: the longest room name sets it, so the
+   doors read as a matched set instead of a row of differently sized signs. */
+let bannerFont = 0;
+function bannerFontSize(g){
+  if(bannerFont) return bannerFont;
+  const names = Object.keys(ROOMS).map(function(k){ return ROOMS[k].toUpperCase(); });
+  let size = 92;
+  while(size > 26){
+    g.font = '600 ' + size + 'px Georgia, "Times New Roman", serif';
+    if(names.every(function(n){ return g.measureText(n).width <= BANNER_PX_W - 120; })) break;
+    size -= 2;
+  }
+  bannerFont = size;
+  return size;
+}
+
+function bannerCanvas(text){
+  const w = BANNER_PX_W, h = BANNER_PX_H, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = P.trim; g.fillRect(0,0,w,h);
+  blotch(g, w, h, P.trim, 22, 0.5, 0.06);
+  speckle(g, w, h, 700, 0.05);
+  g.strokeStyle = rgba(P.casingEdge, 0.55); g.lineWidth = 5;
+  g.strokeRect(15,15,w-30,h-30);
+  g.strokeStyle = rgba(P.casingEdge, 0.24); g.lineWidth = 2;
+  g.strokeRect(29,29,w-58,h-58);
+
+  const label = text.toUpperCase();
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.letterSpacing = '7px';                    /* ignored where unsupported */
+  g.font = '600 ' + bannerFontSize(g) + 'px Georgia, "Times New Roman", serif';
+  g.fillStyle = rgba(P.casingEdge, 0.22);
+  g.fillText(label, w/2, h/2 + 6);            /* the paint sits in the ground */
+  g.fillStyle = P.casingEdge;
+  g.fillText(label, w/2, h/2 + 3);
+  return c;
+}
+
+const BANNER_W = 1.46, BANNER_H = 0.46;
+function makeBanner(text){
+  const g = new THREE.Group();
+  g.add(box(BANNER_W + 0.11, BANNER_H + 0.11, 0.05, M.casing, 0, 0, 0.025));
+  const map = tex(bannerCanvas(text));
+  const face = new THREE.MeshStandardMaterial({map:map, bumpMap:map, bumpScale:0.004,
+                                               roughness:0.74});
+  const edge = M.casingEdge;
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(BANNER_W, BANNER_H, 0.045),
+                               [edge,edge,edge,edge,face,edge]);
+  plate.position.z = 0.0725;
+  plate.castShadow = true; plate.receiveShadow = true;
+  g.add(plate);
+  [-1,1].forEach(function(s){                 /* screwed to the plaster */
+    const pin = new THREE.Mesh(new THREE.SphereGeometry(0.026, 16, 12), M.brass);
+    pin.position.set(s*(BANNER_W/2 - 0.10), 0, 0.098);
+    g.add(pin);
+  });
+  return g;
+}
+
+function makeDoor(color, name){
+  const g = new THREE.Group();
+  const faces = [];
+
+  /* dark shadow gap, sitting proud of the plaster so the leaf reads as recessed */
+  const gapH = DOOR_H + REVEAL;
+  const gap = box(DOOR_W + REVEAL*2, gapH, 0.07,
+                  new THREE.MeshStandardMaterial({color:'#2a2018', roughness:1}),
+                  0, gapH/2, 0.035);
+  gap.castShadow = false;
+  g.add(gap);
+
+  /* everything that swings hangs off one pivot at the hinge stile, so the
+     leaf, its panels and the furniture all move as one piece */
+  const swing = new THREE.Group();
+  swing.position.set(HINGE_X, 0, HINGE_Z);
+  g.add(swing);
+
+  const leaf = paintedSlab(DOOR_W, DOOR_H, 0.10, color);
+  leaf.position.set(-HINGE_X, DOOR_H/2, 0.12 - HINGE_Z);
+  swing.add(leaf); faces.push(leaf.userData.face);
+
+  const pw = DOOR_W - 0.34;
+  [[1.34, 2.60], [0.50, 1.58], [1.00, 0.70]].forEach(function(p){
+    const panel = paintedSlab(pw, p[0], 0.04, color);
+    panel.position.set(-HINGE_X, p[1], 0.19 - HINGE_Z);
+    swing.add(panel); faces.push(panel.userData.face);
+  });
+
+  /* architrave: stands 0.24 off the wall, deeper than any band it meets */
+  const CD = 0.24;
+  const CH = DOOR_H + REVEAL + CASE_T;
+  g.add(box(CASE_T, CH, CD, M.casing, -DOOR_HALF + CASE_T/2, CH/2, CD/2));
+  g.add(box(CASE_T, CH, CD, M.casing,  DOOR_HALF - CASE_T/2, CH/2, CD/2));
+  g.add(box(DOOR_HALF*2, CASE_T, CD, M.casing, 0, CH - CASE_T/2, CD/2));
+  g.add(box(DOOR_HALF*2 + 0.07, 0.06, CD + 0.05, M.casing, 0, CH + 0.03, CD/2 + 0.02));
+
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.062, 24, 18), M.brass);
+  knob.position.set(DOOR_W/2 - 0.18 - HINGE_X, 1.42, 0.28 - HINGE_Z); knob.castShadow = true;
+  swing.add(knob);
+  const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.042,0.042,0.02,18), M.brass);
+  plate.rotation.x = Math.PI/2;
+  plate.position.set(DOOR_W/2 - 0.18 - HINGE_X, 1.42, 0.18 - HINGE_Z);
+  swing.add(plate);
+
+  const banner = makeBanner(name);
+  banner.position.set(0, BANNER_Y, -0.02);      /* flush on the plaster behind */
+  g.add(banner);
+
+  g.userData.isDoor = true;
+  g.userData.name = name;
+  g.userData.faces = faces;
+  g.userData.swing = swing;
+  return g;
+}
+
+/* ============================================================
+   7. WALLS — every horizontal band stops at the architrave
+   ============================================================ */
+const WAINSCOT_H = 2.02;
+
+/* every sunk panel in the room is this one size. deriving the width from the
+   run it sits in — which is what used to happen — gave a wall of squares that
+   were all slightly different, and half a panel at each corner. */
+const PANEL_W = 1.02, PANEL_H = WAINSCOT_H - 0.84;
+const PANEL_MIN_MARGIN = 0.30;                  /* clear wall a lone panel needs */
+const PANEL_PITCH = PANEL_W + 0.52;             /* panel plus the gap after it */
+
+function buildWall(width, openings, occ, opts){
+  opts = opts || {};
+  const g = new THREE.Group();
+
+  const pTex = tex(plasterCanvas(Math.min(2048, Math.round(width*120)), 512, occ));
+  const pm = new THREE.MeshStandardMaterial({map:pTex, bumpMap:pTex, bumpScale:0.006,
+                                             roughnessMap:pTex, roughness:1});
+  const plaster = new THREE.Mesh(new THREE.BoxGeometry(width, WALL_H, 0.3), pm);
+  plaster.position.set(0, WALL_H/2, -0.15);
+  plaster.receiveShadow = true;
+  g.add(plaster);
+
+  /* split the wall into runs that die into each architrave */
+  function runs(margin){
+    const e = [-width/2];
+    openings.slice().sort(function(a,b){return a-b;}).forEach(function(x){
+      e.push(x - (DOOR_HALF + margin), x + (DOOR_HALF + margin));
+    });
+    e.push(width/2);
+    const out = [];
+    for(let i=0;i<e.length;i+=2){
+      const a = e[i], b = e[i+1];
+      if(b - a > 0.02) out.push([a, b]);
+    }
+    return out;
+  }
+
+  runs(0).forEach(function(r){
+    const w = r[1] - r[0], cx = (r[0] + r[1])/2;
+    g.add(box(w, WAINSCOT_H, 0.09, M.dado, cx, WAINSCOT_H/2, 0.045));
+    g.add(box(w, 0.12, 0.21, M.dadoTrim, cx, WAINSCOT_H - 0.06, 0.105));   // chair rail
+    g.add(box(w, 0.05, 0.22, M.dadoTrim, cx, WAINSCOT_H - 0.14, 0.11));   // rail underside
+    g.add(box(w, 0.24, 0.16, M.dadoTrim, cx, 0.12, 0.08));                 // skirting
+  });
+
+  /* cornice clears the door heads, so it can run the full width */
+  g.add(box(width, 0.22, 0.23, M.trim, 0, WALL_H - 0.13, 0.115));
+  g.add(box(width, 0.10, 0.34, M.trim, 0, WALL_H - 0.29, 0.17));
+
+  const bays = runs(0.16);
+  bays.forEach(function(r, i){
+    /* the two runs that die into the room corners are left plain — on the back
+       wall they are mostly hidden behind the side walls, so all they ever
+       showed was a sliver of panel */
+    if(opts.plainEnds && (i === 0 || i === bays.length - 1)) return;
+    const span = r[1] - r[0];
+    if(span < PANEL_W + PANEL_MIN_MARGIN) return;
+    const n = Math.max(1, Math.floor(span / PANEL_PITCH));
+    const cell = span / n;
+    for(let k=0;k<n;k++){
+      const f = moulding(PANEL_W, PANEL_H, 0.08, 0.055, M.dadoTrim);
+      f.position.set(r[0] + cell*(k+0.5), WAINSCOT_H/2 - 0.10, 0.12);
+      g.add(f);
+    }
+  });
+
+  /* a wall's own mouldings never cast. the side cornice, lit this obliquely,
+     was throwing a hard diagonal band clear across the back wall — and every
+     shadow these bands owe is already baked into their maps. */
+  g.traverse(function(o){ if(o.isMesh) o.castShadow = false; });
+  return g;
+}
+
+const backDoorX = [-3.6, 0.1, 3.7];
+const backWall = buildWall(16, backDoorX, {bottom:0.16, top:0.13, left:0.06, right:0.06},
+                           {plainEnds:true});
+backWall.position.set(0, 0, BACK_Z);
+scene.add(backWall);
+
+/* left wall: world z = SIDE_MID - localX.   right wall: world z = SIDE_MID + localX. */
+const sideLocal = { left: SIDE_MID + 5.3, right: -(SIDE_MID + 5.0) };
+
+const leftWall = buildWall(SIDE_LEN, [sideLocal.left], {bottom:0.14, top:0.11, left:0.10});
+leftWall.rotation.y = Math.PI/2;
+leftWall.position.set(-SIDE_X, 0, SIDE_MID);
+scene.add(leftWall);
+
+const rightWall = buildWall(SIDE_LEN, [sideLocal.right], {bottom:0.14, top:0.11, right:0.10});
+rightWall.rotation.y = -Math.PI/2;
+rightWall.position.set(SIDE_X, 0, SIDE_MID);
+scene.add(rightWall);
+
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(44,44), M.carpet);
+floor.rotation.x = -Math.PI/2; floor.receiveShadow = true;
+scene.add(floor);
+
+const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(44,44), M.ceiling);
+ceiling.rotation.x = Math.PI/2; ceiling.position.y = WALL_H;
+scene.add(ceiling);
+
+/* carpet-to-skirting occlusion */
+(function(){
+  const s = 512, c = cvs(s,s), g = c.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0,0,s,s);
+  g.globalCompositeOperation = 'destination-out';
+  g.filter = 'blur(26px)'; g.fillStyle = '#fff';
+  g.fillRect(34,34,s-68,s-68); g.filter = 'none';
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(SIDE_X*2, SIDE_LEN),
+    new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c), color:0x2b2013,
+      transparent:true, opacity:0.44, depthWrite:false}));
+  m.rotation.x = -Math.PI/2;
+  m.position.set(0, 0.008, SIDE_MID);
+  m.renderOrder = 1;
+  scene.add(m);
+})();
+
+/* the area rug — a slab, not a plane, so its edge catches the window light */
+(function(){
+  const RW = 7.2, RD = 8.0, RT = 0.038, RX = 0, RZ = 0.8;
+
+  /* soft drop shadow first, so the rug edge has something to sit on */
+  const sc = cvs(512,512), sg = sc.getContext('2d');
+  sg.fillStyle = '#000'; sg.fillRect(0,0,512,512);
+  sg.globalCompositeOperation = 'destination-out';
+  sg.filter = 'blur(20px)'; sg.fillStyle = '#fff';
+  sg.fillRect(-40,-40,592,592);
+  sg.globalCompositeOperation = 'source-over';
+  sg.filter = 'blur(22px)'; sg.fillStyle = 'rgba(0,0,0,0.9)';
+  sg.fillRect(26,26,460,460); sg.filter = 'none';
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(RW + 0.7, RD + 0.7),
+    new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(sc), color:0x2b2013,
+      transparent:true, opacity:0.34, depthWrite:false}));
+  shadow.rotation.x = -Math.PI/2;
+  shadow.position.set(RX, 0.014, RZ);
+  shadow.renderOrder = 2;
+  scene.add(shadow);
+
+  const sideM = new THREE.MeshStandardMaterial({color:P.rug.border, roughness:1});
+  const rug = new THREE.Mesh(new THREE.BoxGeometry(RW, RT, RD),
+                             [sideM, sideM, M.rug, sideM, sideM, sideM]);
+  rug.position.set(RX, RT/2, RZ);
+  rug.receiveShadow = true;
+  scene.add(rug);
+
+  /* fringe: a comb of fine bristles off the two short ends */
+  const fringeM = new THREE.MeshStandardMaterial({color:P.rug.accent, roughness:1});
+  const strand  = new THREE.BoxGeometry(0.018, RT*0.55, 0.17);
+  const n = Math.round(RW / 0.055);
+  [-1, 1].forEach(function(sgn){
+    const inst = new THREE.InstancedMesh(strand, fringeM, n);
+    const m4 = new THREE.Matrix4();
+    for(let i=0;i<n;i++){
+      const x = -RW/2 + 0.03 + i*(RW - 0.06)/(n-1);
+      m4.makeTranslation(RX + x,
+                         RT*0.30,
+                         RZ + sgn*(RD/2 + 0.075 + Math.random()*0.012));
+      inst.setMatrixAt(i, m4);
+    }
+    inst.receiveShadow = true;
+    scene.add(inst);
+  });
+})();
+
+/* which room is behind which door. the banner over each one says the same,
+   and so does the label that follows the pointer. */
+const ROOMS = {1:'About', 2:'Experience', 3:'Education', 4:'Projects', 5:'Skills'};
+
+/* and which page each door actually opens onto */
+const DOOR_PAGES = {
+  'About':     'kitchen.html',
+  'Experience': 'dining.html',
+  'Education':     'bedroom.html',
+  'Projects': 'living.html',
+  'Skills':       'office.html'
+};
+
+const doors = [];
+backDoorX.forEach(function(x,i){
+  const d = makeDoor(P.doors[i], ROOMS[i+2]);
+  d.position.set(x, 0, BACK_Z + 0.02);
+  scene.add(d); doors.push(d);
+});
+const dL = makeDoor(P.doors[3], ROOMS[1]);
+dL.rotation.y = Math.PI/2;
+dL.position.set(-SIDE_X + 0.02, 0, SIDE_MID - sideLocal.left);
+scene.add(dL); doors.push(dL);
+
+const dR = makeDoor(P.doors[4], ROOMS[5]);
+dR.rotation.y = -Math.PI/2;
+dR.position.set(SIDE_X - 0.02, 0, SIDE_MID + sideLocal.right);
+scene.add(dR); doors.push(dR);
+
+/* ============================================================
+   8. FURNITURE — each prop owns its materials so it can fade alone
+   ============================================================ */
+const props = [];
+function registerProp(obj, mats, extra){
+  mats.forEach(function(m){
+    m.userData.opaqueBase = !m.transparent;
+    m.userData.baseOpacity = m.transparent ? m.opacity : 1;
+    m.transparent = true;
+  });
+  const p = Object.assign({obj:obj, mats:mats, o:1, shown:1}, extra || {});
+  props.push(p);
+  return p;
+}
+
+/* ---- two ways to make a shape a box cannot ---------------------------- */
+
+/* a swept tube whose section changes along the run: turned legs, a handset,
+   a coiled cord. TubeGeometry lays vertices at centre + unit normal, so the
+   section is just a per-ring rescale of that normal. */
+function sweep(curve, tubular, radial, radiusAt){
+  const g = new THREE.TubeGeometry(curve, tubular, 1, radial, false);
+  const pos = g.attributes.position, nrm = g.attributes.normal, c = new THREE.Vector3();
+  for(let i=0;i<=tubular;i++){
+    const t = i/tubular, r = radiusAt(t);
+    curve.getPointAt(t, c);
+    for(let j=0;j<=radial;j++){
+      const k = i*(radial+1)+j;
+      pos.setXYZ(k, c.x + nrm.getX(k)*r, c.y + nrm.getY(k)*r, c.z + nrm.getZ(k)*r);
+    }
+  }
+  pos.needsUpdate = true;
+  g.computeVertexNormals();
+  return g;
+}
+
+/* a stack of rounded-rectangle sections lofted up the y axis — how a moulded
+   bakelite case actually reads. rings are superellipses, so the corners are
+   genuinely round rather than a few bevel facets, and the grid is indexed so
+   the normals come out smooth the whole way round.
+   rings are [halfWidth, halfDepth, y, squareness]. */
+function loft(rings, seg){
+  const rows = rings.length, pos = [], uv = [], idx = [];
+  for(let i=0;i<rows;i++){
+    const R = rings[i], e = 2/(R[3] === undefined ? 5 : R[3]);
+    for(let j=0;j<=seg;j++){
+      const t = j/seg*Math.PI*2, ct = Math.cos(t), st = Math.sin(t);
+      pos.push(R[0]*Math.sign(ct)*Math.pow(Math.abs(ct), e), R[2],
+               R[1]*Math.sign(st)*Math.pow(Math.abs(st), e));
+      uv.push(j/seg, i/(rows-1));
+    }
+  }
+  for(let i=0;i<rows-1;i++) for(let j=0;j<seg;j++){
+    const a = i*(seg+1)+j, b = a+seg+1;
+    idx.push(a, b, a+1, a+1, b, b+1);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv,2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
+/* a turned profile, given as [radius, height] pairs read bottom to top */
+function turned(profile, segs){
+  return new THREE.LatheGeometry(profile.map(function(p){
+    return new THREE.Vector2(p[0], p[1]);
+  }), segs || 56);
+}
+
+/* ---- what the furniture is made of ------------------------------------ */
+
+/* close-grain walnut: cathedral figure, ray fleck, and the open pores that
+   keep a french-polished top from reading as moulded plastic */
+function walnutCanvas(){
+  const w = 1024, h = 1024, c = cvs(w,h), g = c.getContext('2d');
+  const base = '#4a2e1e';
+  g.fillStyle = base; g.fillRect(0,0,w,h);
+  blotch(g, w, h, base, 34, 1.0, 0.40);
+  for(let i=0;i<12;i++){                                   /* broad tonal bands */
+    const y = Math.random()*h, hh = 50 + Math.random()*190;
+    const d = g.createLinearGradient(0, y-hh, 0, y+hh);
+    const c = shift(base, (Math.random()-0.5)*0.13, (Math.random()-0.5)*0.06);
+    d.addColorStop(0, rgba(c,0)); d.addColorStop(0.5, rgba(c,0.5)); d.addColorStop(1, rgba(c,0));
+    g.fillStyle = d; g.fillRect(0, y-hh, w, hh*2);
+  }
+  for(let i=0;i<340;i++){                                  /* growth rings */
+    const y = Math.random()*h;
+    const amp = 14 + Math.pow(Math.random(), 2.2)*250;     /* mostly straight, some cathedral */
+    g.globalAlpha = 0.07 + Math.random()*0.30;
+    g.strokeStyle = shift(base, (Math.random()-0.5)*0.26, (Math.random()-0.5)*0.12);
+    g.lineWidth = 0.6 + Math.random()*3.4;
+    g.beginPath(); g.moveTo(-12, y);
+    g.bezierCurveTo(w*0.26, y - amp,
+                    w*0.64, y + amp*0.78,
+                    w+12,   y + (Math.random()-0.5)*70);
+    g.stroke();
+  }
+  for(let i=0;i<900;i++){                                  /* ray fleck */
+    g.globalAlpha = 0.05 + Math.random()*0.10;
+    g.strokeStyle = shift(base, 0.11);
+    g.lineWidth = 0.7;
+    const x = Math.random()*w, y = Math.random()*h;
+    g.beginPath(); g.moveTo(x,y);
+    g.lineTo(x + 6 + Math.random()*22, y + (Math.random()-0.5)*3); g.stroke();
+  }
+  g.globalAlpha = 1;
+  for(let i=0;i<2600;i++){                                 /* open pores */
+    g.fillStyle = 'rgba(26,14,7,' + (0.05 + Math.random()*0.20).toFixed(3) + ')';
+    g.fillRect(Math.random()*w, Math.random()*h, 1.4 + Math.random()*2.2, 1.0);
+  }
+  return c;
+}
+
+/* brass, still showing the lathe's circular tooling and a little tarnish */
+function brassCanvas(){
+  const w = 512, h = 512, c = cvs(w,h), g = c.getContext('2d');
+  const base = '#c8a765';
+  g.fillStyle = base; g.fillRect(0,0,w,h);
+  blotch(g, w, h, shift(base,-0.12,0.06), 26, 0.9, 0.34);
+  for(let i=0;i<520;i++){
+    g.globalAlpha = 0.05 + Math.random()*0.18;
+    g.strokeStyle = shift(base, (Math.random()-0.5)*0.26, (Math.random()-0.5)*0.12);
+    g.lineWidth = 0.5 + Math.random()*2.2;
+    const y = Math.random()*h;
+    g.beginPath(); g.moveTo(0,y); g.lineTo(w, y + (Math.random()-0.5)*4); g.stroke();
+  }
+  g.globalAlpha = 1;
+  speckle(g, w, h, 1100, 0.06);
+  return c;
+}
+
+/* shade cloth seen from outside: warp, weft, slubs, and the vertical seam */
+function linenCanvas(){
+  const w = 512, h = 256, c = cvs(w,h), g = c.getContext('2d');
+  const base = '#b0574a';
+  g.fillStyle = base; g.fillRect(0,0,w,h);
+  blotch(g, w, h, base, 28, 0.8, 0.26);
+  g.globalAlpha = 0.10;
+  for(let x=0;x<w;x+=2){
+    g.strokeStyle = shift(base, (Math.random()-0.5)*0.20);
+    g.lineWidth = 1; g.beginPath(); g.moveTo(x,0); g.lineTo(x,h); g.stroke();
+  }
+  for(let y=0;y<h;y+=2){
+    g.strokeStyle = shift(base, (Math.random()-0.5)*0.16);
+    g.lineWidth = 1; g.beginPath(); g.moveTo(0,y); g.lineTo(w,y); g.stroke();
+  }
+  g.globalAlpha = 1;
+  for(let i=0;i<170;i++){                                  /* slubs */
+    g.fillStyle = rgba(shift(base, 0.10), 0.20 + Math.random()*0.22);
+    g.fillRect(Math.random()*w, Math.random()*h, 3 + Math.random()*9, 1.3);
+  }
+  g.fillStyle = rgba(shift(base,-0.12), 0.45);             /* the seam */
+  g.fillRect(w*0.5 - 1.5, 0, 3, h);
+  return c;
+}
+
+/* how much light the cloth lets through: hot just above the bulb, dying at
+   both rims. v runs 0 at the bottom edge of the shade. */
+function shadeGlowCanvas(){
+  const w = 32, h = 256, c = cvs(w,h), g = c.getContext('2d');
+  const d = g.createLinearGradient(0,h,0,0);
+  d.addColorStop(0.00,'#3a2a1a');
+  d.addColorStop(0.07,'#e2a765');
+  d.addColorStop(0.34,'#ffd9a6');
+  d.addColorStop(0.74,'#7a5836');
+  d.addColorStop(1.00,'#211809');
+  g.fillStyle = d; g.fillRect(0,0,w,h);
+  return c;
+}
+
+/* moulded bakelite: flow lines from the press, and a buffed-out surface */
+function bakeliteCanvas(color){
+  const w = 512, h = 512, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = color; g.fillRect(0,0,w,h);
+  blotch(g, w, h, color, 34, 0.7, 0.20);
+  g.globalAlpha = 0.07;
+  for(let i=0;i<70;i++){                                   /* mould flow */
+    g.strokeStyle = shift(color, (Math.random()-0.5)*0.18);
+    g.lineWidth = 3 + Math.random()*16;
+    const y = Math.random()*h;
+    g.beginPath(); g.moveTo(0, y);
+    g.bezierCurveTo(w*0.3, y+(Math.random()-0.5)*70, w*0.7, y+(Math.random()-0.5)*70, w, y+(Math.random()-0.5)*40);
+    g.stroke();
+  }
+  g.globalAlpha = 1;
+  speckle(g, w, h, 1500, 0.045);
+  return c;
+}
+
+/* the dial: finger wheel over a printed number ring */
+function dialCanvas(){
+  const s = 512, R = s/2, c = cvs(s,s), g = c.getContext('2d');
+  g.fillStyle = '#ece5d6'; g.beginPath(); g.arc(R,R,R*0.995,0,Math.PI*2); g.fill();
+  g.fillStyle = 'rgba(30,24,16,.16)';
+  g.beginPath(); g.arc(R,R,R*0.995,0,Math.PI*2); g.arc(R,R,R*0.86,0,Math.PI*2,true); g.fill();
+  g.fillStyle = '#232120'; g.beginPath(); g.arc(R,R,R*0.79,0,Math.PI*2); g.fill();
+
+  const label = ['1','2','3','4','5','6','7','8','9','0'];
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for(let i=0;i<10;i++){
+    const a = (-96 + i*29.5) * Math.PI/180;
+    const hx = R + Math.cos(a)*R*0.565, hy = R + Math.sin(a)*R*0.565;
+    g.fillStyle = '#0b0b0a';
+    g.beginPath(); g.arc(hx,hy,R*0.112,0,Math.PI*2); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,.13)'; g.lineWidth = R*0.016;
+    g.beginPath(); g.arc(hx,hy,R*0.112,0,Math.PI*2); g.stroke();
+    g.fillStyle = '#2b2822';
+    g.font = '600 ' + Math.round(R*0.145) + 'px Helvetica, Arial, sans-serif';
+    g.fillText(label[i], R + Math.cos(a)*R*0.915, R + Math.sin(a)*R*0.915);
+  }
+  g.fillStyle = '#171614'; g.beginPath(); g.arc(R,R,R*0.215,0,Math.PI*2); g.fill();
+  g.fillStyle = '#3a3733'; g.beginPath(); g.arc(R,R,R*0.06,0,Math.PI*2); g.fill();
+  return c;
+}
+
+const walnutTex = tex(walnutCanvas());
+const brassTex  = tex(brassCanvas());
+const linenTex  = tex(linenCanvas());
+const glowTex   = tex(shadeGlowCanvas());
+
+const TABLE = new THREE.Vector3(-4.30, 0, -5.05);
+
+/* ---- the table: a walnut tripod on a turned pedestal ------------------- */
+const walnutM = new THREE.MeshPhysicalMaterial({
+  map:walnutTex, bumpMap:walnutTex, bumpScale:0.0018,
+  roughness:0.44, metalness:0, clearcoat:0.38, clearcoatRoughness:0.30
+});
+const tBrassM = new THREE.MeshStandardMaterial({
+  map:brassTex, bumpMap:brassTex, bumpScale:0.002, color:'#a98c52',
+  roughness:0.34, metalness:0.9
+});
+
+const table = new THREE.Group();
+
+/* top, with an ogee edge turned into the profile rather than faked with a torus */
+const top = new THREE.Mesh(turned([
+  [0.000,0.000],[0.760,0.000],[0.830,0.004],[0.868,0.014],[0.888,0.030],
+  [0.893,0.046],[0.884,0.060],[0.862,0.070],[0.832,0.076],[0.790,0.078],
+  [0.000,0.078]
+], 72), walnutM);
+top.position.y = 0.937;
+(function(g){                       /* grain runs across the top, not around it */
+  const p = g.attributes.position, uv = [];
+  for(let i=0;i<p.count;i++) uv.push(p.getX(i)/2.1 + 0.5, p.getZ(i)/2.1 + 0.5);
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+})(top.geometry);
+table.add(top);
+
+/* pedestal */
+table.add(new THREE.Mesh(turned([
+  [0.000,0.150],[0.212,0.150],[0.224,0.166],[0.210,0.190],[0.166,0.226],
+  [0.129,0.276],[0.112,0.336],[0.127,0.400],[0.163,0.462],[0.187,0.520],
+  [0.190,0.576],[0.171,0.632],[0.132,0.686],[0.104,0.730],[0.098,0.768],
+  [0.117,0.800],[0.153,0.830],[0.168,0.858],[0.150,0.882],[0.128,0.902],
+  [0.292,0.906],[0.302,0.918],[0.296,0.936],[0.000,0.936]
+], 48), walnutM));
+
+/* three cabriole legs: knee out, ankle in, pad foot on a brass toe cap */
+for(let i=0;i<3;i++){
+  const a  = (i/3)*Math.PI*2 + 0.62;
+  const ux = Math.cos(a), uz = Math.sin(a);
+  const path = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(ux*0.10, 0.290, uz*0.10),
+    new THREE.Vector3(ux*0.31, 0.198, uz*0.31),
+    new THREE.Vector3(ux*0.53, 0.118, uz*0.53),
+    new THREE.Vector3(ux*0.71, 0.068, uz*0.71),
+    new THREE.Vector3(ux*0.81, 0.030, uz*0.81)
+  ]);
+  table.add(new THREE.Mesh(sweep(path, 40, 14, function(t){
+    return 0.090 - 0.050*t*t - 0.012*Math.sin(t*Math.PI);
+  }), walnutM));
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.040,0.046,0.030,18), tBrassM);
+  cap.position.set(ux*0.815, 0.015, uz*0.815);
+  table.add(cap);
+}
+
+table.traverse(function(o){ if(o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
+table.position.copy(TABLE);
+scene.add(table);
+const tableShadow = contact(2.15, 0.30, TABLE.x, TABLE.z);
+scene.add(tableShadow);
+registerProp(table, [walnutM, tBrassM]);
+registerProp(tableShadow, [tableShadow.material]);
+
+/* ---- the lamp: turned brass column, harp, linen shade ------------------ */
+const lBrassM = new THREE.MeshStandardMaterial({
+  map:brassTex, bumpMap:brassTex, bumpScale:0.0016, color:'#b39359',
+  roughness:0.28, metalness:0.92
+});
+const shadeM = new THREE.MeshStandardMaterial({
+  map:linenTex, bumpMap:linenTex, bumpScale:0.0025,
+  emissiveMap:glowTex, emissive:'#ffffff', emissiveIntensity:0.85,
+  roughness:0.94, metalness:0, side:THREE.DoubleSide
+});
+
+const lamp = new THREE.Group();
+lamp.add(new THREE.Mesh(turned([
+  [0.000,0.000],[0.180,0.000],[0.188,0.012],[0.180,0.026],[0.152,0.038],
+  [0.118,0.046],[0.080,0.056],[0.062,0.078],[0.056,0.108],[0.070,0.132],
+  [0.082,0.148],[0.054,0.164],[0.031,0.196],[0.028,0.560],[0.038,0.598],
+  [0.028,0.626],[0.027,0.690],[0.048,0.700],[0.050,0.744],[0.036,0.752],
+  [0.000,0.752]
+], 44), lBrassM));
+
+/* harp */
+[-1,1].forEach(function(s){
+  const arc = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(s*0.032, 0.756, 0),
+    new THREE.Vector3(s*0.104, 0.826, 0),
+    new THREE.Vector3(s*0.118, 0.930, 0),
+    new THREE.Vector3(s*0.076, 1.052, 0),
+    new THREE.Vector3(s*0.013, 1.092, 0)
+  ]);
+  lamp.add(new THREE.Mesh(sweep(arc, 24, 8, function(){ return 0.0085; }), lBrassM));
+});
+const finial = new THREE.Mesh(turned([
+  [0.000,1.088],[0.026,1.090],[0.026,1.100],[0.040,1.112],[0.040,1.128],
+  [0.024,1.146],[0.000,1.152]
+], 24), lBrassM);
+lamp.add(finial);
+
+/* shade: slight taper, rolled rims top and bottom */
+const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.215,0.335,0.395,48,1,true), shadeM);
+shade.position.y = 0.895; lamp.add(shade);
+[[0.335,0.6975],[0.215,1.0925]].forEach(function(r){
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(r[0]-0.006, 0.010, 8, 48), shadeM);
+  rim.rotation.x = Math.PI/2; rim.position.y = r[1]; lamp.add(rim);
+});
+
+lamp.traverse(function(o){ if(o.isMesh) o.castShadow = true; });
+lamp.position.set(TABLE.x - 0.02, 1.015, TABLE.z - 0.18);
+scene.add(lamp);
+
+lamp.userData.isLamp = true;
+lamp.userData.name = 'Lamp';
+
+const bulb = new THREE.PointLight(0xffcf9c, 2.2, 9, 2);
+bulb.position.set(TABLE.x - 0.02, 1.86, TABLE.z - 0.18);
+bulb.castShadow = true;
+bulb.shadow.mapSize.set(1024,1024);
+bulb.shadow.bias = -0.004;
+scene.add(bulb);
+
+/* the switch. the bulb and the glow in the linen are both driven off one
+   eased level, so it warms up rather than snapping on. */
+let lampOn = false, lampLevel = 0;
+const lampProp = registerProp(lamp, [lBrassM, shadeM],
+  {light:bulb, baseI:2.2, dim:function(){ return lampLevel; }});
+
+/* ---- the telephone: bakelite desk set, pressable ---------------------- */
+const bakeTex   = tex(bakeliteCanvas('#5f8ea8'));
+const bakeliteM = new THREE.MeshPhysicalMaterial({
+  map:bakeTex, bumpMap:bakeTex, bumpScale:0.0012,
+  roughness:0.38, metalness:0, clearcoat:0.5, clearcoatRoughness:0.3
+});
+const bakeDarkM = new THREE.MeshStandardMaterial({color:'#2c3a42', roughness:0.55});
+const chromeM   = new THREE.MeshStandardMaterial({color:'#ccd2d6', roughness:0.17, metalness:0.95});
+const dialM     = new THREE.MeshStandardMaterial({map:tex(dialCanvas()), roughness:0.42});
+
+const phone = new THREE.Group();
+
+/* case: square-shouldered at the table, drawing in and doming over the top */
+const body = new THREE.Mesh(loft([
+  [0.002,0.002,0.000,5],
+  [0.176,0.130,0.000,7],
+  [0.198,0.148,0.013,7],
+  [0.205,0.153,0.030,6.5],
+  [0.201,0.150,0.062,6],
+  [0.187,0.139,0.092,5.5],
+  [0.166,0.122,0.115,5],
+  [0.142,0.102,0.131,4.2],
+  [0.112,0.079,0.140,3.6],
+  [0.068,0.047,0.145,3.2],
+  [0.002,0.002,0.147,3]
+], 72), bakeliteM);
+phone.add(body);
+
+/* the dial, sunk into the front of the top face and tipped towards the caller */
+const dialGroup = new THREE.Group();
+const bezel = new THREE.Mesh(turned([
+  [0.000,0.000],[0.128,0.000],[0.134,0.008],[0.132,0.018],[0.120,0.024],
+  [0.114,0.020],[0.113,0.004],[0.000,0.004]
+], 48), bakeliteM);
+dialGroup.add(bezel);
+const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.109,0.111,0.013,48),
+                             [bakeDarkM, dialM, bakeDarkM]);
+wheel.position.y = 0.013;
+dialGroup.add(wheel);
+/* finger stop: the little chrome hook the wheel returns against */
+const stop = new THREE.Mesh(turned([
+  [0.000,0.000],[0.016,0.000],[0.017,0.010],[0.013,0.020],[0.009,0.026],[0.000,0.028]
+], 20), chromeM);
+stop.position.set(0.108, 0.014, 0.052);
+dialGroup.add(stop);
+dialGroup.position.set(0, 0.128, 0.030);
+dialGroup.rotation.x = -0.19;
+phone.add(dialGroup);
+
+/* cradle: two humps moulded out of the case, each with a plunger the
+   handset presses down */
+[-1,1].forEach(function(s){
+  const hump = new THREE.Mesh(turned([
+    [0.000,0.000],[0.062,0.000],[0.064,0.010],[0.060,0.022],[0.050,0.030],
+    [0.036,0.034],[0.000,0.035]
+  ], 28), bakeliteM);
+  hump.position.set(s*0.148, 0.126, -0.052);
+  phone.add(hump);
+  const plunger = new THREE.Mesh(new THREE.CylinderGeometry(0.026,0.028,0.022,20), bakeDarkM);
+  plunger.position.set(s*0.148, 0.150, -0.052);
+  phone.add(plunger);
+});
+
+/* handset: one moulded piece — a grip that swells into a cup at each end */
+const HANDSET_Y = 0.162;
+const handset = new THREE.Group();
+const bar = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(-0.188, 0.044, 0),
+  new THREE.Vector3(-0.100, 0.092, 0),
+  new THREE.Vector3( 0.000, 0.104, 0),
+  new THREE.Vector3( 0.100, 0.092, 0),
+  new THREE.Vector3( 0.188, 0.044, 0)
+]);
+handset.add(new THREE.Mesh(sweep(bar, 48, 18, function(t){
+  return 0.0175 + 0.013*Math.pow(Math.abs(t-0.5)*2, 2.6);
+}), bakeliteM));
+[-1,1].forEach(function(s){
+  const cup = new THREE.Mesh(turned([
+    [0.046,0.000],[0.056,0.002],[0.061,0.009],[0.060,0.019],[0.052,0.033],
+    [0.043,0.047],[0.036,0.060],[0.000,0.062]
+  ], 32), bakeliteM);
+  cup.position.set(s*0.186, 0.000, 0);
+  handset.add(cup);
+  const grille = new THREE.Mesh(new THREE.CircleGeometry(0.047, 28), bakeDarkM);
+  grille.rotation.x = Math.PI/2;
+  grille.position.set(s*0.186, 0.004, 0);
+  handset.add(grille);
+});
+handset.position.y = HANDSET_Y;
+phone.add(handset);
+
+/* the coiled cord — the one detail that reads as "telephone" from across the
+   room. it is restrung whenever the handset moves, so the coil follows it. */
+const cordM = new THREE.MeshStandardMaterial({color:'#3d6579', roughness:0.6});
+const CORD_PORT = new THREE.Vector3(-0.176, 0.046, -0.112);
+let cord = null;
+function cordPath(end){
+  /* the cord leaves the back of the case, loops out clear of it on the table,
+     then climbs to the handset — a helix wound around that spine */
+  const spine = new THREE.CatmullRomCurve3([
+    CORD_PORT.clone(),
+    new THREE.Vector3(-0.286, 0.028, -0.126),
+    new THREE.Vector3(-0.330, 0.026,  0.004),
+    end.clone()
+  ]);
+  const pts = [], n = 132, turns = 6, up = new THREE.Vector3(0,1,0);
+  const c = new THREE.Vector3(), tan = new THREE.Vector3(),
+        u = new THREE.Vector3(), v = new THREE.Vector3();
+  for(let i=0;i<=n;i++){
+    const t = i/n;
+    spine.getPointAt(t, c);
+    spine.getTangentAt(t, tan);
+    u.crossVectors(tan, up);
+    if(u.lengthSq() < 1e-8) u.set(1,0,0);
+    u.normalize();
+    v.crossVectors(u, tan).normalize();
+    const env = Math.pow(Math.sin(Math.PI*t), 0.45);     /* the coil dies into both ends */
+    const a = t*turns*Math.PI*2, r = 0.026*env;
+    pts.push(new THREE.Vector3(
+      c.x + (u.x*Math.cos(a) + v.x*Math.sin(a))*r,
+      c.y + (u.y*Math.cos(a) + v.y*Math.sin(a))*r,
+      c.z + (u.z*Math.cos(a) + v.z*Math.sin(a))*r
+    ));
+  }
+  return new THREE.CatmullRomCurve3(pts);
+}
+function restringCord(){
+  const end = new THREE.Vector3(-0.196, 0.020, 0)
+    .applyAxisAngle(new THREE.Vector3(0,0,1), handset.rotation.z)
+    .add(new THREE.Vector3(0, handset.position.y, 0));
+  const geo = sweep(cordPath(end), 132, 8, function(){ return 0.0092; });
+  if(cord){ cord.geometry.dispose(); cord.geometry = geo; }
+  else {
+    cord = new THREE.Mesh(geo, cordM);
+    cord.castShadow = true;
+    phone.add(cord);
+  }
+}
+restringCord();
+
+phone.traverse(function(o){ if(o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
+phone.position.set(TABLE.x - 0.36, 1.015, TABLE.z + 0.32);
+phone.rotation.y = 0.5;
+phone.userData.isPhone = true;
+phone.userData.name = 'Telephone';
+scene.add(phone);
+registerProp(phone, [bakeliteM, bakeDarkM, chromeM, dialM, cordM]);
+
+/* ============================================================
+   9. LIGHT — one window, front left, plus image-based fill
+   ============================================================ */
+scene.add(new THREE.HemisphereLight(0xfff6e6, 0xa8977a, 0.34));
+
+const sun = new THREE.DirectionalLight(0xffeccd, 1.5);
+sun.position.set(-11, 8.5, 11);
+sun.target.position.set(2.5, 0.8, -4.5);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left = -16; sun.shadow.camera.right = 16;
+sun.shadow.camera.top = 14;   sun.shadow.camera.bottom = -8;
+sun.shadow.camera.near = 1;   sun.shadow.camera.far = 46;
+sun.shadow.bias = -0.0008;
+sun.shadow.radius = 4;
+scene.add(sun); scene.add(sun.target);
+
+const bounce = new THREE.DirectionalLight(0xd6e0ee, 0.26);
+bounce.position.set(9, 3, -2);
+scene.add(bounce);
+
+/* a tiny stand-in interior, pre-filtered into an environment map.
+   gives brass and glass something real to reflect. */
+try{
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const env = new THREE.Scene();
+  const shell = new THREE.Mesh(new THREE.BoxGeometry(10,10,10),
+    new THREE.MeshBasicMaterial({color:0xc9bda4, side:THREE.BackSide}));
+  env.add(shell);
+  const win = new THREE.Mesh(new THREE.PlaneGeometry(4.6,5.4),
+    new THREE.MeshBasicMaterial({color:0xfff3e0}));
+  win.rotation.y = Math.PI/2; win.position.set(-4.9, 1.2, 1);
+  env.add(win);
+  const gnd = new THREE.Mesh(new THREE.PlaneGeometry(10,10),
+    new THREE.MeshBasicMaterial({color:0x877962}));
+  gnd.rotation.x = -Math.PI/2; gnd.position.y = -4.9;
+  env.add(gnd);
+  scene.environment = pmrem.fromScene(env, 0.05).texture;
+  pmrem.dispose();
+  scene.traverse(function(o){
+    if(o.isMesh && o.material && o.material.isMeshStandardMaterial){
+      o.material.envMapIntensity = o.material.metalness > 0.5 ? 1.15 : 0.4;
+    }
+  });
+}catch(e){ /* environment is a bonus, not a requirement */ }
+
+/* the light the window throws */
+const goboTex = new THREE.CanvasTexture(goboCanvas());
+function pool(w,h,opacity){
+  return new THREE.Mesh(new THREE.PlaneGeometry(w,h),
+    new THREE.MeshBasicMaterial({map:goboTex, color:0xffd9a1, transparent:true,
+      opacity:opacity, blending:THREE.AdditiveBlending, depthWrite:false}));
+}
+const floorPool = pool(7.4, 9.4, 0.16);
+floorPool.rotation.x = -Math.PI/2; floorPool.rotation.z = -0.42;
+floorPool.position.set(1.4, 0.058, -1.6); floorPool.renderOrder = 3;  /* clears the rug */
+scene.add(floorPool);
+
+const wallPool = pool(4.6, 4.0, 0.19);
+wallPool.rotation.y = -Math.PI/2;
+wallPool.position.set(SIDE_X - 0.16, 3.3, -0.2); wallPool.renderOrder = 3;
+scene.add(wallPool);
+
+const backPool = pool(4.0, 3.2, 0.11);
+backPool.position.set(4.9, 3.6, BACK_Z + 0.22); backPool.renderOrder = 3;
+scene.add(backPool);
+
+/* ============================================================
+   10. INTERACTION
+   ============================================================ */
+const dom = renderer.domElement;
+const pointer = new THREE.Vector2(0,0);
+const look = {x:0,y:0}, target = {x:0,y:0};
+let dolly = 0, dollyTarget = 0, yaw = 0, pitch = 0;
+let dragging = false, dragged = false, lastX = 0, lastY = 0;
+
+const raycaster = new THREE.Raycaster();
+let hovered = null;
+/* the pointer starts at (0,0) — dead centre, which is a door. nothing is
+   really hovered until the pointer has actually been moved over the canvas,
+   so the name tag stays shut until then. */
+let pointerLive = false;
+const clickable = doors.concat([phone, lamp]);
+
+const APPROACH = 4.6;
+const walk = {state:'idle', t:0, door:null,
+              from:new THREE.Vector3(), to:new THREE.Vector3(),
+              lookFrom:new THREE.Vector3(), lookTo:new THREE.Vector3()};
+const restLook = new THREE.Vector3(0, 2.05, BACK_Z);
+const ORIGIN = HOME.clone();
+
+function approach(door){
+  hangUp();
+  walk.door = door;
+  const n = new THREE.Vector3(0,0,1).applyQuaternion(door.quaternion);
+  walk.from.copy(camera.position);
+  walk.to.copy(door.position).addScaledVector(n, APPROACH);
+  walk.to.y = 1.9;
+  walk.lookFrom.copy(restLook);
+  walk.lookTo.copy(door.position).setY(1.86);
+
+  /* a prop that is still inside the frame once we arrive cannot dissolve at
+     the door without being watched doing it — on the left-wall door the table
+     sits square on the sightline. those go early instead, over the fastest
+     stretch of the move. everything else holds until the door fills the view. */
+  const eye = walk.to.clone(), fwd = walk.lookTo.clone().sub(eye).normalize();
+  props.forEach(function(pr){
+    pr.obj.getWorldPosition(tmpV).sub(eye);
+    const along = tmpV.dot(fwd), len = Math.max(1e-4, tmpV.length());
+    pr.early = along > 0.2 &&
+      Math.acos(THREE.MathUtils.clamp(along/len, -1, 1)) < H_HALF*1.3;
+  });
+
+  walk.t = 0; walk.state = 'in';
+  walk.navigated = false;
+}
+function stepBack(){
+  if(walk.state !== 'at' || walk.navigated) return;
+  walk.from.copy(camera.position);
+  walk.to.copy(ORIGIN);
+  walk.lookFrom.copy(walk.lookTo);
+  walk.lookTo.copy(restLook);
+  walk.t = 0; walk.state = 'out';
+  backBtn.classList.remove('show');
+}
+backBtn.addEventListener('click', stepBack);
+
+/* --- telephone: lifting the handset opens the contact card --- */
+const callCard = document.getElementById('call');
+let handsetUp = false, handsetY = 0;
+function togglePhone(){
+  handsetUp = !handsetUp;
+  callCard.classList.toggle('open', handsetUp);
+  callCard.setAttribute('aria-hidden', handsetUp ? 'false' : 'true');
+  if(handsetUp){
+    dialTone();
+    const first = callCard.querySelector('a');
+    if(first) first.focus({preventScroll:true});
+  }
+}
+function hangUp(){ if(handsetUp) togglePhone(); }
+document.getElementById('hang').addEventListener('click', hangUp);
+
+/* --- lamp --- */
+function toggleLamp(){ lampOn = !lampOn; }
+
+dom.style.cursor = 'default';
+/* `dragging` no longer turns the hall — it only remembers that a press is in
+   flight, so a press that slides off its mark can be told from a click */
+dom.addEventListener('pointerdown', function(e){
+  pointerLive = true;
+  pointer.x =  (e.clientX/innerWidth)*2 - 1;
+  pointer.y = -(e.clientY/innerHeight)*2 + 1;
+  dragging = true; dragged = false;
+  lastX = e.clientX; lastY = e.clientY;
+  if(dom.setPointerCapture) dom.setPointerCapture(e.pointerId);
+});
+dom.addEventListener('pointermove', function(e){
+  pointerLive = true;
+  pointer.x =  (e.clientX/innerWidth)*2 - 1;
+  pointer.y = -(e.clientY/innerHeight)*2 + 1;
+  target.x = pointer.x; target.y = pointer.y;
+  /* the hall does not follow a held press. all that is left to measure is
+     whether the press wandered far enough to stop being a click */
+  if(dragging && Math.abs(e.clientX-lastX) + Math.abs(e.clientY-lastY) > 12){
+    dragged = true;
+  }
+});
+function endDrag(){
+  if(!dragging) return;
+  dragging = false;
+  dom.style.cursor = hovered ? 'pointer' : 'default';
+  if(dragged) return;
+  if(walk.state === 'at'){ stepBack(); return; }
+  if(hovered && walk.state === 'idle'){
+    if(hovered.userData.isDoor) approach(hovered);
+    else if(hovered.userData.isPhone) togglePhone();
+    else if(hovered.userData.isLamp) toggleLamp();
+  }
+}
+dom.addEventListener('pointerup', endDrag);
+dom.addEventListener('pointercancel', endDrag);
+dom.addEventListener('pointerleave', function(){
+  pointerLive = false; hovered = null;
+  dom.style.cursor = 'default';
+});
+dom.addEventListener('wheel', function(e){
+  if(walk.state !== 'idle') return;
+  dollyTarget = THREE.MathUtils.clamp(dollyTarget - e.deltaY*0.0024, -2.0, 4.2);
+}, {passive:true});
+
+function updateHover(){
+  if(!pointerLive){
+    if(hovered){ hovered = null; dom.style.cursor = 'default'; }
+    return;
+  }
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObjects(clickable, true)[0];
+  let group = null;
+  if(hit){
+    let o = hit.object;
+    while(o && !o.userData.isDoor && !o.userData.isPhone && !o.userData.isLamp) o = o.parent;
+    group = o;
+    /* a prop already dissolving under the camera stops answering to the pointer */
+    if(group && group.userData.isPhone && phoneProp && phoneProp.shown < 0.4) group = null;
+    if(group && group.userData.isLamp  && lampProp.shown  < 0.4) group = null;
+  }
+  if(group !== hovered){
+    hovered = group;
+    dom.style.cursor = hovered ? 'pointer' : 'default';
+  }
+}
+const phoneProp = props.filter(function(p){ return p.obj === phone; })[0];
+
+addEventListener('keydown', function(e){
+  if(e.key === 'Escape'){ if(closeWelcome()) return; hangUp(); stepBack(); }
+});
+
+/* --- audio: dial tone --- */
+let actx = null;
+function ensureAudio(){
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC) return null;
+  if(!actx) actx = new AC();
+  if(actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function dialTone(){
+  const ctx = ensureAudio(); if(!ctx) return;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0, ctx.currentTime);
+  g.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 0.05);
+  g.gain.setValueAtTime(0.05, ctx.currentTime + 1.6);
+  g.gain.linearRampToValueAtTime(0, ctx.currentTime + 2.0);
+  g.connect(ctx.destination);
+  [350, 440].forEach(function(f){
+    const o = ctx.createOscillator();
+    o.type = 'sine'; o.frequency.value = f;
+    o.connect(g); o.start();
+    o.stop(ctx.currentTime + 2.1);
+  });
+}
+/* ============================================================
+   10b. THE TAP BADGES
+   A baked hall looks exactly as pressable as a photograph, and
+   the name tag only turns up once the cursor is already on the
+   thing. The doors say what they are without help; the two small
+   props that answer to a press do not, so those are the only two
+   that wear a badge. It is also the keyboard's way to both.
+   ============================================================ */
+const hints = TapHints.init({
+  THREE: THREE, camera: camera,
+  /* nothing during the walk to a door, and nothing behind the welcome card */
+  enabled: function(){
+    return walk.state === 'idle' && !welcomeEl.classList.contains('show');
+  }
+});
+
+/* No badge on any of the doors. They already carry their own name banners,
+   they are the only five things in the hall shaped like a way out, and a
+   hall is the one room whose headline needs no explaining — the visitor
+   arrived here to go somewhere. A hand on the middle door was answering a
+   question nobody was asking, and it sat on top of the banner that already
+   said the same thing. The two ticks below are the whole board. */
+
+/* the phone wears the pen, not the plain circle. It is a way to reach me,
+   and every other way-to-reach-me in the house — the menu, the letter, the
+   journal, the place card — is marked with the same drawing. One badge, one
+   meaning, wherever in the house it turns up. */
+const phoneHint = hints.add({
+  kind: 'write',
+  object: phone, offset: [0, 0.14, 0.06],
+  label: 'Pick up',
+  onActivate: function(){ togglePhone(); }
+});
+
+const lampHint = hints.add({
+  object: lamp, offset: [0.22, 0.10, 0.10],
+  label: 'Switch on',
+  onActivate: function(){ toggleLamp(); }
+});
+
+/* the badges and the hall are two handles on one state, so the labels are
+   painted from that state in the loop rather than hand-synced */
+function paintHints(){
+  phoneHint.label(handsetUp ? 'Hang up' : 'Pick up');
+  lampHint.label(lampOn ? 'Switch off' : 'Switch on');
+}
+
+/* ============================================================
+   11. LOOP
+   ============================================================ */
+const lookAt = new THREE.Vector3();
+const clock = new THREE.Clock();
+const tmpV = new THREE.Vector3();
+let hoverGlow = 0;
+
+function easeInOut(p){ return p < 0.5 ? 2*p*p : 1 - Math.pow(-2*p + 2, 2)/2; }
+
+/* props clear out of an approach so nothing crosses the door — but the
+   visitor should never catch them going. the veil holds at 0 for the whole
+   walk across the room and only closes over the last few frames, once the
+   door already fills the frame; stepping back releases it immediately, so
+   they are back before the camera has pulled far enough to see them arrive. */
+let veil = 0, veilEarly = 0;
+function updateVeil(dt){
+  const ss = THREE.MathUtils.smoothstep;
+  if(walk.state === 'in'){
+    veil      = ss(walk.t, 0.80, 0.97);
+    veilEarly = ss(walk.t, 0.08, 0.46);
+  } else if(walk.state === 'at'){
+    veil = veilEarly = 1;
+  } else if(walk.state === 'out'){          /* both release the moment we pull away */
+    veil      = 1 - ss(walk.t, 0.00, 0.30);
+    veilEarly = 1 - ss(walk.t, 0.00, 0.55);
+  } else {
+    const k = Math.min(1, dt*4.0);
+    veil -= veil*k; veilEarly -= veilEarly*k;
+  }
+}
+
+/* and independently of all that, a prop dissolves when the camera closes on it */
+function updateProps(dt){
+  props.forEach(function(p){
+    p.obj.getWorldPosition(tmpV);
+    const d = camera.position.distanceTo(tmpV);
+    const want = THREE.MathUtils.clamp((d - 1.5)/1.9, 0, 1);
+    p.o += (want - p.o) * Math.min(1, dt*4.5);
+    const o = p.shown = p.o * (1 - (p.early ? veilEarly : veil));
+    p.obj.visible = o > 0.012;
+    p.mats.forEach(function(m){
+      const base = m.userData.baseOpacity === undefined ? 1 : m.userData.baseOpacity;
+      m.opacity = base * o;
+      if(m.userData.opaqueBase) m.depthWrite = o > 0.985;
+    });
+    if(p.light) p.light.intensity = p.baseI * o * (p.dim ? p.dim() : 1);
+  });
+}
+
+function tick(){
+  requestAnimationFrame(tick);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.getElapsedTime();
+
+  /* handset */
+  const wantY = handsetUp ? 0.17 : 0;
+  handsetY += (wantY - handsetY) * Math.min(1, dt*7);
+  if(Math.abs(handset.position.y - (HANDSET_Y + handsetY)) > 0.0006){
+    handset.position.y = HANDSET_Y + handsetY;
+    handset.rotation.z = -handsetY * 1.5;
+    restringCord();
+  }
+
+  if(walk.state === 'in' || walk.state === 'out'){
+    walk.t = Math.min(1, walk.t + dt/1.5);
+    const e = easeInOut(walk.t);
+    camera.position.lerpVectors(walk.from, walk.to, e);
+    lookAt.lerpVectors(walk.lookFrom, walk.lookTo, e);
+    camera.lookAt(lookAt);
+    if(walk.t >= 1){
+      if(walk.state === 'out'){
+        walk.state = 'idle';
+        HOME.copy(ORIGIN);
+        yaw = pitch = 0; dolly = dollyTarget = 0;
+        look.x = look.y = target.x = target.y = 0;
+      } else {
+        walk.state = 'at';
+        /* the door is ajar now — step through it */
+        const page = walk.door && DOOR_PAGES[walk.door.userData.name];
+        if(page && !walk.navigated){
+          walk.navigated = true;
+          setTimeout(function(){
+            if(window.HOUSE && window.HOUSE.go) window.HOUSE.go(page);
+            else location.href = page;
+          }, 450);
+        }
+      }
+    }
+  } else if(walk.state === 'at'){
+    camera.position.copy(walk.to);
+    camera.lookAt(walk.lookTo);
+  } else {
+    const k = Math.min(1, dt*3.0);
+    look.x += (target.x - look.x)*k;
+    look.y += (target.y - look.y)*k;
+    dolly  += (dollyTarget - dolly)*Math.min(1, dt*3.2);
+    camera.position.set(
+      HOME.x + look.x*0.42 + yaw*2.6,
+      HOME.y + look.y*0.16 + pitch*2.0 + Math.sin(t*0.4)*0.014,
+      HOME.z - dolly
+    );
+    lookAt.set(look.x*0.8 + yaw*1.9, 1.98 + look.y*0.26 + pitch*1.5, BACK_Z);
+    camera.lookAt(lookAt);
+    updateHover();
+  }
+
+  updateVeil(dt);
+  updateProps(dt);
+
+  /* the lamp warms up rather than snapping on */
+  lampLevel += ((lampOn ? 1 : 0) - lampLevel) * Math.min(1, dt*5);
+  shadeM.emissiveIntensity = 0.05 + 1.00*lampLevel;
+
+  /* the door we are walking at comes ajar over the last of the approach —
+     late enough that it is already filling the frame — and shuts again the
+     moment we pull back */
+  const ss = THREE.MathUtils.smoothstep;
+  let ajar = 0;
+  if(walk.state === 'in')       ajar = ss(walk.t, 0.68, 1.00);
+  else if(walk.state === 'at')  ajar = 1;
+  else if(walk.state === 'out') ajar = 1 - ss(walk.t, 0.00, 0.40);
+  doors.forEach(function(d){
+    d.userData.swing.rotation.y = (d === walk.door) ? -AJAR*ajar : 0;
+  });
+
+  /* the hovered door warms very slightly, as if catching more light */
+  const wantGlow = (hovered && hovered.userData.isDoor) ? 1 : 0;
+  hoverGlow += (wantGlow - hoverGlow) * Math.min(1, dt*6);
+  doors.forEach(function(d){
+    const on = (d === hovered) ? hoverGlow : 0;
+    d.userData.faces.forEach(function(f){
+      f.emissive.setRGB(0.10, 0.075, 0.04);
+      f.emissiveIntensity = on * 0.32;
+    });
+  });
+
+  paintHints();
+  hints.update();
+
+  renderer.render(scene, camera);
+}
+if(window.HouseBoot) HouseBoot.mark('built');
+tick();
+
+addEventListener('resize', function(){
+  renderer.setSize(innerWidth, innerHeight);
+  frameCamera();
+});
+
+/* The room is drawn. Two frames deep, so the first render has actually
+   been composited rather than merely queued, and the screen lifts onto
+   a finished picture instead of a half-built one. */
+requestAnimationFrame(function(){ requestAnimationFrame(function(){
+  if(window.HouseBoot) HouseBoot.open();
+  else fadeEl.classList.add('hidden');
+}); });
+
+})();
+</script>
+<script src="house-nav.js"></script>
+</body>
+</html>

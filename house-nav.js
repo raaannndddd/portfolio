@@ -1,0 +1,148 @@
+/* ============================================================
+   house-nav.js — one include, three jobs:
+     1. the room-to-room pill nav along the bottom
+     2. the departure veil, so leaving a page fades into the
+        colour the next page fades in from
+     3. idle prefetch of the other rooms
+   Every page carries its own arrival fade (#fade); this script
+   only has to match its colour on the way out for the cut to
+   be invisible.
+   ============================================================ */
+(function(){
+"use strict";
+
+var PAGES = [
+  {file:'entrance.html', label:'Entrance',   fade:'#0e0c09', section:'the front room'},
+  {file:'kitchen.html',  label:'About',    fade:'#0e0c09', section:'about me'},
+  {file:'living.html',   label:'Projects',     fade:'#0e0c09', section:'projects'},
+  {file:'bedroom.html',  label:'Education',    fade:'#0e0c09', section:'education'},
+  {file:'office.html',   label:'Skills',     fade:'#0e0c09', section:'skills'},
+  {file:'dining.html',   label:'Experience',     fade:'#efece6', section:'experience'},
+  {divider:true},
+  {file:'writing.html',  label:'Writing', fade:'#f4ede0', section:'the whole house, on paper'},
+  {file:'contact.html',  label:'Contact',    fade:'#f4ede0', section:'say hello'}
+];
+
+var here = location.pathname.split('/').pop() || 'entrance.html';
+var reduced = matchMedia('(prefers-reduced-motion: reduce)');
+
+function pageFor(file){
+  for(var i=0;i<PAGES.length;i++) if(PAGES[i].file === file) return PAGES[i];
+  return null;
+}
+
+/* ---- styles -------------------------------------------------- */
+var css = [
+'#house-nav{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:40;',
+'  display:flex;align-items:center;gap:2px;padding:6px;',
+'  background:#fffdf9;border-radius:999px;box-shadow:0 8px 30px rgba(28,22,14,.20);',
+'  font-family:"Helvetica Neue",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;',
+'  max-width:min(94vw,calc(100vw - 200px));overflow-x:auto;scrollbar-width:none;',
+'  -webkit-overflow-scrolling:touch;white-space:nowrap;}',
+'#house-nav::-webkit-scrollbar{display:none}',
+'#house-nav a{flex:0 0 auto;display:block;padding:9px 14px;border-radius:999px;',
+'  font-size:13px;letter-spacing:.02em;color:#1c1a17;text-decoration:none;',
+'  transition:background .25s,color .25s,transform .25s cubic-bezier(.2,.8,.2,1);}',
+'#house-nav a:hover{background:rgba(28,26,23,.07);transform:translateY(-1px)}',
+'#house-nav a:focus-visible{outline:2px solid #1c1a17;outline-offset:2px}',
+'#house-nav a[aria-current="page"]{background:#1c1a17;color:#fffdf9}',
+'#house-nav .nav-div{flex:0 0 auto;width:1px;height:18px;margin:0 6px;',
+'  background:rgba(28,26,23,.18)}',
+'#house-veil{position:fixed;inset:0;z-index:80;opacity:0;pointer-events:none;',
+'  transition:opacity .28s ease}',
+/* lift the HUD furniture that lives where the nav now sits */
+'#back{bottom:88px !important}',
+'#hint{bottom:92px !important}',
+'@media (max-width:820px){',
+'  #house-nav{bottom:12px;max-width:94vw}',
+'  #house-nav a{padding:8px 11px;font-size:12px}',
+'  #full,#lights{bottom:72px !important}',
+'  #back{bottom:78px !important}',
+'  #hint{bottom:128px !important}',
+'}',
+'@media (prefers-reduced-motion:reduce){#house-veil{transition-duration:.01ms}}'
+].join('\n');
+
+var style = document.createElement('style');
+style.textContent = css;
+document.head.appendChild(style);
+
+/* ---- the nav ------------------------------------------------- */
+var nav = document.createElement('nav');
+nav.id = 'house-nav';
+nav.setAttribute('aria-label', 'House rooms');
+PAGES.forEach(function(p){
+  if(p.divider){
+    var d = document.createElement('span');
+    d.className = 'nav-div';
+    d.setAttribute('aria-hidden', 'true');
+    nav.appendChild(d);
+    return;
+  }
+  var a = document.createElement('a');
+  a.href = p.file;
+  a.textContent = p.label;
+  a.title = p.section;
+  if(p.file === here) a.setAttribute('aria-current', 'page');
+  nav.appendChild(a);
+});
+document.body.appendChild(nav);
+
+/* ---- the departure veil -------------------------------------- */
+var veil = null, leaving = false;
+function go(file){
+  if(leaving) return;
+  leaving = true;
+  var dest = pageFor(file);
+  if(reduced.matches || !dest){ location.href = file; return; }
+  if(!veil){
+    veil = document.createElement('div');
+    veil.id = 'house-veil';
+    document.body.appendChild(veil);
+  }
+  veil.style.background = dest.fade;
+  veil.style.pointerEvents = 'auto';
+  /* force a layout so the opacity change actually transitions */
+  void veil.offsetWidth;
+  veil.style.opacity = '1';
+  /* matches the veil's .28s ramp — navigate the moment it is opaque,
+     rather than sitting on a finished fade doing nothing. */
+  setTimeout(function(){ location.href = file; }, 300);
+}
+
+nav.addEventListener('click', function(e){
+  var a = e.target.closest ? e.target.closest('a') : null;
+  if(!a) return;
+  if(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+  var file = a.getAttribute('href');
+  if(file === here) { e.preventDefault(); return; }
+  e.preventDefault();
+  go(file);
+});
+
+/* coming back via bfcache: lift the veil, we're home again */
+addEventListener('pageshow', function(e){
+  if(e.persisted && veil){
+    veil.style.opacity = '0';
+    veil.style.pointerEvents = 'none';
+    leaving = false;
+  }
+});
+
+/* ---- idle prefetch of the other rooms ------------------------ */
+function prefetch(){
+  PAGES.forEach(function(p){
+    if(p.divider || p.file === here) return;
+    var l = document.createElement('link');
+    l.rel = 'prefetch';
+    l.href = p.file;
+    document.head.appendChild(l);
+  });
+}
+if('requestIdleCallback' in window) requestIdleCallback(prefetch, {timeout:4000});
+else setTimeout(prefetch, 2500);
+
+/* the entrance's doors (and anything else) can use the same exit */
+window.HOUSE = { go: go, pages: PAGES };
+
+})();

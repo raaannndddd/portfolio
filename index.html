@@ -1,77 +1,543 @@
-<!doctype html>
-<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kitchen</title>
 
-<head>
-  <meta charset="UTF-8" />
-  <link rel="icon" href="/img/logo.png" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 
-  <!-- Resource hints for external domains -->
-  <link rel="dns-prefetch" href="https://github.com" />
-  <link rel="dns-prefetch" href="https://linkedin.com" />
-  <title>Rand Halasa — Software Engineer & SEO Specialist in Sydney</title>
-  <meta name="description"
-    content="Rand Halasa is a software engineering graduate and SEO specialist in Sydney. Full-stack web work with a specialty in SEO/GEO for the AI-search era. Available for freelance web and SEO projects." />
-  <meta name="keywords"
-    content="Rand Halasa, Software Engineer, SEO Specialist, GEO, Portfolio, Developer, Full Stack, Freelance Web Developer, Sydney" />
-  <meta name="author" content="Rand Halasa" />
-  <link rel="canonical" href="https://raaannndddd.github.io/portfolio/" />
+<style>
+/* ============================================================
+   1. TOKENS  — change things here first
+   ============================================================ */
+:root{
+  /* The room photo's aspect ratio (width / height). This is only a
+     first guess for the frames before the image decodes — the real
+     value is read off the file itself and written back on load, so
+     the stage always matches the photo rather than cropping it. */
+  --room-ar: 1.7917;   /* images/kitchen.jpg, 2752 x 1536 */
 
-  <!-- GEO Tags -->
-  <meta name="geo.region" content="AU-NSW" />
-  <meta name="geo.placename" content="Sydney" />
+  /* How far the photo is pushed past the edges of the viewport.
+     1 = it covers the screen exactly and cannot move; the amount
+     over 1 is the slack the cursor-lean drifts into. Kept small —
+     just enough headroom for a movement you feel more than see. */
+  --overscan: 1.04;
+  --pan-x: 0px;
+  --pan-y: 0px;
 
-  <!-- Open Graph / Social Media -->
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://raaannndddd.github.io/portfolio/" />
-  <meta property="og:title" content="Rand Halasa — Software Engineer & SEO Specialist" />
-  <meta property="og:description"
-    content="Full-stack web work with a specialty in SEO/GEO for the AI-search era. Client projects, honours research, and freelance web & SEO work." />
-  <meta property="og:image" content="https://raaannndddd.github.io/portfolio/img/logo.png" />
+  /* the shape of a printed photo. 4:5 = portrait print */
+  --print-ar: 0.8;
 
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="Rand Halasa — Software Engineer & SEO Specialist" />
-  <meta name="twitter:description"
-    content="Full-stack web work with a specialty in SEO/GEO for the AI-search era. Client projects, honours research, and freelance web & SEO work." />
-  <meta name="twitter:image" content="https://raaannndddd.github.io/portfolio/img/logo.png" />
+  /* palette, pulled from an old kitchen rather than a UI kit */
+  --paper:      #EFE7D6;   /* photo border / print stock */
+  --paper-edge: #DCD2BC;
+  --ink:        #2A2521;   /* handwriting + typed text */
+  --ink-soft:   #7C7263;
+  --magnet:     #A8342A;   /* worn red enamel */
+  --magnet-hi:  #D4695C;
+  --dark:       #15100C;   /* backdrop base */
+  --lamp:       255, 214, 148;  /* fridge-light warmth, as rgb parts */
 
-  <!-- JSON-LD Structured Data (Person) -->
-  <script type="application/ld+json">
+  --hand: 'Caveat', ui-rounded, cursive;
+  --typed: 'Courier Prime', ui-monospace, monospace;
+
+  --ease-out: cubic-bezier(.22,.61,.36,1);
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ height:100%; background:var(--dark); }
+body{ overflow:hidden; -webkit-font-smoothing:antialiased; }
+img{ display:block; }
+
+/* ============================================================
+   2. THE ROOM
+   The stage is sized so the photo always *covers* the viewport
+   while percentage coordinates inside it stay accurate.
+   This is the whole trick: hotspots are positioned in % of the
+   photo, not % of the screen, so they never drift on resize.
+   ============================================================ */
+.viewport{
+  position:fixed; inset:0;
+  /* Centred both ways. The stage is bigger than the viewport by
+     --overscan, so the crop comes evenly off all four edges and the
+     middle of the room sits in the middle of the screen. */
+  display:grid; place-items:center;
+  overflow:hidden;
+}
+/* The lean layer. Script writes --pan-x / --pan-y here as the cursor
+   moves, so the photo can slide into the overscan without disturbing
+   the breathing transform on .stage below it. */
+.pan{
+  transform:translate3d(var(--pan-x), var(--pan-y), 0);
+  will-change:transform;
+}
+.stage{
+  position:relative;
+  width:  calc(max(100vw, 100svh * var(--room-ar)) * var(--overscan));
+  height: calc(max(100svh, 100vw / var(--room-ar)) * var(--overscan));
+  background:#241c15;
+  /* A barely-there Ken Burns drift, so the room doesn't read as a dead
+     photo. It lives on .stage, not the <img>, so the hotspots scale with
+     the objects they sit on instead of sliding off them. Anchored to the
+     centre, matching the framing. */
+  transform-origin:50% 50%;
+  animation:roomBreathing 18s ease-in-out infinite alternate;
+}
+.stage img.room{
+  width:100%; height:100%; object-fit:cover;
+  object-position:50% 50%;
+}
+
+@keyframes roomBreathing{
+  from{ transform:scale(1); }
+  to  { transform:scale(1.008); }
+}
+
+/* ============================================================
+   3. HOTSPOTS
+   Invisible buttons laid over objects. --x/--y is the CENTRE
+   of the object, --w/--h its size, all as % of the room photo.
+   ============================================================ */
+.hotspot{
+  position:absolute;
+  left:var(--x); top:var(--y);
+  width:var(--w); height:var(--h);
+  transform:translate(-50%,-50%);
+  border:0; padding:0; background:none;
+  cursor:pointer;
+  border-radius:4px;
+}
+/* the affordance: a warm breath of light, like the fridge bulb
+   leaking round the door seal. no pulsing dot, no glowing outline. */
+.hotspot::before{
+  content:"";
+  position:absolute; inset:-6%;
+  border-radius:inherit;
+  background:radial-gradient(closest-side,
+              rgba(var(--lamp),.30), rgba(var(--lamp),0) 72%);
+  opacity:0;
+  transition:opacity .5s var(--ease-out);
+  pointer-events:none;
+}
+.hotspot::after{
+  content:attr(data-label);
+  position:absolute;
+  left:50%; bottom:-2.2em;
+  transform:translateX(-50%) translateY(4px);
+  font-family:var(--hand);
+  font-size:clamp(17px, 2.1vw, 25px);
+  color:rgba(var(--lamp),.92);
+  text-shadow:0 1px 10px rgba(0,0,0,.7);
+  white-space:nowrap;
+  opacity:0;
+  transition:opacity .35s var(--ease-out), transform .35s var(--ease-out);
+  pointer-events:none;
+}
+.hotspot:hover::before,
+.hotspot:focus-visible::before{ opacity:1; }
+.hotspot:hover::after,
+.hotspot:focus-visible::after{ opacity:1; transform:translateX(-50%) translateY(0); }
+.hotspot:focus-visible{ outline:2px solid rgba(var(--lamp),.9); outline-offset:3px; }
+
+/* press H to see where your hotspots actually sit */
+body.debug .hotspot{ background:rgba(255,80,80,.28); outline:1px dashed #ff6b6b; }
+body.debug .hotspot::after{ opacity:1; }
+
+/* ============================================================
+   4. THE VIEWER
+   ============================================================ */
+.viewer{
+  position:fixed; inset:0; z-index:20;
+  display:grid; place-items:center;
+  padding:clamp(16px,4vw,48px);
+  opacity:0; visibility:hidden;
+  transition:opacity .45s var(--ease-out), visibility .45s;
+}
+.viewer.open{ opacity:1; visibility:visible; }
+
+/* the backdrop isn't a flat scrim — it's the fridge light,
+   centred on whatever you just opened */
+.viewer::before{
+  content:"";
+  position:absolute; inset:0;
+  background:
+    radial-gradient(60vmax 60vmax at var(--glow-x,50%) var(--glow-y,50%),
+      rgba(var(--lamp),.13), rgba(21,16,12,.86) 55%, rgba(11,8,6,.95));
+  backdrop-filter:blur(7px) saturate(.85);
+  -webkit-backdrop-filter:blur(7px) saturate(.85);
+}
+
+.frame{
+  position:relative;
+  display:grid;
+  grid-template-columns:auto auto auto;
+  align-items:center;
+  gap:clamp(10px,3vw,34px);
+}
+
+/* --- the hanging print ------------------------------------- */
+.pin{
+  position:relative;
+  /* the pivot: everything below swings from the magnet */
+  padding-top:26px;
+}
+.magnet{
+  position:absolute; top:0; left:50%;
+  transform:translateX(-50%);
+  width:34px; height:34px; border-radius:50%;
+  z-index:3;
+  background:
+    radial-gradient(circle at 34% 30%, var(--magnet-hi), var(--magnet) 52%, #6E1F18 100%);
+  box-shadow:
+    0 3px 7px rgba(0,0,0,.55),
+    inset 0 -2px 4px rgba(0,0,0,.35),
+    inset 0 2px 3px rgba(255,255,255,.28);
+}
+.magnet::after{ /* chipped enamel highlight */
+  content:"";
+  position:absolute; top:6px; left:9px;
+  width:9px; height:6px; border-radius:50%;
+  background:rgba(255,255,255,.5);
+  filter:blur(1px);
+}
+
+.print{
+  transform-origin:50% 0;           /* <-- swings from the magnet */
+  background:var(--paper);
+  padding:12px 12px 0;
+  border:1px solid var(--paper-edge);
+  box-shadow:0 18px 34px rgba(0,0,0,.5), 0 2px 5px rgba(0,0,0,.35);
+  width:min(46vh, 72vw, 380px);
+}
+.print .shot{
+  position:relative;
+  width:100%; aspect-ratio:var(--print-ar);
+  background:#CFC5AF;
+  overflow:hidden;
+}
+.print .shot img{
+  width:100%; height:100%; object-fit:cover;
+  opacity:0; transition:opacity .3s;
+}
+.print .shot img.loaded{ opacity:1; }
+.print .shot .missing{
+  position:absolute; inset:0;
+  display:grid; place-items:center; padding:14px;
+  font-family:var(--typed); font-size:11px; color:#6d6252;
+  text-align:center; word-break:break-all;
+}
+
+.caption{ padding:11px 3px 15px; }
+.caption .title{
+  font-family:var(--hand);
+  font-size:27px; line-height:1.05; color:var(--ink);
+}
+.caption .note{
+  margin-top:5px;
+  font-family:var(--typed);
+  font-size:11.5px; line-height:1.55; color:var(--ink-soft);
+}
+
+/* --- arrows ------------------------------------------------- */
+.arrow{
+  width:46px; height:46px; border-radius:50%;
+  border:1px solid rgba(var(--lamp),.28);
+  background:rgba(0,0,0,.2);
+  color:rgba(var(--lamp),.9);
+  font-family:var(--typed); font-size:20px; line-height:1;
+  cursor:pointer;
+  transition:background .3s, border-color .3s, transform .3s var(--ease-out);
+}
+.arrow:hover{ background:rgba(var(--lamp),.14); border-color:rgba(var(--lamp),.55); }
+.arrow:active{ transform:scale(.92); }
+.arrow:focus-visible{ outline:2px solid rgba(var(--lamp),.9); outline-offset:3px; }
+
+/* --- typed index slip --------------------------------------- */
+.counter{
+  position:absolute; left:50%; bottom:-40px;
+  transform:translateX(-50%);
+  font-family:var(--typed); font-size:11px; letter-spacing:.22em;
+  color:rgba(var(--lamp),.55);
+  white-space:nowrap;
+}
+
+/* --- mobile: arrows drop below, print gets more room --------- */
+@media (max-width:640px){
+  .frame{ grid-template-columns:1fr; justify-items:center; gap:22px; }
+  .pin{ order:1; }
+  .arrow.prev{ order:2; }
+  .arrow.next{ order:3; }
+  .frame{ grid-template-areas:"pin" "arrows"; }
+  .arrow{ position:relative; }
+  .arrow.prev{ grid-area:arrows; justify-self:start; margin-left:-30vw; }
+  .arrow.next{ grid-area:arrows; justify-self:end;  margin-right:-30vw; }
+  .counter{ bottom:-34px; }
+  .print{ width:min(72vw, 320px); }
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{ animation-duration:.01ms !important; transition-duration:.01ms !important; }
+}
+</style>
+
+
+<div class="viewport">
+  <div class="pan">
+    <div class="stage">
+      <img class="room" id="room" alt="A kitchen">
+      <!-- hotspots are injected here -->
+    </div>
+  </div>
+</div>
+
+<div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-label="Photographs on the fridge">
+  <div class="frame">
+    <button class="arrow prev" id="prev" aria-label="Previous photograph">&lsaquo;</button>
+
+    <div class="pin">
+      <div class="magnet" aria-hidden="true"></div>
+      <figure class="print" id="print">
+        <div class="shot">
+          <img id="shot" alt="">
+          <span class="missing" id="missing" hidden></span>
+        </div>
+        <figcaption class="caption">
+          <div class="title" id="title"></div>
+          <div class="note"  id="note"></div>
+        </figcaption>
+      </figure>
+    </div>
+
+    <button class="arrow next" id="next" aria-label="Next photograph">&rsaquo;</button>
+    <div class="counter" id="counter"></div>
+  </div>
+</div>
+
+
+<script>
+/* ============================================================
+   YOUR CONTENT  — this is the only part you need to edit
+   ============================================================ */
+
+const ROOM = "images/kitchen.jpg";
+
+/* Each hotspot is an object in the room you can press.
+   x / y  = centre of the object, as a % of the room photo
+   w / h  = its size, as a % of the room photo
+   Press H on the page to see and place these visually. */
+const HOTSPOTS = [
   {
-    "@context": "https://schema.org",
-    "@type": "Person",
-    "name": "Rand Halasa",
-    "url": "https://raaannndddd.github.io/portfolio/",
-    "jobTitle": ["Software Engineer", "SEO Specialist"],
-    "alumniOf": "University of Sydney",
-    "description": "Software engineering graduate and SEO specialist in Sydney. Full-stack web work with a specialty in SEO/GEO for the AI-search era, available for freelance web and SEO projects.",
-    "address": {
-      "@type": "PostalAddress",
-      "addressLocality": "Sydney",
-      "addressRegion": "NSW",
-      "addressCountry": "AU"
-    },
-    "sameAs": [
-      "https://github.com/raaannndddd",
-      "https://linkedin.com/in/randhalasa"
+    id: "fridge",
+    label: "press",
+    x: "31%", y: "52%", w: "16%", h: "34%",
+    photos: [
+      { src:"images/photos/01.jpg", title:"Sunroom identity",
+        note:"Brand system, print + signage. 2025." },
+      { src:"images/photos/02.jpg", title:"Two weeks in Kyoto",
+        note:"Portra 400, handheld, mostly at dusk. 2024." },
+      { src:"images/photos/03.jpg", title:"Nonna's recipe cards",
+        note:"Typesetting exercise. Riso, two colours. 2024." },
+      { src:"images/photos/04.jpg", title:"Wednesday market",
+        note:"Editorial spread for a student publication. 2023." },
     ]
+  },
+  /* add more objects the same way:
+  { id:"calendar", label:"press", x:"72%", y:"30%", w:"9%", h:"14%", photos:[ ... ] },
+  */
+];
+
+
+/* ============================================================
+   MECHANICS  — you shouldn't need to touch below here
+   ============================================================ */
+
+const stage   = document.querySelector('.stage');
+const viewer  = document.getElementById('viewer');
+const printEl = document.getElementById('print');
+const shotEl  = document.getElementById('shot');
+const missing = document.getElementById('missing');
+const titleEl = document.getElementById('title');
+const noteEl  = document.getElementById('note');
+const counter = document.getElementById('counter');
+
+/* --- let the photo set the shape of the stage ---------------
+   The hotspot coordinates are percentages of the photo, so the stage
+   box has to be the photo's exact aspect ratio or every hotspot sits
+   slightly off its object. Read it from the file instead of trusting
+   the token — swap in a different room photo and this still holds. */
+const roomEl = document.getElementById('room');
+const fitStageToPhoto = () => {
+  if (!roomEl.naturalWidth || !roomEl.naturalHeight) return;
+  document.documentElement.style.setProperty(
+    '--room-ar', roomEl.naturalWidth / roomEl.naturalHeight);
+};
+roomEl.addEventListener('load', fitStageToPhoto);
+roomEl.src = ROOM;
+if (roomEl.complete) fitStageToPhoto();
+
+/* --- the room leans with the cursor -------------------------
+   --overscan parks a sliver of photo just outside every edge of the
+   viewport. Move the pointer towards an edge and the photo drifts
+   that way into the slack, then eases back to centre when the
+   pointer leaves. Nothing ever moves far enough to expose a gap. */
+const panEl  = document.querySelector('.pan');
+const slowly = matchMedia('(prefers-reduced-motion:reduce)');
+
+const TRAVEL    = 14;   // px — the furthest the photo will ever go
+const FOLLOW    = .04;  // how lazily it catches up to the cursor
+const DIRECTION = 1;    // 1 = drifts towards the cursor, -1 = away
+
+let want = {x:0, y:0}, at = {x:0, y:0}, frame = null;
+
+/* How much photo is actually parked offscreen, per axis. offsetWidth
+   rather than a rect, so the breathing scale doesn't count. */
+function slack(){
+  return {
+    x: Math.min(TRAVEL, Math.max(0, (stage.offsetWidth  - innerWidth ) / 2)),
+    y: Math.min(TRAVEL, Math.max(0, (stage.offsetHeight - innerHeight) / 2)),
+  };
+}
+
+function drift(){
+  at.x += (want.x - at.x) * FOLLOW;
+  at.y += (want.y - at.y) * FOLLOW;
+  panEl.style.setProperty('--pan-x', at.x.toFixed(2) + 'px');
+  panEl.style.setProperty('--pan-y', at.y.toFixed(2) + 'px');
+  frame = (Math.abs(want.x - at.x) > .02 || Math.abs(want.y - at.y) > .02)
+    ? requestAnimationFrame(drift) : null;
+}
+
+/* nx / ny are -1 at the left/top edge, +1 at the right/bottom. */
+function lean(nx, ny){
+  if (slowly.matches) return;
+  const s = slack();
+  want.x = nx * s.x * DIRECTION;
+  want.y = ny * s.y * DIRECTION;
+  if (!frame) frame = requestAnimationFrame(drift);
+}
+
+addEventListener('pointermove', e => {
+  if (e.pointerType !== 'mouse') return;
+  if (viewer.classList.contains('open')) return;   // hands off while reading
+  lean((e.clientX / innerWidth) * 2 - 1, (e.clientY / innerHeight) * 2 - 1);
+}, {passive:true});
+
+/* settle back to centre when the cursor leaves or the tab loses focus */
+document.addEventListener('mouseleave', () => lean(0, 0));
+addEventListener('blur', () => lean(0, 0));
+
+let photos = [], index = 0, opener = null;
+
+/* --- build the hotspots ------------------------------------ */
+HOTSPOTS.forEach(h => {
+  const b = document.createElement('button');
+  b.className = 'hotspot';
+  b.dataset.label = h.label || 'press';
+  b.setAttribute('aria-label', `Open the photographs on the ${h.id}`);
+  b.style.cssText = `--x:${h.x};--y:${h.y};--w:${h.w};--h:${h.h}`;
+  b.addEventListener('click', e => open(h, e.currentTarget));
+  stage.appendChild(b);
+});
+
+/* --- open / close ------------------------------------------ */
+function open(hotspot, button){
+  photos = hotspot.photos;
+  index  = 0;
+  opener = button;
+
+  // aim the fridge-light glow at the thing that was pressed
+  const r = button.getBoundingClientRect();
+  viewer.style.setProperty('--glow-x', `${r.left + r.width/2}px`);
+  viewer.style.setProperty('--glow-y', `${r.top  + r.height/2}px`);
+
+  render(0);
+  viewer.classList.add('open');
+}
+
+function close(){
+  viewer.classList.remove('open');
+  if (opener) opener.focus();
+}
+
+/* --- render one photo -------------------------------------- */
+function render(direction){
+  const p = photos[index];
+
+  shotEl.classList.remove('loaded');
+  missing.hidden = true;
+
+  shotEl.onload  = () => shotEl.classList.add('loaded');
+  shotEl.onerror = () => { missing.hidden = false; missing.textContent = p.src; };
+  shotEl.src = p.src;
+  shotEl.alt = p.title;
+
+  titleEl.textContent = p.title;
+  noteEl.textContent  = p.note;
+  counter.textContent = `${String(index+1).padStart(2,'0')} / ${String(photos.length).padStart(2,'0')}`;
+
+  swing(direction);
+  preload(index+1); preload(index-1);
+}
+
+/* The signature move: the print hangs off the magnet, so a new
+   photo doesn't fade or slide — it drops onto the pivot and
+   settles. Damped rotation, origin at the magnet. */
+function swing(direction){
+  const rest = ((index * 37) % 5 - 2) * 0.6;   // small varied resting tilt
+  const kick = direction === 0 ? -7 : (direction > 0 ? 6 : -6);
+
+  printEl.animate([
+    { transform:`rotate(${kick}deg)` },
+    { transform:`rotate(${rest - kick*0.32}deg)`, offset:.35 },
+    { transform:`rotate(${rest + kick*0.13}deg)`, offset:.62 },
+    { transform:`rotate(${rest - kick*0.05}deg)`, offset:.83 },
+    { transform:`rotate(${rest}deg)` },
+  ], { duration:900, easing:'cubic-bezier(.22,.61,.36,1)', fill:'forwards' });
+}
+
+function step(n){
+  index = (index + n + photos.length) % photos.length;
+  render(n);
+}
+
+function preload(i){
+  const p = photos[(i + photos.length) % photos.length];
+  if (p) new Image().src = p.src;
+}
+
+/* --- controls ---------------------------------------------- */
+document.getElementById('next').onclick  = () => step(1);
+document.getElementById('prev').onclick  = () => step(-1);
+viewer.addEventListener('click', e => { if (e.target === viewer) close(); });
+
+document.addEventListener('keydown', e => {
+  if (!viewer.classList.contains('open')){
+    if (e.key === 'h' || e.key === 'H') document.body.classList.toggle('debug');
+    return;
   }
-  </script>
-</head>
+  if (e.key === 'Escape')     close();
+  if (e.key === 'ArrowRight') step(1);
+  if (e.key === 'ArrowLeft')  step(-1);
+});
 
-<body>
-  <div id="app"></div>
-  <script type="module" src="/src/main.js"></script>
-  <script>
-    const theme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (theme === 'dark' || (!theme && prefersDark)) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  </script>
-</body>
+/* swipe */
+let x0 = null;
+viewer.addEventListener('touchstart', e => x0 = e.touches[0].clientX, {passive:true});
+viewer.addEventListener('touchend', e => {
+  if (x0 === null) return;
+  const dx = e.changedTouches[0].clientX - x0;
+  if (Math.abs(dx) > 45) step(dx < 0 ? 1 : -1);
+  x0 = null;
+}, {passive:true});
 
-</html>
+/* --- hotspot placement helper ------------------------------
+   Press H, then click anywhere on the room photo. The console
+   prints coordinates you can paste straight into HOTSPOTS.   */
+stage.addEventListener('click', e => {
+  if (!document.body.classList.contains('debug')) return;
+  const r = stage.getBoundingClientRect();
+  const x = ((e.clientX - r.left) / r.width  * 100).toFixed(1);
+  const y = ((e.clientY - r.top)  / r.height * 100).toFixed(1);
+  console.log(`x:"${x}%", y:"${y}%",`);
+});
+</script>

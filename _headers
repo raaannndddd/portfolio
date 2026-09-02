@@ -1,0 +1,21 @@
+# Cloudflare Pages / Netlify header rules.
+#
+# The house's pictures are the reason this file exists. Every room is
+# its own document, so re-entering a room is a real page load — and a
+# revalidation round-trip per photograph is exactly the stutter the
+# preloader is built to remove. These files are content-stable: when a
+# photograph changes it is a new photograph, so give them a long life
+# and let the cache answer instantly on the way back in.
+
+/images/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/projects/img/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Code and copy do change under the same names, so these revalidate.
+/*.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate

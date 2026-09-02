@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/:path*",
+      "destination": "https://randhalasa.com/:path*",
+      "permanent": true
+    }
+  ]
+}

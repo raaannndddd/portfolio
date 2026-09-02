@@ -1,0 +1,2752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Skills - Rand Halasa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" />
+<style>
+  :root{
+    --ink:#1c1a17;
+    --card:#fffdf9;
+    --shadow:0 8px 30px rgba(28,22,14,.20);
+    /* the fax is set in a struck-typewriter face; Courier stays behind it so
+       the sheet still reads as a fax if the webfont never arrives */
+    --fax:'Special Elite', 'Courier New', Courier, ui-monospace, SFMono-Regular, Menlo, monospace;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;width:100%;margin:0;padding:0;background:#0e0c09;overflow:hidden}
+  body{
+    font-family:"Helvetica Neue",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+    color:var(--ink);-webkit-font-smoothing:antialiased;
+  }
+  #stage{position:fixed;inset:0;width:100vw;height:100vh}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+
+  /* lens pass */
+  .lens{position:fixed;inset:0;pointer-events:none;z-index:3}
+  #vignette{background:radial-gradient(118% 90% at 50% 46%,
+      rgba(0,0,0,0) 28%, rgba(14,10,5,.34) 68%, rgba(8,5,2,.72) 100%);}
+  #bloom{background:radial-gradient(54% 62% at 50% 42%, rgba(255,186,96,.10), rgba(255,186,96,0) 62%);
+         mix-blend-mode:screen;}
+  #grain{opacity:.05;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>");}
+
+  /* hud */
+  .hud{position:fixed;inset:0;pointer-events:none;z-index:5}
+  .hud > *{pointer-events:auto}
+  .pill{
+    position:absolute;background:var(--card);border-radius:var(--radius);
+    box-shadow:var(--shadow);border:0;color:var(--ink);
+    display:flex;align-items:center;gap:10px;
+    font-size:15px;letter-spacing:.01em;font-family:inherit;
+    padding:12px 16px;cursor:pointer;
+    transition:transform .25s cubic-bezier(.2,.8,.2,1);
+  }
+  .pill:hover{transform:translateY(-2px)}
+  .pill:active{transform:translateY(0)}
+  .pill:focus-visible{outline:2px solid #1c1a17;outline-offset:3px}
+  .square{padding:12px;width:46px;height:46px;justify-content:center}
+
+  #plaque{top:22px;left:22px;cursor:default}
+  #plaque:hover{transform:none}
+  #plaque b{font-weight:600}
+  #plaque span{color:#8c8375}
+
+
+
+
+  #fade{position:fixed;inset:0;background:#0e0c09;z-index:9;
+        transition:opacity .45s ease;pointer-events:none}
+  #fade.hidden{opacity:0}
+
+  /* the screen, blown up to read — same terminal, real text */
+  #zoom{position:fixed;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;
+    background:rgba(6,9,7,.78);opacity:0;pointer-events:none;transition:opacity .3s}
+  #zoom.open{opacity:1;pointer-events:auto}
+  #zoomTerm{width:min(94vw,1180px);height:min(88vh,760px);display:flex;flex-direction:column;
+    background:#0d1512;border-radius:16px;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.6);
+    transform:scale(.96);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+  #zoom.open #zoomTerm{transform:none}
+  .zt-bar{display:flex;align-items:center;gap:9px;padding:0 16px;height:44px;background:#16201c;
+    border-bottom:1px solid rgba(255,255,255,.07);flex:none}
+  .zt-dot{width:13px;height:13px;border-radius:50%}
+  .zt-title{flex:1;text-align:center;color:#4d7a66;
+    font:400 14px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  #zoomClose{background:none;border:0;color:#4d7a66;font-size:17px;line-height:1;
+    cursor:pointer;padding:6px 8px;font-family:inherit}
+  #zoomClose:hover{color:#8fe0b0}
+  #zoomClose:focus-visible{outline:2px solid #63c98e;outline-offset:2px;border-radius:6px}
+  .zt-body{flex:1;overflow:hidden;padding:22px 32px 24px;color:#8fe0b0;
+    font:400 var(--zt-fs,18px)/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .zt-dim{color:#4d7a66}
+  .zt-accent{color:#63c98e;font-weight:700}
+  .zt-cmd{color:#e7f6ec;font-weight:600}
+  /* the same groups the monitor draws, in the same order, in the same two
+     columns — and the body shrinks its own type until the whole print
+     fits, so the panel never scrolls however long the array grows */
+  #ztList{margin:.6em 0 .5em;columns:2;column-gap:38px}
+  #ztList section{break-inside:avoid;margin:0 0 1em}
+  #ztList h3{margin:0;font:inherit;font-weight:700;color:#63c98e}
+  #ztList ul{list-style:none;margin:0;padding:0 0 0 1.1em}
+  #ztList li{break-inside:avoid}
+  @media (max-width:720px){ #ztList{columns:1} }
+  #ztList li::before{content:"\00b7\2002";color:#4d7a66}
+  .zt-caret{display:inline-block;width:.55em;height:1.05em;background:#8fe6bb;
+    vertical-align:text-bottom;animation:ztBlink 1.06s steps(1) infinite}
+  @keyframes ztBlink{0%,56%{opacity:.92}57%,100%{opacity:0}}
+
+  /* the fax, come through: thermal paper, still warm, with the ways to
+     reach me printed on it. Everything here is a fax cue rather than a
+     decoration — the transmission header, the scan banding, the
+     double-struck ink and the torn bottom edge where it was pulled off
+     the roll. The typography is the machine's: Courier, upper case,
+     letterspaced, because that is what a fax header is set in and it is
+     the fastest way to say "fax" without a single word about faxes. */
+  #fax{position:fixed;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;
+    background:rgba(6,9,7,.78);opacity:0;pointer-events:none;transition:opacity .3s;padding:20px}
+  #fax.open{opacity:1;pointer-events:auto}
+  #faxSheet{position:relative;width:min(92vw,470px);max-height:88vh;overflow:auto;
+    background:#f2eee3;padding:26px 30px 34px;font-family:var(--fax);
+    box-shadow:0 30px 90px rgba(0,0,0,.6), inset 0 14px 18px -14px rgba(60,50,36,.30);
+    /* the scan banding a thermal head leaves, and the warm cast down the page */
+    background-image:
+      linear-gradient(to bottom, rgba(206,196,172,.30), rgba(206,196,172,0) 110px),
+      repeating-linear-gradient(to bottom,
+        rgba(120,110,90,.055) 0, rgba(120,110,90,.055) 1px, transparent 1px, transparent 4px);
+    /* pulled off the roll, so the bottom edge is torn rather than cut */
+    -webkit-mask-image:linear-gradient(#000,#000),
+      repeating-conic-gradient(from 135deg at 50% 0, #000 0 25%, transparent 0 50%);
+    mask-image:linear-gradient(#000,#000),
+      repeating-conic-gradient(from 135deg at 50% 0, #000 0 25%, transparent 0 50%);
+    -webkit-mask-size:100% calc(100% - 9px), 16px 18px;
+    mask-size:100% calc(100% - 9px), 16px 18px;
+    -webkit-mask-position:0 0, 0 100%;
+    mask-position:0 0, 0 100%;
+    -webkit-mask-repeat:no-repeat, repeat-x;
+    mask-repeat:no-repeat, repeat-x;
+    transform:translateY(10px) rotate(-.35deg);
+    transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+  #fax.open #faxSheet{transform:none}
+  #faxClose{position:absolute;top:8px;right:10px;background:none;border:0;
+    color:#8c8375;font-size:17px;line-height:1;cursor:pointer;padding:6px 8px;font-family:inherit}
+  #faxClose:hover{color:#1c1a17}
+  #faxClose:focus-visible{outline:2px solid #4a4438;outline-offset:2px;border-radius:6px}
+  /* the transmission header the sending machine prints across the top */
+  #faxHead{display:flex;flex-wrap:wrap;gap:4px 16px;padding-right:26px;
+    font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#6f6858;
+    border-bottom:1.5px solid #2f2b23;padding-bottom:8px;margin-bottom:20px}
+  #faxHead span{white-space:nowrap}
+  /* the headline, double-struck the way a thermal head lays it down twice */
+  #faxSheet h2{margin:0 0 4px;font-size:clamp(38px,9vw,58px);line-height:1;
+    font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#1f1c16;
+    text-shadow:1px 0 0 rgba(31,28,22,.55), 0 1px 0 rgba(31,28,22,.25)}
+  #faxSheet .fax-lede{margin:0 0 22px;font-size:11px;letter-spacing:.2em;
+    text-transform:uppercase;color:#7a7364}
+  #faxWays{display:flex;flex-direction:column;gap:2px;
+    border-top:1px dashed #a49c88;padding-top:10px}
+  #faxWays a{display:flex;align-items:center;gap:14px;padding:11px 10px;margin:0 -10px;
+    text-decoration:none;color:#1f1c16;
+    transition:background .2s, transform .2s cubic-bezier(.2,.8,.2,1)}
+  #faxWays a:hover{background:rgba(47,43,35,.08);transform:translateX(3px)}
+  #faxWays a:focus-visible{outline:2px solid #2f2b23;outline-offset:2px}
+  #faxWays svg{flex:none;color:#4a4438}
+  #faxWays .what{font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    line-height:1.1;color:#7a7364}
+  #faxWays .where{font-size:16px;letter-spacing:.02em;line-height:1.45;color:#1f1c16;
+    word-break:break-all;text-shadow:.5px 0 0 rgba(31,28,22,.35)}
+  #faxEnd{margin:20px 0 0;padding-top:10px;border-top:1.5px solid #2f2b23;
+    font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#6f6858}
+
+  @media (max-width:820px){
+    #faxSheet{padding:22px 20px 30px}
+    #plaque{top:14px;left:14px;font-size:13px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important}}
+</style>
+<!-- the whole house's pictures, started before anything else asks for them -->
+<script src="preload.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+<div class="lens" id="vignette"></div>
+<div class="lens" id="bloom"></div>
+<div class="lens" id="grain"></div>
+
+<div class="hud">
+  <div class="pill" id="plaque">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1c1a17" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4.5" width="18" height="12" rx="1.8"/><path d="M9 20h6"/><path d="M12 16.5V20"/>
+    </svg>
+    <b>Skills</b>
+  </div>
+
+</div>
+
+<div id="fax" aria-hidden="true">
+  <div id="faxSheet" role="dialog" aria-modal="true" aria-labelledby="faxTitle">
+    <button id="faxClose" aria-label="Close the fax">&#10005;</button>
+    <div id="faxHead" aria-hidden="true">
+      <span>From: Rand Halasa</span>
+      <span>Page 1 of 1</span>
+      <span>Re: Saying hello</span>
+    </div>
+    <h2 id="faxTitle">Fax me</h2>
+    <!-- <p class="fax-lede">No fax line, so use one of these instead</p> -->
+    <nav id="faxWays" aria-label="Ways to reach me">
+      <a href="mailto:hello@randhalasa.com">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>
+        </svg>
+        <span><span class="what">Email</span><br /><span class="where">hello@randhalasa.com</span></span>
+      </a>
+      <a href="https://linkedin.com/in/randhalasa" rel="me" target="_blank">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4V8h4v2a5 5 0 0 1 2-2z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/>
+        </svg>
+        <span><span class="what">LinkedIn</span><br /><span class="where">linkedin.com/in/randhalasa</span></span>
+      </a>
+      <a href="https://github.com/raaannndddd" rel="me" target="_blank">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/>
+        </svg>
+        <span><span class="what">GitHub</span><br /><span class="where">github.com/raaannndddd</span></span>
+      </a>
+    </nav>
+    <p id="faxEnd" aria-hidden="true">&mdash;&mdash; End of transmission &mdash;&mdash;</p>
+  </div>
+</div>
+
+<div id="zoom" aria-hidden="true">
+  <div id="zoomTerm" role="dialog" aria-modal="true" aria-label="What is on the monitor">
+    <div class="zt-bar">
+      <span class="zt-dot" style="background:#e0705f"></span>
+      <span class="zt-dot" style="background:#ddb15c"></span>
+      <span class="zt-dot" style="background:#63c98e"></span>
+      <span class="zt-title"></span>
+      <button id="zoomClose" aria-label="Close the screen">&#10005;</button>
+    </div>
+    <div class="zt-body">
+      <div class="zt-dim" id="ztHost"></div>
+      <div><span class="zt-accent">&gt; </span><span class="zt-cmd" id="ztCmd"></span></div>
+      <div id="ztList"></div>
+      <div><span class="zt-accent">&gt; </span><span class="zt-caret"></span></div>
+    </div>
+  </div>
+</div>
+
+<div id="fade"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="tap-hints.js"></script>
+<script>
+(function(){
+"use strict";
+if(!window.THREE) return;
+
+/* ============================================================
+   0. HUD
+   ============================================================ */
+const fadeEl = document.getElementById('fade');
+
+/* ============================================================
+   1. THE SCREEN — the one block you edit to change what the monitor says
+   ------------------------------------------------------------
+   COMMAND is the line typed after the prompt. SKILLS is the grouped list
+   it prints underneath. Both screens — the monitor in the room and the
+   blown-up panel you get by pressing it — are drawn from this one array,
+   in this order, in two columns, so they read as the same screen. Add,
+   remove or reorder freely: each re-measures itself so the print always
+   fits without a scrollbar.
+   ============================================================ */
+const COMMAND = './skills';
+
+const SKILLS = [
+  { group: 'ai + llm', items: [
+    'Claude API · Claude Code',
+    'Ollama · Llama 3',
+    'Prompt engineering · agentic workflows',
+    'LLM output evaluation · model/bias evaluation',
+    'scikit-learn · PyTorch · TensorFlow',
+    'Computer vision · OpenCV · YOLOv8'
+  ]},
+  { group: 'languages', items: [
+    'TypeScript · JavaScript',
+    'Python · Java · C'
+  ]},
+  { group: 'web', items: [
+    'React · Next.js · Vue 3',
+    'Node · Express · FastAPI · Django',
+    'Spring Boot',
+    'Three.js · WebGL',
+    'Tailwind · CSS architecture'
+  ]},
+  { group: 'data', items: [
+    'PostgreSQL · MySQL · MongoDB',
+    'AWS · Cloudflare'
+  ]},
+  { group: 'tooling', items: [
+    'REST API design and integration',
+    'Browser automation',
+    'Git · Docker · Linux',
+    'Jenkins · CI/CD pipelines',
+    'pytest · JUnit · fuzzing',
+    'ClickUp'
+  ]},
+  { group: 'search + seo', items: [
+    'Apache Solr · Elasticsearch',
+    'Vectara · semantic search',
+    'Technical SEO · structured data',
+    'On-page/off-page SEO · site speed'
+  ]},
+  { group: 'apis in production', items: [
+    'Ahrefs · SE Ranking · Google Search Console',
+    'Apify · Dexscreener · CoinGecko'
+  ]},
+  { group: 'spoken', items: [
+    'English — native',
+    'Modern Standard Arabic — native',
+    'Shami Arabic — native',
+    'French — intermediate',
+    'Mandarin — beginner'
+  ]}
+];
+
+const SHELL_HOST = 'rand@office';          /* the dim line above the prompt */
+const SHELL_TITLE = 'zsh — skills';        /* what the window chrome reads */
+
+/* ============================================================
+   2. PALETTE
+   ============================================================ */
+/*  >>> EVERY COLOUR IN THE ROOM IS SET HERE. Edit a hex, reload. <<< */
+const P = {
+  wall:      '#9e9179',   // plaster
+  ceiling:   '#a09580',
+  trim:      '#948a75',   // skirting and cornice
+
+  floor:     '#6d5030',   // oak boards
+  desk:      '#7a5335',   // desk top and legs — warm walnut
+  deskDark:  '#4b3323',   // modesty panel and drawer box
+  shelf:     '#54381f',   // bookcase carcass
+
+  metal:     '#3d4145',   // monitor arm, chair column, castors
+  metalPale: '#9aa0a6',   // aluminium
+  fabric:    '#35424a',   // chair upholstery
+  fabricDim: '#2f3a41',
+
+  pot:       '#b5734e',   // terracotta
+  potPale:   '#cfa07d',
+  soil:      '#3a2c22',
+  leaf:      '#4f7d52',   // foliage
+
+  paper:     '#f4efe2',   // thermal fax stock
+
+  glow:      '#ffb44e',   // what the ceiling fittings throw — tungsten, not daylight
+  screenGlow:'#8fe6bb',   // what the monitor throws
+
+  wallBack:  '#3f5147',   // the wall the monitor stands against — the kitchen
+                          // green taken right down, so the lit screen has
+                          // something dark to sit against
+  shade:     '#e8c274',   // lamp linen with the bulb behind it
+  shadeCool: '#a08d68',   // the same linen unlit
+  lampBody:  '#1e2226',   // the task lamp's base and arms
+  lampWarm:  '#ffb04a'    // what a lamp bulb throws
+};
+
+/* ============================================================
+   3. RENDERER / CAMERA
+   ============================================================ */
+const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.84;   /* the room is meant to be under-exposed, not neutral */
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.getElementById('stage').appendChild(renderer.domElement);
+const ANISO = renderer.capabilities.getMaxAnisotropy();
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#0d0b08');
+
+/* room shell — these five numbers drive every wall and everything against one */
+const BACK_Z = -4.2, FRONT_Z = 4.6, SIDE_X = 3.5, WALL_H = 2.78, WALL_T = 0.16;
+const HOME = new THREE.Vector3(0, 1.56, 2.45);
+
+const camera = new THREE.PerspectiveCamera(44, innerWidth/innerHeight, 0.05, 120);
+camera.position.copy(HOME);
+
+const H_HALF = 33.5 * Math.PI/180;                 /* constant horizontal FOV */
+function frameCamera(){
+  camera.aspect = innerWidth / innerHeight;
+  const v = 2 * Math.atan(Math.tan(H_HALF) / camera.aspect) * 180/Math.PI;
+  camera.fov = THREE.MathUtils.clamp(v, 26, 58);
+  camera.updateProjectionMatrix();
+}
+frameCamera();
+
+/* ============================================================
+   4. TEXTURE FOUNDRY — every surface is drawn to a canvas at load
+   ============================================================ */
+function cvs(w,h){ const c = document.createElement('canvas'); c.width=w; c.height=h; return c; }
+function tex(canvas, rx, ry){
+  const t = new THREE.CanvasTexture(canvas);
+  t.encoding = THREE.sRGBEncoding;
+  t.anisotropy = ANISO;
+  if(rx){ t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry || rx); }
+  return t;
+}
+function shift(hex, dL, dS){
+  const c = new THREE.Color(hex), hsl = {};
+  c.getHSL(hsl);
+  c.setHSL(hsl.h, THREE.MathUtils.clamp(hsl.s + (dS||0), 0, 1),
+                  THREE.MathUtils.clamp(hsl.l + dL, 0.02, 0.98));
+  return '#' + c.getHexString();
+}
+function rgba(hex, a){
+  const c = new THREE.Color(hex);
+  return 'rgba(' + Math.round(c.r*255) + ',' + Math.round(c.g*255) + ',' + Math.round(c.b*255) + ',' + a + ')';
+}
+function blotch(g, w, h, base, count, spread, alpha){
+  for(let i=0;i<count;i++){
+    const x = Math.random()*w, y = Math.random()*h;
+    const r = (0.04 + Math.random()*0.22) * Math.max(w,h) * spread;
+    const c = shift(base, (Math.random()-0.5)*0.10, (Math.random()-0.5)*0.06);
+    const grd = g.createRadialGradient(x,y,0,x,y,r);
+    grd.addColorStop(0, rgba(c, alpha));
+    grd.addColorStop(1, rgba(c, 0));
+    g.fillStyle = grd; g.fillRect(x-r, y-r, r*2, r*2);
+  }
+}
+function speckle(g, w, h, count, alpha){
+  for(let i=0;i<count;i++){
+    g.fillStyle = 'rgba(52,44,30,' + (Math.random()*alpha).toFixed(3) + ')';
+    g.fillRect(Math.random()*w, Math.random()*h, 1.6, 1.1);
+  }
+}
+/* linear black gradient, used to bake occlusion into a map */
+function ao(g, w, h, x0,y0,x1,y1, a){
+  const d = g.createLinearGradient(x0,y0,x1,y1);
+  d.addColorStop(0, 'rgba(44,34,20,' + a + ')');
+  d.addColorStop(1, 'rgba(44,34,20,0)');
+  g.fillStyle = d; g.fillRect(0,0,w,h);
+}
+
+function plasterCanvas(w, h, o){
+  o = o || {};
+  const base = o.base || P.wall;                           /* one wall is painted, the rest are not */
+  const c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = base; g.fillRect(0,0,w,h);
+  blotch(g, w, h, base, 90, 1.0, 0.5);
+  blotch(g, w, h, shift(base,-0.05), 40, 0.5, 0.28);
+  g.globalAlpha = 0.055; g.lineCap = 'round';
+  for(let i=0;i<64;i++){                                   /* trowel drag */
+    g.strokeStyle = shift(base, (Math.random()-0.5)*0.14);
+    g.lineWidth = 2 + Math.random()*14;
+    const x = Math.random()*w, y = Math.random()*h;
+    g.beginPath(); g.moveTo(x,y);
+    g.lineTo(x + (Math.random()-0.5)*w*0.28, y + (Math.random()-0.5)*h*0.12); g.stroke();
+  }
+  g.globalAlpha = 1;
+  speckle(g, w, h, Math.round(w*h/1000), 0.04);
+  if(o.bottom) ao(g, w, h, 0, h, 0, h*(1-o.bottom), 0.30);
+  if(o.top)    ao(g, w, h, 0, 0, 0, h*o.top, 0.18);
+  return c;
+}
+
+/* painted joinery: primer showing through a laid-off brush coat */
+function paintCanvas(w, h, color){
+  const c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = shift(color, -0.10); g.fillRect(0,0,w,h);
+  speckle(g, w, h, Math.round(w*h/300), 0.045);
+  g.lineCap = 'round';
+  for(let i=0, n=Math.max(70, Math.round(w*h/1500)); i<n; i++){
+    g.strokeStyle = shift(color, (Math.random()-0.4)*0.09);
+    g.globalAlpha = 0.20 + Math.random()*0.45;
+    g.lineWidth = 3 + Math.random()*13;
+    const y = Math.random()*h;
+    g.beginPath(); g.moveTo(-10, y);
+    g.bezierCurveTo(w*0.3, y+(Math.random()-0.5)*7, w*0.7, y+(Math.random()-0.5)*7, w+10, y+(Math.random()-0.5)*5);
+    g.stroke();
+  }
+  g.globalAlpha = 1;
+  return c;
+}
+
+/* timber: grain running the length of the board, the odd knot */
+function timberCanvas(base, knots){
+  const w = 1024, h = 512, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = base; g.fillRect(0,0,w,h);
+  blotch(g, w, h, base, 30, 0.9, 0.28);
+  for(let i=0;i<220;i++){
+    g.strokeStyle = shift(base, (Math.random()-0.55)*0.15, (Math.random()-0.5)*0.05);
+    g.globalAlpha = 0.10 + Math.random()*0.30;
+    g.lineWidth = 0.6 + Math.random()*3.0;
+    const y = Math.random()*h;
+    g.beginPath(); g.moveTo(0,y);
+    g.bezierCurveTo(w*0.30, y+(Math.random()-0.5)*22, w*0.70, y+(Math.random()-0.5)*22, w, y+(Math.random()-0.5)*12);
+    g.stroke();
+  }
+  g.globalAlpha = 0.55;
+  for(let k=0;k<(knots===undefined?3:knots);k++){
+    const kx = Math.random()*w, ky = Math.random()*h, kr = 7+Math.random()*13;
+    for(let r=kr;r>0;r-=1.7){
+      g.strokeStyle = shift(base, -0.12 - r*0.004);
+      g.lineWidth = 1.3;
+      g.beginPath(); g.ellipse(kx, ky, r, r*0.45, 0, 0, Math.PI*2); g.stroke();
+    }
+  }
+  g.globalAlpha = 1;
+  speckle(g, w, h, 1600, 0.04);
+  return c;
+}
+
+/* wide oak boards, laid across the room */
+function floorCanvas(){
+  const w = 1024, h = 1024, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = P.floor; g.fillRect(0,0,w,h);
+  const boards = 6, bh = h/boards;
+  for(let b=0;b<boards;b++){
+    const y0 = b*bh;
+    const tone = shift(P.floor, (Math.random()-0.5)*0.075, (Math.random()-0.5)*0.05);
+    g.fillStyle = tone; g.fillRect(0, y0, w, bh);
+    for(let i=0;i<90;i++){
+      g.strokeStyle = shift(tone, (Math.random()-0.55)*0.14);
+      g.globalAlpha = 0.10 + Math.random()*0.28;
+      g.lineWidth = 0.6 + Math.random()*2.6;
+      const y = y0 + Math.random()*bh;
+      g.beginPath(); g.moveTo(0,y);
+      g.bezierCurveTo(w*0.3, y+(Math.random()-0.5)*16, w*0.7, y+(Math.random()-0.5)*16, w, y+(Math.random()-0.5)*9);
+      g.stroke();
+    }
+    if(Math.random() < 0.55){
+      const kx = Math.random()*w, ky = y0 + bh*(0.25+Math.random()*0.5), kr = 5+Math.random()*9;
+      g.globalAlpha = 0.5;
+      for(let r=kr;r>0;r-=1.6){
+        g.strokeStyle = shift(tone, -0.10 - r*0.004);
+        g.lineWidth = 1.2;
+        g.beginPath(); g.ellipse(kx, ky, r, r*0.55, 0, 0, Math.PI*2); g.stroke();
+      }
+    }
+    g.globalAlpha = 1;
+    g.fillStyle = 'rgba(40,26,14,0.34)'; g.fillRect(0, y0, w, 1.6);
+    g.fillStyle = 'rgba(255,240,214,0.10)'; g.fillRect(0, y0+1.6, w, 1.2);
+    const jx = Math.random()*w;
+    g.fillStyle = 'rgba(40,26,14,0.30)'; g.fillRect(jx, y0, 1.5, bh);
+  }
+  speckle(g, w, h, 2600, 0.05);
+  return c;
+}
+
+/* the rug: a flat-weave, banded border, a lattice over the field */
+function rugCanvas(){
+  const w = 1024, h = 700, c = cvs(w,h), g = c.getContext('2d');
+  const field = '#8d6f56', border = '#634d3d', motif = '#c9a870', pale = '#d9c9a8';
+
+  g.fillStyle = field; g.fillRect(0,0,w,h);
+  blotch(g, w, h, field, 60, 0.7, 0.30);
+
+  /* weft: the whole field is drawn as short horizontal picks */
+  g.globalAlpha = 0.09;
+  for(let i=0;i<5200;i++){
+    g.strokeStyle = shift(field, (Math.random()-0.5)*0.24);
+    g.lineWidth = 1 + Math.random()*1.5;
+    const x = Math.random()*w, y = Math.random()*h;
+    g.beginPath(); g.moveTo(x,y); g.lineTo(x + 4 + Math.random()*10, y); g.stroke();
+  }
+  g.globalAlpha = 1;
+
+  function band(inset, thick, colour){
+    g.strokeStyle = colour; g.lineWidth = thick;
+    g.strokeRect(inset + thick/2, inset + thick/2, w - (inset + thick/2)*2, h - (inset + thick/2)*2);
+  }
+  band(0,      h*0.055, border);
+  band(h*0.056,h*0.011, motif);
+  band(h*0.080,h*0.006, pale);
+  band(h*0.110,h*0.026, border);
+  band(h*0.142,h*0.007, motif);
+
+  /* stepped lozenges down the middle of the field */
+  (function(){
+    const n = 5, cw = (w - h*0.34)/n, cy = h/2, r = h*0.15;
+    for(let i=0;i<n;i++){
+      const cx = h*0.17 + cw*(i+0.5);
+      g.globalAlpha = 0.7;
+      g.strokeStyle = motif; g.lineWidth = h*0.010;
+      for(let k=0;k<2;k++){
+        const rr = r*(1 - k*0.42);
+        g.beginPath();
+        g.moveTo(cx, cy-rr); g.lineTo(cx+rr*0.72, cy); g.lineTo(cx, cy+rr); g.lineTo(cx-rr*0.72, cy);
+        g.closePath(); g.stroke();
+      }
+      g.fillStyle = rgba(pale, 0.45);
+      g.beginPath();
+      g.moveTo(cx, cy-r*0.18); g.lineTo(cx+r*0.14, cy); g.lineTo(cx, cy+r*0.18); g.lineTo(cx-r*0.14, cy);
+      g.closePath(); g.fill();
+      g.globalAlpha = 1;
+    }
+  })();
+
+  /* the pile does not lie flat — a slow sheen across the whole thing */
+  const sheen = g.createLinearGradient(0,0,w,h);
+  sheen.addColorStop(0,   'rgba(255,246,226,0.10)');
+  sheen.addColorStop(0.5, 'rgba(255,246,226,0.00)');
+  sheen.addColorStop(1,   'rgba(40,30,20,0.10)');
+  g.fillStyle = sheen; g.fillRect(0,0,w,h);
+  speckle(g, w, h, 3000, 0.05);
+  return c;
+}
+
+/* brushed aluminium */
+function steelCanvas(base){
+  base = base || P.metalPale;
+  const w = 512, h = 512, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = base; g.fillRect(0,0,w,h);
+  for(let i=0;i<5000;i++){
+    g.strokeStyle = shift(base, (Math.random()-0.5)*0.22);
+    g.globalAlpha = 0.05 + Math.random()*0.13;
+    g.lineWidth = 0.5 + Math.random()*1.4;
+    const x = Math.random()*w, y = Math.random()*h, len = 14 + Math.random()*100;
+    g.beginPath(); g.moveTo(x,y); g.lineTo(x + (Math.random()-0.5)*1.5, y+len); g.stroke();
+  }
+  g.globalAlpha = 1;
+  const grd = g.createLinearGradient(0,0,w,0);
+  grd.addColorStop(0,   'rgba(255,255,255,0.10)');
+  grd.addColorStop(0.30,'rgba(255,255,255,0.00)');
+  grd.addColorStop(0.64,'rgba(255,255,255,0.12)');
+  grd.addColorStop(1,   'rgba(40,44,50,0.10)');
+  g.fillStyle = grd; g.fillRect(0,0,w,h);
+  return c;
+}
+
+/* the weave on the chair — a tight mesh with a slack diagonal in it */
+function fabricCanvas(base){
+  const w = 512, h = 512, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = base; g.fillRect(0,0,w,h);
+  const pitch = 7;
+  for(let x=0;x<w;x+=pitch){
+    g.fillStyle = rgba(shift(base, 0.06), 0.32); g.fillRect(x, 0, pitch*0.5, h);
+  }
+  for(let y=0;y<h;y+=pitch){
+    g.fillStyle = rgba(shift(base, -0.05), 0.34); g.fillRect(0, y, w, pitch*0.5);
+  }
+  blotch(g, w, h, base, 34, 0.8, 0.25);
+  for(let i=0;i<900;i++){                                  /* loose fibres */
+    g.strokeStyle = rgba(shift(base, 0.14), 0.10 + Math.random()*0.16);
+    g.lineWidth = 0.6;
+    const x = Math.random()*w, y = Math.random()*h;
+    g.beginPath(); g.moveTo(x,y); g.lineTo(x+(Math.random()-0.5)*9, y+(Math.random()-0.5)*9); g.stroke();
+  }
+  return c;
+}
+
+/* terracotta: unglazed, with the throwing rings still on it */
+function potCanvas(){
+  const w = 512, h = 256, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = P.pot; g.fillRect(0,0,w,h);
+  blotch(g, w, h, P.pot, 50, 0.9, 0.42);
+  blotch(g, w, h, P.potPale, 20, 0.6, 0.28);
+  for(let y=0;y<h;y+=4+Math.random()*7){                   /* throwing rings */
+    g.strokeStyle = rgba(shift(P.pot, (Math.random()-0.5)*0.14), 0.16 + Math.random()*0.16);
+    g.lineWidth = 0.8 + Math.random()*2.4;
+    g.beginPath(); g.moveTo(0,y); g.lineTo(w, y + (Math.random()-0.5)*2); g.stroke();
+  }
+  for(let i=0;i<14;i++){                                   /* efflorescence */
+    const x = Math.random()*w, y = Math.random()*h, r = 8 + Math.random()*36;
+    const grd = g.createRadialGradient(x,y,0,x,y,r);
+    grd.addColorStop(0, 'rgba(238,228,208,0.20)');
+    grd.addColorStop(1, 'rgba(238,228,208,0)');
+    g.fillStyle = grd; g.fillRect(x-r,y-r,r*2,r*2);
+  }
+  speckle(g, w, h, 900, 0.05);
+  return c;
+}
+
+function soilCanvas(){
+  const s = 256, c = cvs(s,s), g = c.getContext('2d');
+  g.fillStyle = P.soil; g.fillRect(0,0,s,s);
+  for(let i=0;i<2600;i++){                                 /* crumb */
+    const r = 1 + Math.random()*4;
+    g.fillStyle = rgba(shift(P.soil, (Math.random()-0.42)*0.20), 0.5 + Math.random()*0.4);
+    g.beginPath(); g.arc(Math.random()*s, Math.random()*s, r, 0, Math.PI*2); g.fill();
+  }
+  const grd = g.createRadialGradient(s/2,s/2,s*0.1,s/2,s/2,s*0.5);
+  grd.addColorStop(0, 'rgba(0,0,0,0)');
+  grd.addColorStop(1, 'rgba(0,0,0,0.45)');
+  g.fillStyle = grd; g.fillRect(0,0,s,s);
+  return c;
+}
+
+/* one leaf, cut out on alpha, so a plane can wear it */
+function leafCanvas(tint){
+  const w = 256, h = 340, c = cvs(w,h), g = c.getContext('2d');
+  const base = shift(P.leaf, tint || 0);
+  const cx = w/2;
+
+  g.beginPath();
+  g.moveTo(cx, h*0.99);
+  g.bezierCurveTo(cx - w*0.46, h*0.72, cx - w*0.44, h*0.22, cx, h*0.02);
+  g.bezierCurveTo(cx + w*0.44, h*0.22, cx + w*0.46, h*0.72, cx, h*0.99);
+  g.closePath();
+
+  const grd = g.createLinearGradient(0, h, 0, 0);
+  grd.addColorStop(0,    shift(base, -0.10));
+  grd.addColorStop(0.45, base);
+  grd.addColorStop(1,    shift(base,  0.09, -0.04));
+  g.fillStyle = grd; g.fill();
+  g.save(); g.clip();
+
+  g.strokeStyle = rgba(shift(base, -0.13), 0.75);          /* midrib */
+  g.lineWidth = 4.5; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(cx, h*0.99); g.lineTo(cx, h*0.05); g.stroke();
+
+  g.lineWidth = 1.9;                                        /* side veins */
+  for(let i=0;i<11;i++){
+    const t = 0.10 + i*0.078, y = h*(1 - t);
+    const spread = Math.sin(t*Math.PI)*w*0.42;
+    [-1,1].forEach(function(s){
+      g.strokeStyle = rgba(shift(base, -0.09), 0.42);
+      g.beginPath(); g.moveTo(cx, y);
+      g.quadraticCurveTo(cx + s*spread*0.55, y - h*0.02, cx + s*spread, y - h*0.055);
+      g.stroke();
+    });
+  }
+  for(let i=0;i<70;i++){                                    /* sheen and blemish */
+    const x = Math.random()*w, y = Math.random()*h, r = 3 + Math.random()*16;
+    g.fillStyle = Math.random() < 0.6 ? 'rgba(226,244,214,0.07)' : 'rgba(28,44,24,0.07)';
+    g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fill();
+  }
+  g.restore();
+  return c;
+}
+
+/* the page the machine has just printed. It is the overlay, on paper: the
+   header, the headline and the three ways to reach me are all read out of
+   the dialog's own markup, so the sheet on the desk cannot drift from the
+   sheet that opens. Type is set the way a thermal head lays it down —
+   Courier, upper case, letterspaced, banded across by the scan lines. */
+function faxSheetCanvas(){
+  const w = 440, h = 580, c = cvs(w,h), g = c.getContext('2d');
+  const MONO = '"Special Elite", "Courier New", Courier, monospace';
+  const MARGIN = 34, RIGHT = w - MARGIN;
+  const INK = '#1f1c16', FAINT = '#6f6858';
+
+  /* canvas has no letter-spacing everywhere it matters, and the face is not
+     monospaced anyway, so every line is set a glyph at a time */
+  function span(text, size, weight, track){
+    g.font = weight + ' ' + size + 'px ' + MONO;
+    let sum = 0;
+    for(let i=0;i<text.length;i++) sum += g.measureText(text[i]).width + track;
+    return sum - track;
+  }
+  function put(text, x, y, size, weight, track, colour, align){
+    let cx = align === 'r' ? x - span(text, size, weight, track) : x;
+    g.fillStyle = colour;
+    g.font = weight + ' ' + size + 'px ' + MONO;
+    for(let i=0;i<text.length;i++){
+      g.fillText(text[i], cx, y);
+      cx += g.measureText(text[i]).width + track;
+    }
+  }
+  function rule(y, thick, colour, dash){
+    g.strokeStyle = colour; g.lineWidth = thick;
+    g.setLineDash(dash || []);
+    g.beginPath(); g.moveTo(MARGIN, y); g.lineTo(RIGHT, y); g.stroke();
+    g.setLineDash([]);
+  }
+  function fromDom(sel, prop){
+    return Array.prototype.map.call(document.querySelectorAll(sel), function(el){
+      return (prop ? el.querySelector(prop) : el).textContent.trim().toUpperCase();
+    });
+  }
+
+  g.fillStyle = P.paper; g.fillRect(0,0,w,h);
+  blotch(g, w, h, P.paper, 20, 0.9, 0.22);
+  /* the warm cast the roll picks up at the head of the page */
+  const cast = g.createLinearGradient(0,0,0,120);
+  cast.addColorStop(0, 'rgba(160,148,120,0.26)');
+  cast.addColorStop(1, 'rgba(160,148,120,0)');
+  g.fillStyle = cast; g.fillRect(0,0,w,120);
+
+  /* the transmission header the sending machine prints across the top */
+  const head = fromDom('#faxHead span');
+  put(head[0] || '', MARGIN, 42, 15, '400', 2.4, FAINT);
+  put(head[1] || '', RIGHT,  42, 15, '400', 2.4, FAINT, 'r');
+  put(head[2] || '', MARGIN, 62, 15, '400', 2.4, FAINT);
+  rule(76, 2.6, '#2f2b23');
+
+  /* the headline, struck twice the way a thermal head lays it down */
+  const title = fromDom('#faxTitle')[0] || 'FAX ME';
+  put(title, MARGIN, 160, 68, '700', 9, 'rgba(31,28,22,0.5)');
+  put(title, MARGIN - 1.2, 158.6, 68, '700', 9, INK);
+
+  put(fromDom('.fax-lede')[0] || '', MARGIN, 192, 12, '400', 1.7, '#7a7364');
+  rule(216, 1.4, '#a49c88', [5, 5]);
+
+  /* the same three ways, in the same order, as the dialog lists them */
+  const ways = Array.prototype.map.call(document.querySelectorAll('#faxWays a'), function(a){
+    return [a.querySelector('.what').textContent.trim().toUpperCase(),
+            a.querySelector('.where').textContent.trim()];
+  });
+  ways.slice(0, 3).forEach(function(pair, i){
+    const y = 256 + i*74;
+    put(pair[0], MARGIN, y, 12, '400', 3.2, '#7a7364');
+    put(pair[1], MARGIN, y + 26, 18, '400', 0.9, INK);
+  });
+
+  rule(256 + 3*74 - 22, 2.6, '#2f2b23');
+  put(fromDom('#faxEnd')[0] || '', MARGIN, 256 + 3*74 + 4, 12, '400', 2.6, FAINT);
+
+  /* the banding a thermal head leaves, then the tooth of the roll itself */
+  g.fillStyle = 'rgba(120,110,90,0.055)';
+  for(let y=0; y<h; y+=4) g.fillRect(0, y, w, 1);
+  speckle(g, w, h, 420, 0.05);
+  return c;
+}
+
+/* a book spine: cloth, two blocked bands and a title that stays illegible */
+function spineCanvas(colour){
+  const w = 128, h = 512, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = colour; g.fillRect(0,0,w,h);
+  blotch(g, w, h, colour, 16, 1.0, 0.30);
+  for(let i=0;i<520;i++){                                   /* cloth tooth */
+    g.fillStyle = rgba(shift(colour, (Math.random()-0.5)*0.20), 0.16);
+    g.fillRect(Math.random()*w, Math.random()*h, 2.2, 1.4);
+  }
+  const gold = Math.random() < 0.55 ? '#c8a866' : shift(colour, 0.34);
+  g.fillStyle = gold;
+  g.fillRect(w*0.16, h*0.13, w*0.68, 3.4);
+  g.fillRect(w*0.16, h*0.20, w*0.68, 3.4);
+  g.fillRect(w*0.16, h*0.86, w*0.68, 3.4);
+  g.globalAlpha = 0.85;                                     /* the "title" */
+  for(let y=h*0.30, n=0; y<h*0.72 && n<7; y += 16 + Math.random()*16, n++){
+    g.fillStyle = gold;
+    const len = w*(0.26 + Math.random()*0.44);
+    g.fillRect(w*0.5 - len/2, y, len, 4.2);
+  }
+  g.globalAlpha = 1;
+  const edge = g.createLinearGradient(0,0,w,0);             /* rounded spine */
+  edge.addColorStop(0,   'rgba(20,14,8,0.46)');
+  edge.addColorStop(0.30,'rgba(255,246,226,0.05)');
+  edge.addColorStop(0.72,'rgba(255,246,226,0.02)');
+  edge.addColorStop(1,   'rgba(20,14,8,0.44)');
+  g.fillStyle = edge; g.fillRect(0,0,w,h);
+  const head = g.createLinearGradient(0,0,0,h*0.16);        /* dust off the top */
+  head.addColorStop(0, 'rgba(40,32,20,0.26)');
+  head.addColorStop(1, 'rgba(40,32,20,0)');
+  g.fillStyle = head; g.fillRect(0,0,w,h*0.16);
+  return c;
+}
+
+/* the block of pages seen edge-on */
+function pagesCanvas(){
+  const w = 256, h = 256, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = '#c3b596'; g.fillRect(0,0,w,h);
+  for(let x=0;x<w;x+=1.6){
+    g.fillStyle = 'rgba(120,104,74,' + (0.05 + Math.random()*0.20).toFixed(3) + ')';
+    g.fillRect(x, 0, 0.9, h);
+  }
+  blotch(g, w, h, '#d8cdb2', 14, 1.0, 0.35);
+  return c;
+}
+
+function radialCanvas(inner, mid){
+  const s = 256, c = cvs(s,s), g = c.getContext('2d');
+  const grd = g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+  grd.addColorStop(0, 'rgba(255,255,255,' + inner + ')');
+  grd.addColorStop(mid || 0.42, 'rgba(255,255,255,' + (inner*0.42) + ')');
+  grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd; g.fillRect(0,0,s,s);
+  return c;
+}
+
+/* ------------------------------------------------------------
+   THE TERMINAL
+   Draws COMMAND and SKILLS into a 16:9 canvas and reports back
+   where the caret finished, so the blinking block can be parked
+   there as its own little plane. The groups run in two columns,
+   split where the taller column comes closest to half, and the
+   type steps down until the tallest column and the longest line
+   both fit — add ten more skills and it still fits.
+   ------------------------------------------------------------ */
+const SCREEN_W = 1920, SCREEN_H = 1080;
+const screenCanvas = cvs(SCREEN_W, SCREEN_H);
+const caret = {x:0, y:0, w:0, h:0};
+
+function drawScreen(){
+  const g = screenCanvas.getContext('2d');
+  const W = SCREEN_W, H = SCREEN_H;
+  const K = H / 720;                    /* the chrome below was drawn for 720p */
+  const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace';
+
+  const bg = '#0d1512', dim = '#4d7a66', body = '#8fe0b0', bright = '#e7f6ec', accent = '#63c98e';
+
+  g.fillStyle = bg; g.fillRect(0,0,W,H);
+
+  /* window chrome */
+  const barH = 54*K;
+  g.fillStyle = '#16201c'; g.fillRect(0,0,W,barH);
+  g.fillStyle = 'rgba(255,255,255,0.07)'; g.fillRect(0,barH-1.6*K,W,1.6*K);
+  ['#e0705f','#ddb15c','#63c98e'].forEach(function(col, i){
+    g.fillStyle = col;
+    g.beginPath(); g.arc((34 + i*30)*K, barH/2, 8.5*K, 0, Math.PI*2); g.fill();
+  });
+  g.fillStyle = dim;
+  g.font = '400 ' + (20*K) + 'px ' + MONO;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(SHELL_TITLE, W/2, barH/2 + K);
+  g.textAlign = 'left';
+
+  /* two columns, filled in order, split at whichever group leaves the
+     taller of the two closest to half the print */
+  const padX = 56*K, padTop = barH + 30*K, padBot = 30*K, colGap = 44*K;
+  const colW = (W - padX*2 - colGap) / 2;
+
+  const cost = SKILLS.map(function(sec){ return sec.items.length + 2; }); /* heading, items, blank */
+  const total = cost.reduce(function(a,b){ return a+b; }, 0);
+  let split = 0, leftRows = 0;
+  while(split < SKILLS.length - 1 && leftRows + cost[split] <= total/2){
+    leftRows += cost[split]; split++;
+  }
+  /* the trailing blank of the last group in a column costs nothing */
+  const colRows = Math.max(leftRows, total - leftRows) - 1;
+
+  /* host, prompt, the gap under them, the columns, then the caret line */
+  const lh = Math.min(40*K, (H - padTop - padBot) / (colRows + 4.4));
+  let fs = Math.round(lh * 0.62);
+
+  /* and nothing is allowed to run out of its column, so the type steps
+     down again if the longest line is wider than one is */
+  const bullet = '  ·  ';
+  g.font = '400 ' + fs + 'px ' + MONO;
+  let widest = 0;
+  SKILLS.forEach(function(sec){
+    sec.items.forEach(function(it){
+      widest = Math.max(widest, g.measureText(bullet + it).width);
+    });
+  });
+  if(widest > colW) fs = Math.max(8, Math.floor(fs * colW / widest));
+
+  function line(x0, yy, parts){
+    let x = x0;
+    parts.forEach(function(p){
+      g.font = (p[2] || '400') + ' ' + fs + 'px ' + MONO;
+      g.fillStyle = p[1];
+      g.fillText(p[0], x, yy);
+      x += g.measureText(p[0]).width;
+    });
+    return x;
+  }
+
+  let y = padTop + lh*0.5;
+  line(padX, y, [[SHELL_HOST + '  ~/portfolio', dim]]); y += lh;
+  line(padX, y, [['> ', accent, '700'], [COMMAND, bright, '600']]); y += lh;
+
+  const colTop = y + lh*0.45;
+  let cx = padX, cy = colTop;
+  SKILLS.forEach(function(sec, i){
+    if(i === split){ cx = padX + colW + colGap; cy = colTop; }
+    line(cx, cy, [[sec.group + '/', accent, '700']]); cy += lh;
+    sec.items.forEach(function(it){
+      line(cx, cy, [[bullet, dim], [it, body]]); cy += lh;
+    });
+    cy += lh;                                     /* a blank between groups */
+  });
+
+  /* the prompt is left waiting under the taller column */
+  const promptY = colTop + (colRows + 0.4)*lh;
+  const endX = line(padX, promptY, [['> ', accent, '700']]);
+
+  /* where the caret sits — handed back in canvas pixels */
+  g.font = '400 ' + fs + 'px ' + MONO;
+  caret.w = g.measureText('M').width * 0.92;
+  caret.h = fs * 1.06;
+  caret.x = endX + caret.w/2;
+  caret.y = promptY;
+
+  /* the glass in front of all of it: scanlines, then a bloom off the corner */
+  g.globalAlpha = 0.055; g.fillStyle = '#000';
+  for(let sy=barH; sy<H; sy+=3*K) g.fillRect(0, sy, W, 1.4*K);
+  g.globalAlpha = 1;
+
+  const wash = g.createRadialGradient(W*0.30, H*0.34, 0, W*0.30, H*0.34, W*0.72);
+  wash.addColorStop(0, 'rgba(120,230,175,0.09)');
+  wash.addColorStop(1, 'rgba(120,230,175,0)');
+  g.fillStyle = wash; g.fillRect(0,0,W,H);
+
+  const corner = g.createLinearGradient(W, 0, W*0.42, H*0.62);
+  corner.addColorStop(0, 'rgba(226,242,232,0.10)');
+  corner.addColorStop(1, 'rgba(226,242,232,0)');
+  g.fillStyle = corner; g.fillRect(0,0,W,H);
+
+  const vig = g.createRadialGradient(W/2, H/2, H*0.30, W/2, H/2, H*0.80);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(0,0,0,0.34)');
+  g.fillStyle = vig; g.fillRect(0,0,W,H);
+}
+drawScreen();
+const screenTex = tex(screenCanvas);
+
+/* ============================================================
+   5. MATERIALS
+   ============================================================ */
+const wallTex      = tex(plasterCanvas(2048, 512, {bottom:0.20, top:0.26}), 2, 1);
+const wallPlainTex = tex(plasterCanvas(512, 512, {top:0.26}), 2, 2);
+const wallBackTex  = tex(plasterCanvas(2048, 512, {base:P.wallBack, bottom:0.20, top:0.26}), 1, 1);
+const trimTex      = tex(paintCanvas(256, 256, P.trim), 3, 3);
+const floorTex     = tex(floorCanvas(), 5, 5);
+const deskTex      = tex(timberCanvas(P.desk, 4));
+const deskDarkTex  = tex(timberCanvas(P.deskDark, 1));
+const shelfTex     = tex(timberCanvas(P.shelf, 2));
+const rugTex       = tex(rugCanvas());
+const steelTex     = tex(steelCanvas());
+const fabricTex    = tex(fabricCanvas(P.fabric), 3, 3);
+const fabricDimTex = tex(fabricCanvas(P.fabricDim), 3, 3);
+const potTex       = tex(potCanvas());
+const soilTex      = tex(soilCanvas());
+const pagesTex     = tex(pagesCanvas());
+
+const M = {
+  wall:     new THREE.MeshStandardMaterial({map:wallTex, bumpMap:wallTex, bumpScale:0.003, roughness:0.94}),
+  wallPlain:new THREE.MeshStandardMaterial({map:wallPlainTex, bumpMap:wallPlainTex, bumpScale:0.003, roughness:0.94}),
+  wallBack: new THREE.MeshStandardMaterial({map:wallBackTex, bumpMap:wallBackTex, bumpScale:0.0035, roughness:0.96}),
+  ceiling:  new THREE.MeshStandardMaterial({color:P.ceiling, roughness:1}),
+  trim:     new THREE.MeshStandardMaterial({map:trimTex, bumpMap:trimTex, bumpScale:0.003, roughness:0.60}),
+  floor:    new THREE.MeshStandardMaterial({map:floorTex, bumpMap:floorTex, bumpScale:0.006,
+                                            roughness:0.52, metalness:0.02}),
+  rug:      new THREE.MeshStandardMaterial({map:rugTex, bumpMap:rugTex, bumpScale:0.012,
+                                            roughnessMap:rugTex, roughness:1, metalness:0}),
+  desk:     new THREE.MeshStandardMaterial({map:deskTex, bumpMap:deskTex, bumpScale:0.0035,
+                                            roughness:0.42, metalness:0.03}),
+  deskDark: new THREE.MeshStandardMaterial({map:deskDarkTex, bumpMap:deskDarkTex, bumpScale:0.003,
+                                            roughness:0.58}),
+  shelf:    new THREE.MeshStandardMaterial({map:shelfTex, bumpMap:shelfTex, bumpScale:0.0035,
+                                            roughness:0.5, metalness:0.02}),
+  shelfBack:new THREE.MeshStandardMaterial({color:shift(P.shelf, -0.16), roughness:0.86}),
+  metal:    new THREE.MeshStandardMaterial({color:P.metal, roughness:0.36, metalness:0.72}),
+  steel:    new THREE.MeshStandardMaterial({map:steelTex, roughness:0.34, metalness:0.9}),
+  plastic:  new THREE.MeshStandardMaterial({color:'#23282c', roughness:0.52, metalness:0.12}),
+  plasticPale:new THREE.MeshStandardMaterial({color:'#d9d4c9', roughness:0.44, metalness:0.05}),
+  fabric:   new THREE.MeshStandardMaterial({map:fabricTex, bumpMap:fabricTex, bumpScale:0.004, roughness:0.88}),
+  fabricDim:new THREE.MeshStandardMaterial({map:fabricDimTex, bumpMap:fabricDimTex, bumpScale:0.004, roughness:0.9}),
+  pot:      new THREE.MeshStandardMaterial({map:potTex, bumpMap:potTex, bumpScale:0.005, roughness:0.86}),
+  soil:     new THREE.MeshStandardMaterial({map:soilTex, bumpMap:soilTex, bumpScale:0.010, roughness:0.98}),
+  brass:    new THREE.MeshStandardMaterial({color:'#c6a463', roughness:0.28, metalness:0.9}),
+  ringTrim: new THREE.MeshStandardMaterial({color:'#e9e4d8', roughness:0.5, metalness:0.1}),
+  lens:     new THREE.MeshStandardMaterial({color:'#ffcf87', roughness:0.4,
+                                            emissive:P.glow, emissiveIntensity:1.9}),
+  lampBody: new THREE.MeshStandardMaterial({color:P.lampBody, roughness:0.58, metalness:0.10}),
+  /* the drum on the standard lamp: linen seen from both sides, lit from within */
+  shade:    new THREE.MeshStandardMaterial({color:P.shadeCool, roughness:0.95,
+                                            side:THREE.DoubleSide,
+                                            emissive:P.lampWarm, emissiveIntensity:0.55}),
+  /* the inside of the task lamp's cone, which is the bit that actually glares */
+  shadeHot: new THREE.MeshStandardMaterial({color:'#ffdd9e', roughness:0.5,
+                                            side:THREE.BackSide,
+                                            emissive:P.lampWarm, emissiveIntensity:1.35}),
+  screen:   new THREE.MeshBasicMaterial({map:screenTex, fog:false})
+};
+
+/* ============================================================
+   6. HELPERS
+   ============================================================ */
+function box(w,h,d,mat,x,y,z){
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
+  m.position.set(x||0,y||0,z||0);
+  m.castShadow = true; m.receiveShadow = true;
+  return m;
+}
+function plate(w,h,mat,x,y,z){          /* flat, never casts */
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h), mat);
+  m.position.set(x||0,y||0,z||0);
+  m.receiveShadow = true;
+  return m;
+}
+/* a rounded slab, extruded on Z then stood up however the caller wants it */
+function roundedGeo(w,h,d,r){
+  r = Math.min(r, w/2-0.002, h/2-0.002);
+  const s = new THREE.Shape(), x = -w/2, y = -h/2;
+  s.moveTo(x+r,y);
+  s.lineTo(x+w-r,y);   s.quadraticCurveTo(x+w,y,x+w,y+r);
+  s.lineTo(x+w,y+h-r); s.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  s.lineTo(x+r,y+h);   s.quadraticCurveTo(x,y+h,x,y+h-r);
+  s.lineTo(x,y+r);     s.quadraticCurveTo(x,y,x+r,y);
+  const g = new THREE.ExtrudeGeometry(s,{depth:Math.max(0.01, d-0.02), bevelEnabled:true,
+    bevelSize:0.010, bevelThickness:0.010, bevelSegments:2, curveSegments:6});
+  g.center();
+  return g;
+}
+function soft(w,h,d,r,mat,x,y,z){
+  const m = new THREE.Mesh(roundedGeo(w,h,d,r), mat);
+  m.position.set(x||0,y||0,z||0);
+  m.castShadow = true; m.receiveShadow = true;
+  return m;
+}
+/* the dark patch a thing leaves where it meets the floor */
+const contactTex = new THREE.CanvasTexture(radialCanvas(1, 0.22));
+function contact(w, d, opacity, x, z){
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d),
+    new THREE.MeshBasicMaterial({map:contactTex, color:0x2a1f12, transparent:true,
+      opacity:opacity, depthWrite:false}));
+  m.rotation.x = -Math.PI/2;
+  m.position.set(x, 0.016, z);
+  m.renderOrder = 2;
+  return m;
+}
+
+/* ============================================================
+   7. THE SHELL — floor, ceiling, four walls
+   ============================================================ */
+const FLOOR_W = SIDE_X*2, FLOOR_D = FRONT_Z - BACK_Z, FLOOR_CZ = (BACK_Z + FRONT_Z)/2;
+
+const floor = plate(FLOOR_W, FLOOR_D, M.floor, 0, 0, FLOOR_CZ);
+floor.rotation.x = -Math.PI/2;
+floor.material.map.repeat.set(FLOOR_W/2.1, FLOOR_D/2.1);
+scene.add(floor);
+
+const ceil = plate(FLOOR_W, FLOOR_D, M.ceiling, 0, WALL_H, FLOOR_CZ);
+ceil.rotation.x = Math.PI/2;
+scene.add(ceil);
+
+/* back wall — the one the desk and the monitor stand against, and the only
+   one that is painted rather than left as bare plaster */
+scene.add(box(FLOOR_W, WALL_H, WALL_T, M.wallBack, 0, WALL_H/2, BACK_Z - WALL_T/2));
+/* left wall — the one the bookcase stands against */
+const leftWall = box(FLOOR_D, WALL_H, WALL_T, M.wall, 0, 0, 0);
+leftWall.rotation.y = Math.PI/2;
+leftWall.position.set(-SIDE_X - WALL_T/2, WALL_H/2, FLOOR_CZ);
+scene.add(leftWall);
+/* right wall */
+const rightWall = box(FLOOR_D, WALL_H, WALL_T, M.wall, 0, 0, 0);
+rightWall.rotation.y = -Math.PI/2;
+rightWall.position.set(SIDE_X + WALL_T/2, WALL_H/2, FLOOR_CZ);
+scene.add(rightWall);
+/* front wall, behind the camera — only ever seen as bounce */
+scene.add(box(FLOOR_W, WALL_H, WALL_T, M.wallPlain, 0, WALL_H/2, FRONT_Z + WALL_T/2));
+
+/* skirting and cornice */
+(function(){
+  const sk = 0.11, sd = 0.022, co = 0.075, cd = 0.055;
+  function run(len, rotY, x, z, y, h, d){
+    const b = box(len, h, d, M.trim, x, y, z);
+    b.rotation.y = rotY;
+    b.castShadow = false;
+    scene.add(b);
+  }
+  run(FLOOR_W, 0,        0,             BACK_Z + sd/2,  sk/2, sk, sd);
+  run(FLOOR_W, 0,        0,             FRONT_Z - sd/2, sk/2, sk, sd);
+  run(FLOOR_D, Math.PI/2,-SIDE_X + sd/2, FLOOR_CZ,      sk/2, sk, sd);
+  run(FLOOR_D, Math.PI/2, SIDE_X - sd/2, FLOOR_CZ,      sk/2, sk, sd);
+
+  run(FLOOR_W, 0,        0,             BACK_Z + cd/2,  WALL_H - co/2, co, cd);
+  run(FLOOR_W, 0,        0,             FRONT_Z - cd/2, WALL_H - co/2, co, cd);
+  run(FLOOR_D, Math.PI/2,-SIDE_X + cd/2, FLOOR_CZ,      WALL_H - co/2, co, cd);
+  run(FLOOR_D, Math.PI/2, SIDE_X - cd/2, FLOOR_CZ,      WALL_H - co/2, co, cd);
+})();
+
+/* floor-to-skirting occlusion, so nothing floats at the walls */
+(function(){
+  const s = 512, c = cvs(s,s), g = c.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0,0,s,s);
+  g.globalCompositeOperation = 'destination-out';
+  g.filter = 'blur(26px)'; g.fillStyle = '#fff';
+  g.fillRect(32,32,s-64,s-64); g.filter = 'none';
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(FLOOR_W, FLOOR_D),
+    new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c), color:0x2b2013,
+      transparent:true, opacity:0.42, depthWrite:false}));
+  m.rotation.x = -Math.PI/2;
+  m.position.set(0, 0.008, FLOOR_CZ);
+  m.renderOrder = 1;
+  scene.add(m);
+})();
+
+/* ============================================================
+   8. THE RUG — it runs under the desk and out past the chair
+   ============================================================ */
+const RUG_W = 4.70, RUG_D = 2.60, RUG_T = 0.026, RUG_Z = -2.84;
+(function(){
+  /* the shadow it sits in first, so the woven edge has somewhere to land */
+  const s = 512, c = cvs(s,s), g = c.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0,0,s,s);
+  g.globalCompositeOperation = 'destination-out';
+  g.filter = 'blur(38px)'; g.fillStyle = '#fff';
+  g.fillRect(76,76,s-152,s-152); g.filter = 'none';
+  const sh = new THREE.Mesh(new THREE.PlaneGeometry(RUG_W + 0.30, RUG_D + 0.30),
+    new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c), color:0x30240f,
+      transparent:true, opacity:0.22, depthWrite:false}));
+  sh.rotation.x = -Math.PI/2;
+  sh.position.set(0, 0.019, RUG_Z);
+  sh.renderOrder = 2;
+  scene.add(sh);
+
+  const rug = box(RUG_W, RUG_T, RUG_D, M.rug, 0, RUG_T/2 + 0.004, RUG_Z);
+  rug.castShadow = false;
+  scene.add(rug);
+
+  /* fringe on the two short ends */
+  const fringeM = new THREE.MeshStandardMaterial({color:'#d3c3a2', roughness:1});
+  const strand = new THREE.CylinderGeometry(0.0028, 0.0020, 0.058, 5);
+  [-1, 1].forEach(function(s2){
+    for(let i=0;i<70;i++){
+      const f = new THREE.Mesh(strand, fringeM);
+      f.rotation.x = Math.PI/2 + (Math.random()-0.5)*0.28;
+      f.rotation.z = (Math.random()-0.5)*0.3;
+      f.position.set(-RUG_W/2 + 0.03 + i*((RUG_W-0.06)/69),
+                     RUG_T*0.62,
+                     RUG_Z + s2*(RUG_D/2 + 0.026));
+      f.castShadow = false; f.receiveShadow = false;
+      scene.add(f);
+    }
+  });
+})();
+
+/* ============================================================
+   9. THE DESK — the largest thing in the room, against the back wall
+   ============================================================ */
+const DESK_W = 4.30, DESK_D = 0.96, DESK_H = 0.755, TOP_T = 0.052;
+const DESK_Z = BACK_Z + DESK_D/2 + 0.05;          /* a hand's width off the plaster */
+const TOP_Y = DESK_H - TOP_T/2;
+
+const desk = new THREE.Group();
+const hoverables = [];
+
+(function(){
+  /* the top: a single slab, edges eased */
+  const top = soft(DESK_W, DESK_D, TOP_T, 0.018, M.desk, 0, 0, 0);
+  top.rotation.x = -Math.PI/2;
+  top.position.set(0, TOP_Y, DESK_Z);
+  desk.add(top);
+
+  /* four square legs, set in from the corners, tapering as they drop */
+  const LEG = 0.086, INSET_X = DESK_W/2 - 0.14, INSET_Z = DESK_D/2 - 0.12;
+  [-1,1].forEach(function(sx){
+    [-1,1].forEach(function(sz){
+      const g = new THREE.CylinderGeometry(LEG*0.72, LEG*0.5, DESK_H - TOP_T, 4, 1);
+      g.rotateY(Math.PI/4);
+      const leg = new THREE.Mesh(g, M.desk);
+      leg.position.set(sx*INSET_X, (DESK_H - TOP_T)/2, DESK_Z + sz*INSET_Z);
+      leg.castShadow = true; leg.receiveShadow = true;
+      desk.add(leg);
+    });
+  });
+
+  /* apron: the rail the legs are jointed into, set back under the top */
+  /* the run is long, so the rail is deep — this is what carries the span */
+  const AP_Y = DESK_H - TOP_T - 0.0775;
+  desk.add(box(DESK_W - 0.20, 0.115, 0.036, M.desk, 0, AP_Y, DESK_Z + DESK_D/2 - 0.125));
+  [-1,1].forEach(function(sx){
+    const a = box(DESK_D - 0.24, 0.115, 0.036, M.desk, sx*(DESK_W/2 - 0.125), AP_Y, DESK_Z);
+    a.rotation.y = Math.PI/2;
+    desk.add(a);
+  });
+
+  /* modesty panel across the back, sitting in shadow */
+  const mp = box(DESK_W - 0.34, 0.42, 0.024, M.deskDark, 0, DESK_H - 0.35, DESK_Z - DESK_D/2 + 0.10);
+  mp.receiveShadow = true;
+  desk.add(mp);
+
+  /* a shallow drawer hung off each end */
+  const DR_W = 0.62, DR_H = 0.115, DR_Z = DESK_Z + 0.03, DR_BOX = DESK_D - 0.20;
+  const DR_Y = DESK_H - TOP_T - DR_H/2 - 0.020;
+  [-1, 1].forEach(function(sd){
+    const DR_X = sd*(DESK_W/2 - 0.44);
+    desk.add(box(DR_W + 0.03, DR_H + 0.03, DR_BOX, M.deskDark, DR_X, DR_Y, DR_Z));
+    desk.add(soft(DR_W, DR_H, 0.022, 0.008, M.desk, DR_X, DR_Y, DR_Z + DR_BOX/2));
+    const pull = new THREE.Mesh(new THREE.CylinderGeometry(0.010, 0.010, 0.20, 12), M.brass);
+    pull.rotation.z = Math.PI/2;
+    pull.position.set(DR_X, DR_Y, DR_Z + DR_BOX/2 + 0.024);
+    pull.castShadow = true;
+    desk.add(pull);
+    [-1,1].forEach(function(s2){
+      const stub = new THREE.Mesh(new THREE.CylinderGeometry(0.0075, 0.0075, 0.026, 10), M.brass);
+      stub.rotation.x = Math.PI/2;
+      stub.position.set(DR_X + s2*0.10, DR_Y, DR_Z + DR_BOX/2 + 0.012);
+      desk.add(stub);
+    });
+
+    /* and under the drawer, a cabinet carrying the pedestal down to the floor.
+       Same footprint as the drawer box above it, so the two read as one unit,
+       with a shadow gap between them and the carcass held up on a recessed
+       plinth so it doesn't look like it is growing out of the boards. */
+    const CAB_TOP = DR_Y - (DR_H + 0.03)/2 - 0.008;
+    const PLINTH  = 0.055;
+    const CAB_H   = CAB_TOP - PLINTH;
+    const CAB_Y   = PLINTH + CAB_H/2;
+
+    desk.add(box(DR_W + 0.03, CAB_H, DR_BOX, M.deskDark, DR_X, CAB_Y, DR_Z));
+    desk.add(box(DR_W - 0.05, PLINTH, DR_BOX - 0.10, M.deskDark, DR_X, PLINTH/2, DR_Z));
+
+    /* the door, standing proud of the carcass by the same margin as the
+       drawer front above it */
+    desk.add(soft(DR_W, CAB_H - 0.014, 0.022, 0.008, M.desk,
+                  DR_X, CAB_Y, DR_Z + DR_BOX/2));
+
+    /* a vertical pull on the inboard edge, same brass as the drawer's */
+    const dPull = new THREE.Mesh(new THREE.CylinderGeometry(0.010, 0.010, 0.17, 12), M.brass);
+    dPull.position.set(DR_X - sd*0.21, CAB_Y, DR_Z + DR_BOX/2 + 0.024);
+    dPull.castShadow = true;
+    desk.add(dPull);
+    [-1,1].forEach(function(s3){
+      const st = new THREE.Mesh(new THREE.CylinderGeometry(0.0075, 0.0075, 0.026, 10), M.brass);
+      st.rotation.x = Math.PI/2;
+      st.position.set(DR_X - sd*0.21, CAB_Y + s3*0.075, DR_Z + DR_BOX/2 + 0.012);
+      desk.add(st);
+    });
+
+    desk.add(contact(DR_W + 0.34, DR_BOX + 0.34, 0.34, DR_X, DR_Z));
+  });
+})();
+scene.add(desk);
+scene.add(contact(DESK_W + 0.5, DESK_D + 0.55, 0.30, 0, DESK_Z));
+
+/* ============================================================
+   10. THE MONITOR — the terminal is the only thing in the room
+       that is genuinely lit from inside
+   ============================================================ */
+const PANEL_W = 1.26, PANEL_H = 0.72, BEZEL = 0.014;   /* 16:9 once the bezel is off */
+const SCR_W = PANEL_W - BEZEL*2, SCR_H = PANEL_H - BEZEL*2;
+const STAND_H = 0.215;                                   /* desk top to the underside of the glass */
+const MON_Y = TOP_Y + TOP_T/2 + STAND_H + PANEL_H/2;
+const MON_Z = DESK_Z - 0.24;
+const MON_TILT = 0.055;                                  /* the top leans back */
+/* every structural part of the stand lives on this plane, which is behind the
+   glass — nothing about the mount ever reads in front of the panel */
+const NECK_Z = MON_Z - 0.090;
+
+const monitor = new THREE.Group();
+let cursorMesh = null, screenMesh = null;
+
+(function(){
+  /* foot: a flat plate tucked back under the panel's shadow */
+  const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.128, 0.140, 0.016, 44), M.steel);
+  foot.scale.z = 0.50;
+  foot.position.set(0, TOP_Y + TOP_T/2 + 0.008, NECK_Z);
+  foot.castShadow = true; foot.receiveShadow = true;
+  monitor.add(foot);
+
+  /* the neck: a slim post standing on the plate, narrower than the hump it
+     disappears into, running up behind the glass rather than beside it */
+  const COL_H = STAND_H + 0.16;
+  const col = new THREE.Mesh(new THREE.BoxGeometry(0.050, COL_H, 0.028), M.steel);
+  col.position.set(0, TOP_Y + TOP_T/2 + COL_H/2, NECK_Z + 0.004);
+  col.castShadow = true;
+  monitor.add(col);
+
+  /* The short cantilever off the top of the neck onto the back of the panel.
+     Its front face has to finish BEHIND the panel's rear face, or it reads as
+     a bright steel square parked in the middle of the glass. The shell's back
+     sits at head-local z = -0.027, and because the head is tilted that plane
+     drifts with height, so measure it at the yoke's top edge — the worst case —
+     and derive the z from there rather than dialling one in by hand. */
+  const YOKE_W = 0.086, YOKE_H = 0.072, YOKE_D = 0.105;
+  const YOKE_Y = MON_Y - 0.075;
+  const SHELL_BACK = -0.027;                               /* rear face, head-local */
+  const panelBackZ = MON_Z + SHELL_BACK*Math.cos(MON_TILT)
+                   + (YOKE_Y + YOKE_H/2 - MON_Y)*Math.sin(MON_TILT);
+  const yoke = new THREE.Mesh(new THREE.BoxGeometry(YOKE_W, YOKE_H, YOKE_D), M.steel);
+  yoke.position.set(0, YOKE_Y, panelBackZ - 0.008 - YOKE_D/2);
+  yoke.castShadow = true;
+  monitor.add(yoke);
+
+  /* the panel itself, on its own group so the tilt carries the screen with it */
+  const head = new THREE.Group();
+  head.position.set(0, MON_Y, MON_Z);
+  head.rotation.x = MON_TILT;
+
+  const shell = soft(PANEL_W, PANEL_H, 0.034, 0.012, M.plastic, 0, 0, -0.010);
+  head.add(shell);
+
+  /* the hump on the back where the electronics live */
+  const hump = soft(PANEL_W*0.46, PANEL_H*0.52, 0.030, 0.020, M.plastic, 0, -0.03, -0.036);
+  head.add(hump);
+
+  /* the glass, sunk just proud of the bezel */
+  screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(SCR_W, SCR_H), M.screen);
+  screenMesh.position.set(0, 0, 0.0085);
+  head.add(screenMesh);
+
+  /* the caret, parked wherever drawScreen() left it */
+  const cw = caret.w / SCREEN_W * SCR_W, ch = caret.h / SCREEN_H * SCR_H;
+  cursorMesh = new THREE.Mesh(new THREE.PlaneGeometry(cw, ch),
+    new THREE.MeshBasicMaterial({color:0x8fe6bb, transparent:true, opacity:0.92,
+                                 depthWrite:false, fog:false}));
+  cursorMesh.position.set((caret.x/SCREEN_W - 0.5)*SCR_W, (0.5 - caret.y/SCREEN_H)*SCR_H, 0.0095);
+  cursorMesh.renderOrder = 4;
+  head.add(cursorMesh);
+
+  /* a sheet of reflection lying across the glass */
+  const refl = new THREE.Mesh(new THREE.PlaneGeometry(SCR_W, SCR_H),
+    new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture((function(){
+      const w = 256, h = 144, c = cvs(w,h), g = c.getContext('2d');
+      const grd = g.createLinearGradient(0, h, w*0.8, 0);
+      grd.addColorStop(0,    'rgba(255,255,255,0)');
+      grd.addColorStop(0.62, 'rgba(255,255,255,0.05)');
+      grd.addColorStop(0.78, 'rgba(255,255,255,0.13)');
+      grd.addColorStop(1,    'rgba(255,255,255,0.02)');
+      g.fillStyle = grd; g.fillRect(0,0,w,h);
+      return c;
+    })()), transparent:true, opacity:0.5, blending:THREE.AdditiveBlending,
+      depthWrite:false, fog:false}));
+  refl.position.set(0, 0, 0.0105);
+  refl.renderOrder = 5;
+  head.add(refl);
+
+  /* the small brand tab under the glass, and the standby pip */
+  const tab = box(0.10, 0.008, 0.004, M.plasticPale, 0, -PANEL_H/2 + 0.009, 0.010);
+  tab.castShadow = false;
+  head.add(tab);
+  const pip = new THREE.Mesh(new THREE.SphereGeometry(0.0055, 10, 8),
+    new THREE.MeshStandardMaterial({color:'#2c6b4b', emissive:'#63c98e', emissiveIntensity:1.4}));
+  pip.position.set(PANEL_W/2 - 0.045, -PANEL_H/2 + 0.010, 0.010);
+  head.add(pip);
+  monitor.userData.pip = pip.material;
+
+  monitor.add(head);
+  monitor.userData.head = head;
+})();
+
+monitor.userData.hoverable = true;
+monitor.userData.clickable = true;
+monitor.userData.isScreen = true;
+scene.add(monitor);
+hoverables.push(monitor);
+
+/* what the terminal throws back into the room */
+const screenLight = new THREE.PointLight(new THREE.Color(P.screenGlow), 0.65, 2.6, 2);
+screenLight.position.set(0, MON_Y - 0.14, MON_Z + 0.30);
+scene.add(screenLight);
+
+/* and the pool of it on the desk under the panel */
+const screenPool = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.85),
+  new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(radialCanvas(1, 0.34)),
+    color:0x7fe0ae, transparent:true, opacity:0.13, blending:THREE.AdditiveBlending,
+    depthWrite:false, fog:false}));
+screenPool.rotation.x = -Math.PI/2;
+screenPool.position.set(0, TOP_Y + TOP_T/2 + 0.003, MON_Z + 0.30);
+screenPool.renderOrder = 3;
+scene.add(screenPool);
+
+/* ============================================================
+   11. KEYBOARD, MOUSE, FAX — what is left on the desk
+   ============================================================ */
+const KB_X = -0.06, KB_Z = DESK_Z + 0.20;
+const DESK_TOP = TOP_Y + TOP_T/2;
+
+/* --- the keyboard: a tray, and every cap on it as its own little slab --- */
+(function(){
+  const kb = new THREE.Group();
+  const KB_W = 0.485, KB_D = 0.168, TRAY = 0.017;
+
+  const tray = soft(KB_W, KB_D, TRAY, 0.008, M.plastic, 0, TRAY/2, 0);
+  tray.rotation.x = -Math.PI/2;
+  kb.add(tray);
+  /* it sits on a slight rake, front edge lower */
+  const foot = box(KB_W - 0.04, 0.008, 0.012, M.plastic, 0, 0.004, -KB_D/2 + 0.014);
+  foot.castShadow = false;
+  kb.add(foot);
+
+  const capGeo = new THREE.BoxGeometry(1, 1, 1);
+  const capM = new THREE.MeshStandardMaterial({color:'#e6e2d8', roughness:0.62});
+  const capDark = new THREE.MeshStandardMaterial({color:'#c2bdb1', roughness:0.62});
+  const U = 0.0295;                                 /* one key unit */
+  const GAP = 0.0035;
+
+  /* each row is a list of key widths in units; a compact 60% layout */
+  const rows = [
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,2],
+    [1.5,1,1,1,1,1,1,1,1,1,1,1,1,1.5],
+    [1.75,1,1,1,1,1,1,1,1,1,1,1,2.25],
+    [2.25,1,1,1,1,1,1,1,1,1,1,2.75],
+    [1.25,1.25,1.25,6.25,1.25,1.25,1.25,1.25]
+  ];
+  const ROW_D = (KB_D - 0.026) / rows.length;
+  rows.forEach(function(row, r){
+    const total = row.reduce(function(a,b){ return a+b; }, 0);
+    let x = -(total*U)/2;
+    row.forEach(function(u, i){
+      const w = u*U - GAP;
+      const cap = new THREE.Mesh(capGeo, (u > 1 || (r === 4 && u > 1.2)) ? capDark : capM);
+      cap.scale.set(w, 0.008, ROW_D - GAP);
+      cap.position.set(x + (u*U)/2, TRAY + 0.004, KB_D/2 - 0.013 - ROW_D*(r + 0.5));
+      cap.castShadow = false; cap.receiveShadow = true;
+      kb.add(cap);
+      x += u*U;
+    });
+  });
+
+  kb.position.set(KB_X, DESK_TOP, KB_Z);
+  kb.rotation.x = 0.028;
+  kb.rotation.y = -0.02;
+  scene.add(kb);
+})();
+
+/* --- the mouse: an upper hemisphere, split down the middle --- */
+(function(){
+  const mouse = new THREE.Group();
+  const shellGeo = new THREE.SphereGeometry(1, 30, 18, 0, Math.PI*2, 0, Math.PI/2);
+  const shell = new THREE.Mesh(shellGeo, M.plasticPale);
+  shell.scale.set(0.032, 0.033, 0.056);
+  shell.castShadow = true; shell.receiveShadow = true;
+  mouse.add(shell);
+
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 30), M.plastic);
+  base.scale.set(0.032, 0.006, 0.056);
+  base.position.y = 0.003;
+  mouse.add(base);
+
+  /* the seam between the two buttons, and the wheel sitting in it */
+  const seam = box(0.0016, 0.004, 0.052, M.plastic, 0, 0.0315, -0.006);
+  seam.castShadow = false;
+  mouse.add(seam);
+  const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.0085, 0.0085, 0.0055, 16),
+    new THREE.MeshStandardMaterial({color:'#33383c', roughness:0.7}));
+  wheel.rotation.z = Math.PI/2;
+  wheel.position.set(0, 0.0315, -0.020);
+  mouse.add(wheel);
+
+  mouse.position.set(KB_X + 0.365, DESK_TOP + 0.0005, KB_Z + 0.012);
+  mouse.rotation.y = -0.13;
+  scene.add(mouse);
+})();
+
+/* the printed sheet's material, kept out here so the webfont can repaint it */
+let faxSheetMat = null;
+
+/* --- the fax machine, with the page it has just printed --- */
+/* A notebook used to sit here, which was the wrong object: a notebook is a
+   private thing you write in, and this corner of the desk is the one that
+   asks to be answered. A fax is a thing you send someone. Pressing it opens
+   the sheet as a dialog, so the copy that has to be read is DOM and not
+   geometry — what lies on the desk is the same page, printed. */
+const FAX_X = -0.80, FAX_Z = DESK_Z + 0.05;
+
+(function(){
+  const fx = new THREE.Group();
+
+  const BW = 0.335, BD = 0.265, BH = 0.060;    /* body: wide, shallow, low */
+  const SLOT_Y = 0.030, SLOT_Z = BD/2 - 0.006; /* where the printed page leaves */
+  const PAPER_X = -0.020;                      /* the paper path, off to the left of the keys */
+
+  const shellM = new THREE.MeshStandardMaterial({color:'#cec6b3', roughness:0.56, metalness:0.04});
+  const shellDk= new THREE.MeshStandardMaterial({color:'#a49b87', roughness:0.62});
+  const trimM  = new THREE.MeshStandardMaterial({color:'#2b3034', roughness:0.5, metalness:0.14});
+  const keyM   = new THREE.MeshStandardMaterial({color:'#3a4046', roughness:0.6});
+  const paperM = new THREE.MeshStandardMaterial({color:P.paper, roughness:0.9,
+                                                 side:THREE.DoubleSide});
+
+  /* the body, and the paper-roll cover humped along the back of it */
+  const body = soft(BW, BD, BH, 0.016, shellM, 0, BH/2, 0);
+  body.rotation.x = -Math.PI/2;
+  fx.add(body);
+
+  const ROLL_R = 0.040, ROLL_Z = -BD/2 + 0.046;
+  const roll = new THREE.Mesh(new THREE.CylinderGeometry(ROLL_R, ROLL_R, BW - 0.014, 26), shellM);
+  roll.rotation.z = Math.PI/2;                 /* on its side, running left to right */
+  roll.position.set(0, BH + 0.004, ROLL_Z);
+  fx.add(roll);
+  [-1, 1].forEach(function(s){
+    const cap = new THREE.Mesh(
+      new THREE.CylinderGeometry(ROLL_R + 0.003, ROLL_R + 0.003, 0.005, 26), shellDk);
+    cap.rotation.z = Math.PI/2;
+    cap.position.set(s*(BW/2 - 0.006), BH + 0.004, ROLL_Z);
+    fx.add(cap);
+  });
+  const lidSeam = box(BW - 0.024, 0.0016, 0.0035, shellDk, 0, BH + 0.004 + ROLL_R, ROLL_Z);
+  lidSeam.castShadow = false;                  /* the split where the cover lifts */
+  fx.add(lidSeam);
+
+  /* the feed in front of the roll, and the page standing in it waiting to go */
+  const feed = box(0.205, 0.008, 0.020, trimM, PAPER_X, BH + 0.004, ROLL_Z + 0.060);
+  fx.add(feed);
+  const waiting = new THREE.Mesh(new THREE.PlaneGeometry(0.185, 0.175), paperM);
+  waiting.position.set(PAPER_X, BH + 0.089, ROLL_Z + 0.028);
+  waiting.rotation.x = -0.38;                  /* leaning back, clear of the roll */
+  waiting.rotation.z = 0.025;
+  fx.add(waiting);
+
+  /* the slot the printed page comes out of, cut into the front */
+  const slot = box(0.215, 0.009, 0.006, trimM, PAPER_X, SLOT_Y, BD/2 - 0.004);
+  slot.castShadow = false;
+  fx.add(slot);
+
+  /* the control deck: a wedge on the right, thin edge forward, where a hand
+     coming off the keyboard would land on it */
+  const deck = new THREE.Group();
+  deck.position.set(BW/2 - 0.062, BH + 0.001, 0.024);
+  deck.rotation.x = 0.17;
+  fx.add(deck);
+  deck.add(box(0.110, 0.030, 0.148, shellM, 0, 0, 0));
+  const FACE = 0.015;                          /* the top of the wedge, in deck space */
+
+  /* the little green display, and READY on it — the machine's own word */
+  const lcdC = cvs(200, 56), lg = lcdC.getContext('2d');
+  lg.fillStyle = '#22301f'; lg.fillRect(0, 0, 200, 56);
+  lg.fillStyle = '#8fe6bb';
+  lg.font = '600 26px "Courier New", Courier, monospace';
+  lg.fillText('READY', 24, 38);
+  lg.fillStyle = 'rgba(20,30,18,0.35)';
+  for(let y=0; y<56; y+=3) lg.fillRect(0, y, 200, 1);
+  const bezel = box(0.086, 0.006, 0.028, trimM, 0, FACE - 0.001, -0.050);
+  bezel.castShadow = false;
+  deck.add(bezel);
+  const lcd = box(0.078, 0.004, 0.021, new THREE.MeshStandardMaterial({
+    map:tex(lcdC), roughness:0.4, emissive:'#3f6a52', emissiveIntensity:0.55}),
+    0, FACE + 0.003, -0.050);
+  lcd.castShadow = false;
+  deck.add(lcd);
+
+  /* twelve keys in the usual three columns, then a row of three under them:
+     stop, start, and the one nobody ever pressed */
+  for(let r=0; r<4; r++){
+    for(let col=0; col<3; col++){
+      const k = box(0.020, 0.005, 0.013, keyM, (col - 1)*0.026, FACE + 0.0025, -0.012 + r*0.019);
+      k.castShadow = false;
+      deck.add(k);
+    }
+  }
+  ['#8c3a30', '#3f7a52', '#4a5158'].forEach(function(col, i){
+    const k = box(0.026, 0.005, 0.012,
+      new THREE.MeshStandardMaterial({color:col, roughness:0.55}),
+      (i - 1)*0.032, FACE + 0.0025, 0.062);
+    k.castShadow = false;
+    deck.add(k);
+  });
+
+  /* the handset, in its cradle down the left-hand side */
+  const HS_X = -BW/2 + 0.050;
+  const handset = new THREE.Group();
+  handset.position.set(HS_X, BH, 0.004);
+  fx.add(handset);
+  [-1, 1].forEach(function(s){                 /* the two saddles it rests in */
+    handset.add(box(0.042, 0.014, 0.017, shellDk, 0, 0.007, s*0.062));
+  });
+  const bar = soft(0.150, 0.026, 0.026, 0.010, trimM, 0, 0.024, 0);
+  bar.rotation.y = Math.PI/2;                  /* its length runs front to back */
+  handset.add(bar);
+  [-1, 1].forEach(function(s){
+    const end = soft(0.038, 0.030, 0.032, 0.011, trimM, 0, 0.019, s*0.074);
+    end.rotation.y = Math.PI/2;
+    handset.add(end);
+    /* the one you speak into and the one you listen through */
+    const grille = box(0.020, 0.0014, 0.020, shellDk, 0, 0.035, s*0.074);
+    grille.castShadow = false;
+    handset.add(grille);
+  });
+
+  /* the cord, coiled, off the back of the handset and into the body */
+  const A = new THREE.Vector3(HS_X, BH + 0.018, -0.088);
+  const B = new THREE.Vector3(-BW/2 + 0.016, 0.020, -BD/2 - 0.008);
+  const cordPts = [];
+  for(let i=0; i<=96; i++){
+    const t = i/96;
+    const a = t*Math.PI*2*4.5;
+    /* the coil is faded in and out so both ends meet what they plug into */
+    const r = 0.013 * Math.min(1, t*6) * Math.min(1, (1 - t)*6);
+    const p = A.clone().lerp(B, t);
+    p.x += Math.cos(a)*r;
+    p.y += Math.sin(a)*r*0.75;
+    cordPts.push(p);
+  }
+  const cord = new THREE.Mesh(new THREE.TubeGeometry(
+    new THREE.CatmullRomCurve3(cordPts), 96, 0.0032, 6, false), trimM);
+  cord.castShadow = false;
+  fx.add(cord);
+
+  /* The printed page: out of the slot, over the lip and down onto the desk,
+     flattening as it goes — the curl a thermal roll keeps for the first foot
+     of paper. Built from a plane whose rows are walked along that path, so
+     the header leaves the machine first and the sheet ends up reading the
+     right way up to anyone standing where the camera stands. */
+  const SW = 0.195, SL = 0.255;
+  const sheetGeo = new THREE.PlaneGeometry(SW, SL, 1, 30);
+  const sp = sheetGeo.attributes.position;
+  for(let i=0; i<sp.count; i++){
+    const t = 0.5 - sp.getY(i)/SL;             /* 0 in the slot, 1 at the free edge */
+    sp.setXYZ(i, sp.getX(i),
+      SLOT_Y*Math.pow(1 - t, 2.1) + 0.0035 + Math.sin(t*Math.PI)*0.0035,
+      SLOT_Z + t*SL*0.945);
+  }
+  sp.needsUpdate = true;
+  sheetGeo.computeVertexNormals();
+  const sheet = new THREE.Mesh(sheetGeo, new THREE.MeshStandardMaterial({
+    map:tex(faxSheetCanvas()), roughness:0.88, side:THREE.DoubleSide}));
+  /* the canvas is painted the moment the room is built, which is very
+     probably before the webfont has arrived — so hand the material out and
+     let the loader below strike the page again once it has */
+  faxSheetMat = sheet.material;
+  sheet.position.x = PAPER_X;
+  sheet.castShadow = false;                    /* it is lying on the desk, not over it */
+  sheet.receiveShadow = true;
+  fx.add(sheet);
+
+  fx.traverse(function(o){
+    if(o.isMesh && o.castShadow !== false){ o.castShadow = true; o.receiveShadow = true; }
+  });
+
+  fx.position.set(FAX_X, DESK_TOP, FAX_Z);
+  fx.rotation.y = 0.14;                        /* turned a little toward the chair */
+  fx.userData.hoverable = true;
+  fx.userData.clickable = true;
+  fx.userData.isFax = true;
+  fx.userData.name = 'Fax me';
+  scene.add(fx);
+  hoverables.push(fx);
+
+  const faxShade = contact(0.46, 0.40, 0.30, FAX_X, FAX_Z - 0.02);
+  faxShade.position.y = DESK_TOP + 0.0015;     /* it stands on the desk, not the floor */
+  scene.add(faxShade);
+})();
+
+/* Strike the page a second time once Special Elite is loaded. Without this
+   the sheet keeps whatever Courier drew at build time and the machine on the
+   desk disagrees with the dialog it opens. */
+if(document.fonts && document.fonts.load){
+  Promise.all([
+    document.fonts.load('400 18px "Special Elite"'),
+    document.fonts.load('700 68px "Special Elite"')
+  ]).then(function(){
+    if(!faxSheetMat) return;
+    if(faxSheetMat.map) faxSheetMat.map.dispose();
+    faxSheetMat.map = tex(faxSheetCanvas());
+    faxSheetMat.needsUpdate = true;
+  }).catch(function(){});
+}
+
+/* --- pens: a cup of them beside the fax, and two left out on the desk --- */
+(function(){
+  const inks  = ['#1b1f23','#8c2f2a','#27506e','#2f5b3c'];
+  const woodM = new THREE.MeshStandardMaterial({color:'#c08f45', roughness:0.76});
+  const leadM = new THREE.MeshStandardMaterial({color:'#2a2a2a', roughness:0.6});
+
+  /* One pen, built lying along +X with its point at +X, so a caller can either
+     lay it flat on the desk or stand it on end in the cup. A pencil gets a bare
+     timber taper and a lead; a pen gets a brass cone and a clip. */
+  function makePen(colour, len, pencil){
+    const g = new THREE.Group();
+    const mat = pencil ? woodM
+      : new THREE.MeshStandardMaterial({color:colour, roughness:0.44, metalness:0.16});
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.0040, 0.0040, len, 12), mat);
+    barrel.rotation.z = Math.PI/2;
+    g.add(barrel);
+    const point = new THREE.Mesh(new THREE.ConeGeometry(0.0040, 0.016, 12),
+                                 pencil ? woodM : M.brass);
+    point.rotation.z = -Math.PI/2;
+    point.position.x = len/2 + 0.008;
+    g.add(point);
+    if(pencil){
+      const lead = new THREE.Mesh(new THREE.ConeGeometry(0.0014, 0.005, 8), leadM);
+      lead.rotation.z = -Math.PI/2;
+      lead.position.x = len/2 + 0.018;
+      g.add(lead);
+    }else{
+      g.add(box(0.026, 0.0020, 0.0050, M.brass, -len/2 + 0.026, 0.0046, 0));
+    }
+    g.traverse(function(o){ if(o.isMesh){ o.castShadow = true; } });
+    return g;
+  }
+
+  /* the cup: a plain tin, open at the top */
+  const CUP_X = -1.16, CUP_Z = DESK_Z + 0.05, CUP_R = 0.038, CUP_H = 0.098;
+  const cup = new THREE.Group();
+  const tinM = new THREE.MeshStandardMaterial({color:'#454c52', roughness:0.38,
+                                               metalness:0.55, side:THREE.DoubleSide});
+  const wall = new THREE.Mesh(
+    new THREE.CylinderGeometry(CUP_R, CUP_R*0.94, CUP_H, 28, 1, true), tinM);
+  wall.position.y = CUP_H/2;
+  wall.castShadow = true; wall.receiveShadow = true;
+  cup.add(wall);
+  const cupBase = new THREE.Mesh(
+    new THREE.CylinderGeometry(CUP_R*0.94, CUP_R*0.94, 0.006, 28), tinM);
+  cupBase.position.y = 0.003;
+  cup.add(cupBase);
+  const cupRim = new THREE.Mesh(new THREE.TorusGeometry(CUP_R, 0.0022, 6, 30), tinM);
+  cupRim.rotation.x = Math.PI/2;
+  cupRim.position.y = CUP_H;
+  cup.add(cupRim);
+
+  /* six standing in it. Each one is hung off a holder pivoting on the base of
+     the cup, so leaning it over swings the top and leaves the point where it
+     is — which is how a handful of pens actually sits in a tin. */
+  [[ 0.00, -0.03, 0.142, 0],
+   [ 0.09,  0.06, 0.156, 1],
+   [-0.10,  0.04, 0.146, 2],
+   [ 0.04,  0.13, 0.150, 3],
+   [-0.05, -0.12, 0.140, 0],
+   [ 0.12, -0.05, 0.158, 1]].forEach(function(q, i){
+    const pencil = (i === 1 || i === 5);
+    const pen = makePen(inks[q[3]], q[2], pencil);
+    pen.rotation.z = -Math.PI/2;                    /* stand it up, point down */
+    pen.position.y = q[2]/2 + 0.010;
+    const holder = new THREE.Group();
+    holder.position.y = 0.008;
+    holder.rotation.set(q[1], 0, q[0]);
+    holder.add(pen);
+    cup.add(holder);
+  });
+
+  cup.position.set(CUP_X, DESK_TOP, CUP_Z);
+  cup.rotation.y = 0.30;
+  cup.userData.hoverable = true;
+  cup.userData.name = 'Pens';
+  scene.add(cup);
+  hoverables.push(cup);
+  const cupShade = contact(0.22, 0.22, 0.32, CUP_X, CUP_Z);
+  cupShade.position.y = DESK_TOP + 0.002;           /* it stands on the desk, not the floor */
+  scene.add(cupShade);
+
+  /* two left out: one dropped by the keyboard, one down past the fax */
+  [[KB_X + 0.46,  KB_Z + 0.115,  0.52, 0.146, 1, false],
+   [-1.44,        DESK_Z + 0.28, -0.24, 0.156, 0, true ]
+  ].forEach(function(q){
+    const pen = makePen(inks[q[4]], q[3], q[5]);
+    pen.position.set(q[0], DESK_TOP + 0.0042, q[1]);
+    pen.rotation.y = q[2];
+    scene.add(pen);
+  });
+})();
+
+/* ============================================================
+   12. THE CHAIR — drawn in to the desk, square on to the terminal
+   ------------------------------------------------------------
+   Built facing -Z, which is the desk. The back is deliberately a
+   mid-back rather than a tall one: pulled in this close, a tall
+   back would stand across the bottom of the screen.
+   ============================================================ */
+/* drawn in square to the desk, dead in front of the monitor — the seat back
+   sits just below the bottom of the glass from the camera's height */
+const CHAIR_X = 0.00, CHAIR_Z = -2.80, CHAIR_TURN = 0;
+
+(function(){
+  const chair = new THREE.Group();
+  const SEAT_Y = 0.442;
+
+  /* --- five-star base, one castor on the end of each arm --- */
+  const HUB_Y = 0.070;
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.058, 0.052, 20), M.metal);
+  hub.position.y = HUB_Y;
+  hub.castShadow = true;
+  chair.add(hub);
+
+  for(let i=0;i<5;i++){
+    const a = (i/5)*Math.PI*2 + 0.36;
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.030, 0.285, 10), M.metal);
+    /* lay it down, point it out, and let it fall away from the hub */
+    const armWrap = new THREE.Group();
+    armWrap.rotation.y = a;
+    arm.position.set(0.155, 0, 0);
+    arm.rotation.z = Math.PI/2 - 0.10;
+    arm.castShadow = true;
+    armWrap.add(arm);
+    armWrap.position.y = HUB_Y - 0.004;
+    chair.add(armWrap);
+
+    const cx = Math.sin(a)*0.285, cz = Math.cos(a)*0.285;
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.010, 0.010, 0.036, 8), M.metal);
+    stem.position.set(cx, 0.049, cz);
+    chair.add(stem);
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.031, 0.031, 0.020, 16), M.plastic);
+    wheel.rotation.z = Math.PI/2;
+    wheel.rotation.y = a;
+    wheel.position.set(cx, 0.031, cz);
+    wheel.castShadow = true;
+    chair.add(wheel);
+  }
+
+  /* --- gas lift --- */
+  const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.040, 0.185, 18), M.plastic);
+  sleeve.position.y = 0.096 + 0.0925;
+  sleeve.castShadow = true;
+  chair.add(sleeve);
+  const ram = new THREE.Mesh(new THREE.CylinderGeometry(0.021, 0.021, 0.16, 16), M.steel);
+  ram.position.y = 0.30;
+  ram.castShadow = true;
+  chair.add(ram);
+  /* the mechanism under the seat */
+  const mech = box(0.20, 0.045, 0.24, M.plastic, 0, SEAT_Y - 0.055, 0.005);
+  chair.add(mech);
+  const lever = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.13, 10), M.metal);
+  lever.rotation.z = Math.PI/2;
+  lever.rotation.y = 0.22;
+  lever.position.set(0.16, SEAT_Y - 0.062, 0.02);
+  chair.add(lever);
+
+  /* --- seat: a rounded cushion with a firmer shell under it --- */
+  const pan = soft(0.50, 0.475, 0.085, 0.075, M.fabric, 0, SEAT_Y, 0);
+  pan.rotation.x = -Math.PI/2;
+  chair.add(pan);
+  const shell = soft(0.505, 0.48, 0.026, 0.075, M.plastic, 0, SEAT_Y - 0.048, 0);
+  shell.rotation.x = -Math.PI/2;
+  chair.add(shell);
+  /* the seam quilted across the pan */
+  [-0.13, 0.13].forEach(function(x){
+    const sm = box(0.006, 0.012, 0.40, M.fabricDim, x, SEAT_Y + 0.040, 0);
+    sm.castShadow = false;
+    chair.add(sm);
+  });
+
+  /* --- the back, carried on a spar off the rear of the seat --- */
+  const BACK_TILT = -0.20;
+  const backWrap = new THREE.Group();
+  backWrap.position.set(0, SEAT_Y - 0.02, 0.205);
+  backWrap.rotation.x = BACK_TILT;
+  chair.add(backWrap);
+
+  const spar = box(0.075, 0.26, 0.042, M.plastic, 0, 0.11, 0.012);
+  backWrap.add(spar);
+
+  const rest = soft(0.475, 0.500, 0.075, 0.085, M.fabric, 0, 0.425, -0.010);
+  backWrap.add(rest);
+  const restShell = soft(0.48, 0.505, 0.024, 0.085, M.fabricDim, 0, 0.425, 0.030);
+  backWrap.add(restShell);
+  /* lumbar seam, and the frame edge showing round the cushion */
+  const lum = box(0.40, 0.014, 0.010, M.fabricDim, 0, 0.330, -0.044);
+  lum.castShadow = false;
+  backWrap.add(lum);
+
+  /* --- armrests --- */
+  [-1, 1].forEach(function(s){
+    const post = box(0.032, 0.20, 0.048, M.plastic, s*0.265, SEAT_Y + 0.075, 0.03);
+    post.rotation.z = -s*0.06;
+    chair.add(post);
+    const pad = soft(0.075, 0.215, 0.030, 0.014, M.plastic, s*0.278, SEAT_Y + 0.180, 0.015);
+    pad.rotation.x = -Math.PI/2;
+    chair.add(pad);
+  });
+
+  chair.position.set(CHAIR_X, 0, CHAIR_Z);
+  chair.rotation.y = CHAIR_TURN;
+  chair.userData.hoverable = true;
+  chair.userData.name = 'The chair';
+  scene.add(chair);
+  hoverables.push(chair);
+
+  scene.add(contact(0.95, 0.95, 0.34, CHAIR_X, CHAIR_Z));
+})();
+
+/* ============================================================
+   13. THE PLANTS — one either side of the desk
+   ------------------------------------------------------------
+   Each leaf is a cut-out on a plane, hung off the end of a stem
+   that is swept as a tube. Alpha-tested rather than blended, so
+   the leaves still cast.
+   ============================================================ */
+const leafMats = [0, 0.05, -0.06, 0.10, -0.11].map(function(t){
+  return new THREE.MeshStandardMaterial({
+    map: tex(leafCanvas(t)), alphaTest:0.5, side:THREE.DoubleSide,
+    roughness:0.72, metalness:0
+  });
+});
+
+function makePlant(o){
+  const g = new THREE.Group();
+  const R = o.potR, PH = o.potH;
+
+  /* pot: a straight-sided planter with a rolled rim */
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(R, R*0.76, PH, 34), M.pot);
+  body.position.y = PH/2;
+  body.castShadow = true; body.receiveShadow = true;
+  g.add(body);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(R - 0.006, 0.016, 8, 34), M.pot);
+  rim.rotation.x = Math.PI/2;
+  rim.position.y = PH - 0.008;
+  rim.castShadow = true;
+  g.add(rim);
+  /* the saucer it stands in */
+  const saucer = new THREE.Mesh(new THREE.CylinderGeometry(R*0.92, R*0.84, 0.026, 30), M.pot);
+  saucer.position.y = 0.013;
+  saucer.receiveShadow = true;
+  g.add(saucer);
+
+  /* soil, sunk below the rim */
+  const soil = new THREE.Mesh(new THREE.CircleGeometry(R - 0.014, 30), M.soil);
+  soil.rotation.x = -Math.PI/2;
+  soil.position.y = PH - 0.045;
+  soil.receiveShadow = true;
+  g.add(soil);
+
+  const stemM = new THREE.MeshStandardMaterial({color:shift(P.leaf, -0.14, 0.04), roughness:0.8});
+  const base = PH - 0.05;
+
+  for(let i=0;i<o.leaves;i++){
+    const t = i/o.leaves;
+    const a = t*Math.PI*2*o.turns + o.seed;
+    const lean = o.lean * (0.42 + t*0.72);              /* outer leaves lie further over */
+    const h = o.height * (0.46 + 0.62*((i*7)%o.leaves)/o.leaves);
+    const tipX = Math.sin(a)*lean, tipZ = Math.cos(a)*lean;
+
+    /* the stem: out of the soil, up, then bowing over under the leaf */
+    const curve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(Math.sin(a)*R*0.20, base, Math.cos(a)*R*0.20),
+      new THREE.Vector3(tipX*0.24, base + h*0.42, tipZ*0.24),
+      new THREE.Vector3(tipX*0.68, base + h*0.82, tipZ*0.68),
+      new THREE.Vector3(tipX, base + h, tipZ)
+    ]);
+    const stem = new THREE.Mesh(new THREE.TubeGeometry(curve, 12, 0.0075, 6, false), stemM);
+    stem.castShadow = true;
+    g.add(stem);
+
+    const LW = o.leafW*(0.82 + Math.random()*0.36);
+    const leaf = new THREE.Mesh(new THREE.PlaneGeometry(LW, LW*1.32),
+                                leafMats[i % leafMats.length]);
+    /* the plane hangs from its stalk, so lift it half its own length */
+    const hang = new THREE.Group();
+    hang.position.set(tipX, base + h, tipZ);
+    hang.rotation.y = -a;
+    hang.rotation.x = -0.62 - Math.random()*0.5;         /* the blade tips away and down */
+    hang.rotation.z = (Math.random()-0.5)*0.45;
+    leaf.position.y = LW*0.62;
+    leaf.castShadow = true;
+    hang.add(leaf);
+    g.add(hang);
+  }
+
+  g.userData.hoverable = true;
+  g.userData.name = o.name || 'The plant';
+  return g;
+}
+
+[
+  {x:-2.80, z:-1.30, potR:0.190, potH:0.38, leaves:12, height:0.66, lean:0.35,
+   leafW:0.24, turns:2.6, seed:0.4,  name:'Fig by the shelf'},
+  {x: 2.58, z:-3.88, potR:0.168, potH:0.31, leaves:9,  height:0.54, lean:0.30,
+   leafW:0.21, turns:2.2, seed:1.9,  name:'The other one'}
+].forEach(function(o){
+  const p = makePlant(o);
+  p.position.set(o.x, 0, o.z);
+  scene.add(p);
+  hoverables.push(p);
+  scene.add(contact(o.potR*4.4, o.potR*4.4, 0.32, o.x, o.z));
+});
+
+/* ============================================================
+   14. THE BOOKCASE — on the left wall, beside the desk
+   ============================================================ */
+const SHELF_D = 0.33, SHELF_W = 1.80, SHELF_H = 2.06, SHELF_Z = -2.62;
+const SHELF_X = -SIDE_X + SHELF_D/2 + 0.02;
+
+/* a handful of book styles, reused down the run */
+const BOOK_COLOURS = ['#7d3b34','#2f4a5c','#4a5b36','#6b5330','#3d3550','#8a6a3a','#374a45','#5e3b48'];
+const bookStyles = BOOK_COLOURS.map(function(col){
+  return {
+    spine: new THREE.MeshStandardMaterial({map:tex(spineCanvas(col)), roughness:0.78}),
+    cloth: new THREE.MeshStandardMaterial({color:shift(col, -0.05), roughness:0.82})
+  };
+});
+const bookPages = new THREE.MeshStandardMaterial({map:pagesTex, roughness:0.95});
+
+(function(){
+  const bc = new THREE.Group();
+  const SIDE_T = 0.028, SH_T = 0.026, BAYS = 4;
+
+  /* carcass: two gables, a top, a plinth and a thin back */
+  [-1, 1].forEach(function(s){
+    bc.add(box(SHELF_D, SHELF_H, SIDE_T, M.shelf, 0, SHELF_H/2, s*(SHELF_W/2 - SIDE_T/2)));
+  });
+  bc.add(box(SHELF_D, 0.030, SHELF_W, M.shelf, 0, SHELF_H - 0.015, 0));
+  bc.add(box(SHELF_D - 0.03, 0.105, SHELF_W - 0.02, M.shelf, -0.015, 0.0525, 0));
+  const back = box(0.014, SHELF_H - 0.12, SHELF_W - SIDE_T*2, M.shelfBack,
+                   -SHELF_D/2 + 0.007, SHELF_H/2 + 0.05, 0);
+  back.castShadow = false;
+  bc.add(back);
+  /* a lip along the front of each gable, so the case reads as joinery */
+  [-1, 1].forEach(function(s){
+    const lip = box(0.016, SHELF_H - 0.12, SIDE_T + 0.006, M.shelf,
+                    SHELF_D/2 - 0.008, SHELF_H/2 + 0.05, s*(SHELF_W/2 - SIDE_T/2));
+    bc.add(lip);
+  });
+
+  /* shelves, and what stands on them */
+  const CLEAR = (SHELF_H - 0.105 - 0.030 - SH_T*(BAYS-1)) / BAYS;
+  for(let b=0; b<BAYS; b++){
+    const yTop = 0.105 + (b+1)*CLEAR + b*SH_T;         /* top face of this bay's shelf */
+    if(b < BAYS-1){
+      bc.add(box(SHELF_D - 0.020, SH_T, SHELF_W - SIDE_T*2, M.shelf, -0.010, yTop + SH_T/2, 0));
+    }
+    const standY = 0.105 + b*(CLEAR + SH_T);           /* the surface this bay stands on */
+    fillBay(bc, standY, CLEAR, SHELF_W/2 - SIDE_T - 0.012, b);
+  }
+
+  /* built depth-on-X and width-on-Z already, so it needs no turning: the
+     opening looks straight out into the room */
+  bc.position.set(SHELF_X, 0, SHELF_Z);
+  bc.userData.hoverable = true;
+  bc.userData.name = 'The shelf';
+  scene.add(bc);
+  hoverables.push(bc);
+
+  scene.add(contact(SHELF_D*3.4, SHELF_W + 0.5, 0.30, SHELF_X + 0.1, SHELF_Z));
+})();
+
+/* one bay of books: a run of standing volumes, the odd gap, the odd flat stack */
+function fillBay(parent, standY, clear, halfRun, seed){
+  let z = -halfRun;
+  const limit = halfRun;
+  let n = 0;
+
+  function rnd(a, b){ return a + Math.random()*(b - a); }
+
+  while(z < limit - 0.05 && n < 40){
+    n++;
+    /* every so often, leave the shelf empty for a hand's width */
+    if(n > 3 && Math.random() < 0.13){ z += rnd(0.05, 0.13); continue; }
+
+    /* or lay three or four of them flat instead */
+    if(n > 2 && Math.random() < 0.14 && limit - z > 0.30){
+      const w = rnd(0.20, 0.25), depth = rnd(0.15, 0.19);
+      let y = standY;
+      const stack = 2 + Math.floor(Math.random()*3);
+      for(let k=0;k<stack;k++){
+        const th = rnd(0.026, 0.042);
+        const st = bookStyles[Math.floor(Math.random()*bookStyles.length)];
+        const bk = box(depth, th, w, st.cloth, -SHELF_D/2 + depth/2 + 0.055, y + th/2, z + w/2);
+        bk.rotation.y = rnd(-0.03, 0.03);
+        parent.add(bk);
+        y += th;
+      }
+      z += w + rnd(0.015, 0.05);
+      continue;
+    }
+
+    const th = rnd(0.026, 0.058);
+    if(z + th > limit) break;
+    const h = Math.min(clear - 0.035, rnd(0.20, 0.31));
+    const depth = rnd(0.155, 0.205);
+    const st = bookStyles[Math.floor(Math.random()*bookStyles.length)];
+
+    /* BoxGeometry face order is +x,-x,+y,-y,+z,-z — +x is the spine, which is
+       the face pointing out of the case */
+    const mats = [st.spine, st.cloth, st.cloth, st.cloth, bookPages, bookPages];
+    const bk = new THREE.Mesh(new THREE.BoxGeometry(depth, h, th), mats);
+    bk.castShadow = true; bk.receiveShadow = true;
+
+    /* a book with room beside it leans into the gap */
+    const lean = (Math.random() < 0.10 && limit - z > 0.16) ? rnd(0.10, 0.20) : 0;
+    bk.rotation.x = lean;
+    bk.position.set(-SHELF_D/2 + depth/2 + rnd(0.045, 0.075),
+                    standY + h/2 * Math.cos(lean) + 0.001,
+                    z + th/2);
+    parent.add(bk);
+    z += th + (lean ? h*Math.sin(lean)*0.6 : 0) + 0.002;
+  }
+}
+
+/* ============================================================
+   15. THE LAMPS — a task lamp on the desk and a standard lamp
+       against each side wall
+   ------------------------------------------------------------
+   Every lamp is its own switch: click it and it goes on or off
+   by itself, independent of the ceiling. Each one is three
+   things: the object, the bulb inside it, and the wash it lays
+   down — all gathered into one unit so the loop can fade them
+   together.
+   ============================================================ */
+const lampUnits = [];
+
+function makeLampUnit(){
+  const u = {on:true, level:1, bulbs:[], shades:[], washes:[]};
+  lampUnits.push(u);
+  return u;
+}
+
+const lampGlareTex = new THREE.CanvasTexture(radialCanvas(1, 0.32));
+
+/* a flat additive card — floor pool, desk pool, wall wash, ceiling wash */
+function wash(unit, w, h, opacity, colour, x, y, z, rx, ry){
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+    new THREE.MeshBasicMaterial({map:lampGlareTex, color:colour, transparent:true,
+      opacity:opacity, blending:THREE.AdditiveBlending, depthWrite:false, fog:false}));
+  m.rotation.set(rx || 0, ry || 0, 0);
+  m.position.set(x, y, z);
+  m.renderOrder = 3;
+  m.userData.baseOpacity = opacity;
+  unit.washes.push(m);
+  scene.add(m);
+  return m;
+}
+function bulb(unit, colour, intensity, distance, x, y, z){
+  const l = new THREE.PointLight(new THREE.Color(colour), intensity, distance, 2);
+  l.position.set(x, y, z);
+  l.userData.base = intensity;
+  unit.bulbs.push(l);
+  scene.add(l);
+  return l;
+}
+function glowing(unit, mat, base){
+  mat.userData.base = base;
+  unit.shades.push(mat);
+  return mat;
+}
+
+/* --- the task lamp: weighted disc, two arms, a cone raked over the desk --- */
+const TASK_X = 1.52, TASK_Z = DESK_Z - 0.16;
+const TASK_TURN = -0.85;      /* turned across the desk, so the two arms read as two */
+const TASK_S = 1.12;          /* a desk this size wants a lamp with some presence on it */
+(function(){
+  const unit = makeLampUnit();
+  const L = new THREE.Group();
+
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.104, 0.116, 0.022, 36), M.lampBody);
+  base.position.y = 0.011;
+  base.castShadow = true; base.receiveShadow = true;
+  L.add(base);
+  const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.036, 0.032, 22), M.lampBody);
+  collar.position.y = 0.038;
+  collar.castShadow = true;
+  L.add(collar);
+
+  /* lower arm leans back toward the wall, upper arm reaches out over the desk */
+  const A1 = 0.42, T1 = -0.34;
+  const lower = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.016, A1, 14), M.lampBody);
+  lower.position.set(0, 0.046 + Math.cos(T1)*A1/2, Math.sin(T1)*A1/2);
+  lower.rotation.x = T1;
+  lower.castShadow = true;
+  L.add(lower);
+
+  const ELB_Y = 0.046 + Math.cos(T1)*A1, ELB_Z = Math.sin(T1)*A1;
+  const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.023, 18, 12), M.lampBody);
+  elbow.position.set(0, ELB_Y, ELB_Z);
+  elbow.castShadow = true;
+  L.add(elbow);
+
+  const A2 = 0.34, T2 = 1.15;
+  const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.014, A2, 14), M.lampBody);
+  upper.position.set(0, ELB_Y + Math.cos(T2)*A2/2, ELB_Z + Math.sin(T2)*A2/2);
+  upper.rotation.x = T2;
+  upper.castShadow = true;
+  L.add(upper);
+
+  /* the head: a cone hung off the end of the upper arm, mouth down and forward */
+  const HEAD_Y = ELB_Y + Math.cos(T2)*A2, HEAD_Z = ELB_Z + Math.sin(T2)*A2;
+  const TIP = -0.34;                                  /* how far the shade is raked over */
+  const head = new THREE.Group();
+  head.position.set(0, HEAD_Y, HEAD_Z);
+  head.rotation.x = TIP;
+  L.add(head);
+
+  const knuckle = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, 0.058, 14), M.lampBody);
+  knuckle.rotation.z = Math.PI/2;
+  knuckle.position.y = 0.012;
+  head.add(knuckle);
+
+  const CONE = new THREE.CylinderGeometry(0.048, 0.108, 0.140, 30, 1, true);
+  const outer = new THREE.Mesh(CONE, M.lampBody);
+  outer.position.y = -0.048;
+  outer.castShadow = true;
+  head.add(outer);
+  const innerMat = glowing(unit, M.shadeHot.clone(), 1.35);
+  const inner = new THREE.Mesh(CONE, innerMat);
+  inner.position.y = -0.048;
+  head.add(inner);
+  /* the filament, seen up inside the cone */
+  const fil = new THREE.Mesh(new THREE.SphereGeometry(0.021, 14, 10),
+    glowing(unit, new THREE.MeshStandardMaterial({color:'#ffe1a6', roughness:0.3,
+      emissive:P.lampWarm, emissiveIntensity:1.9}), 1.9));
+  fil.position.y = -0.030;
+  head.add(fil);
+
+  L.position.set(TASK_X, DESK_TOP, TASK_Z);
+  L.rotation.y = TASK_TURN;
+  L.scale.setScalar(TASK_S);
+  L.userData.hoverable = true;
+  L.userData.clickable = true;
+  L.userData.lampUnit = unit;
+  L.userData.name = 'The desk lamp';
+  L.userData.isDeskLamp = true;
+  scene.add(L);
+  hoverables.push(L);
+
+  /* the bulb, and where its cone lands. The group is both turned and scaled,
+     so the head and the direction it points have to be carried through both. */
+  const cs = Math.cos(TASK_TURN), sn = Math.sin(TASK_TURN);
+  const hy = HEAD_Y*TASK_S, hz = HEAD_Z*TASK_S;
+  const dy = -Math.cos(TIP), dz = -Math.sin(TIP);     /* the mouth's direction, unturned */
+  const wx = TASK_X + hz*sn, wy = DESK_TOP + hy, wz = TASK_Z + hz*cs;
+  const t = hy / -dy;                                 /* how far down to the desk top */
+  const lx = wx + dz*sn*t, lz = wz + dz*cs*t;         /* and where that puts the pool */
+  const sp = new THREE.SpotLight(new THREE.Color(P.lampWarm), 2.15, 3.4, 0.88, 0.74, 1.4);
+  sp.position.set(wx, wy - 0.05, wz);
+  sp.target.position.set(lx, DESK_TOP, lz);
+  sp.userData.base = 2.15;
+  unit.bulbs.push(sp);
+  scene.add(sp); scene.add(sp.target);
+  /* a little spill out of the top of the cone, so the wall behind gets something */
+  bulb(unit, P.lampWarm, 0.58, 2.1, wx, wy + 0.12, wz - 0.05);
+
+  wash(unit, 1.20, 0.86, 0.26, 0xffb459, lx, DESK_TOP + 0.003, lz, -Math.PI/2, 0);
+  const seat = contact(0.42, 0.42, 0.26, TASK_X, TASK_Z);
+  seat.position.y = DESK_TOP + 0.002;                 /* it stands on the desk, not the floor */
+  scene.add(seat);
+})();
+
+/* --- the standard lamps: a linen drum at head height against each side wall.
+   The right one stands opposite the bookcase; the left one stands in the
+   corner between the bookcase and the back wall, where the fig used to be.
+   Each is its own switch. `side` is +1 on the right wall, -1 on the left,
+   and steers which wall the washes land on. --- */
+function makeStandardLamp(x, z, side, name){
+  const unit = makeLampUnit();
+  const L = new THREE.Group();
+
+  const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.186, 0.206, 0.026, 44), M.lampBody);
+  foot.position.y = 0.013;
+  foot.castShadow = true; foot.receiveShadow = true;
+  L.add(foot);
+  const boss = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.086, 0.040, 28), M.lampBody);
+  boss.position.y = 0.046;
+  boss.castShadow = true;
+  L.add(boss);
+
+  const STEM_H = 1.34;
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.021, STEM_H, 20), M.brass);
+  stem.position.y = 0.066 + STEM_H/2;
+  stem.castShadow = true;
+  L.add(stem);
+
+  const socket = new THREE.Mesh(new THREE.CylinderGeometry(0.030, 0.034, 0.075, 20), M.brass);
+  socket.position.y = 0.066 + STEM_H + 0.030;
+  L.add(socket);
+
+  /* the drum: linen from both sides, with a ring of brass round the top */
+  const SH_BOT = 1.400, SH_H = 0.320, SH_Y = SH_BOT + SH_H/2;
+  const drumMat = glowing(unit, M.shade.clone(), 0.42);
+  const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.186, 0.216, SH_H, 44, 1, true), drumMat);
+  drum.position.y = SH_Y;
+  L.add(drum);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.186, 0.005, 8, 44), M.brass);
+  ring.rotation.x = Math.PI/2;
+  ring.position.y = SH_BOT + SH_H;
+  L.add(ring);
+  const lidMat = glowing(unit, new THREE.MeshStandardMaterial({color:'#eccd8a', roughness:0.6,
+    side:THREE.DoubleSide, emissive:P.lampWarm, emissiveIntensity:0.42}), 0.42);
+  const lid = new THREE.Mesh(new THREE.RingGeometry(0.052, 0.184, 40), lidMat);
+  lid.rotation.x = -Math.PI/2;
+  lid.position.y = SH_BOT + SH_H - 0.004;
+  L.add(lid);
+
+  L.position.set(x, 0, z);
+  L.userData.hoverable = true;
+  L.userData.clickable = true;
+  L.userData.lampUnit = unit;
+  L.userData.name = name;
+  scene.add(L);
+  hoverables.push(L);
+  scene.add(contact(0.86, 0.86, 0.30, x, z));
+
+  bulb(unit, P.lampWarm, 1.35, 4.9, x, SH_Y, z);
+  /* what it leaves on the floor, up the wall beside it, and on the ceiling */
+  wash(unit, 2.40, 2.40, 0.100, 0xffab4a, x - side*0.12, 0.024, z, -Math.PI/2, 0);
+  wash(unit, 1.70, 2.00, 0.066, 0xffb45a, side*(SIDE_X - 0.012), SH_Y - 0.06, z, 0, -side*Math.PI/2);
+  wash(unit, 1.50, 1.50, 0.060, 0xffbb66, x - side*0.06, WALL_H - 0.008, z, Math.PI/2, 0);
+}
+makeStandardLamp( 3.00, -2.95,  1, 'The standard lamp');
+makeStandardLamp(-2.95, -3.80, -1, 'The other standard lamp');
+
+/* ============================================================
+   16. LIGHT — six recessed fittings, three of them carrying a spot
+   ============================================================ */
+const glareTex = new THREE.CanvasTexture(radialCanvas(1, 0.28));
+const halos = [], pools = [];
+
+function downlight(x, z){
+  const g = new THREE.Group();
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.086, 0.078, 0.026, 20), M.ringTrim);
+  ring.position.y = WALL_H - 0.013;
+  const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.064, 0.064, 0.010, 20), M.lens);
+  lens.position.y = WALL_H - 0.030;
+  g.add(ring, lens);
+
+  const halo = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.62),
+    new THREE.MeshBasicMaterial({map:glareTex, color:0xffb14a, transparent:true,
+      opacity:0.30, blending:THREE.AdditiveBlending, depthWrite:false, fog:false}));
+  halo.rotation.x = Math.PI/2;
+  halo.position.y = WALL_H - 0.042;
+  halo.renderOrder = 3;
+  g.add(halo);
+  halos.push(halo);
+
+  g.position.set(x, 0, z);
+  scene.add(g);
+}
+
+const LIGHT_X = [-2.1, 0, 2.1], LIGHT_Z = [-3.2, -0.3];
+LIGHT_Z.forEach(function(z){ LIGHT_X.forEach(function(x){ downlight(x, z); }); });
+
+/* the wash each fitting leaves on the floor */
+function pool(size, opacity, x, z){
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size),
+    new THREE.MeshBasicMaterial({map:glareTex, color:0xffa938, transparent:true,
+      opacity:opacity, blending:THREE.AdditiveBlending, depthWrite:false, fog:false}));
+  m.rotation.x = -Math.PI/2;
+  m.position.set(x, 0.022, z);
+  m.renderOrder = 3;
+  m.userData.baseOpacity = opacity;
+  pools.push(m);
+  scene.add(m);
+}
+LIGHT_Z.forEach(function(z){ LIGHT_X.forEach(function(x){ pool(2.4, 0.044, x, z); }); });
+
+/* The room is lit by the fittings and the three lamps, and by almost nothing
+   else. What ambient there is exists only to keep the corners from going to
+   pure black — it is not carrying any of the exposure, and it is warm, so it
+   never reads as daylight leaking in. */
+const amb = new THREE.AmbientLight(0xffd39a, 0.040);
+scene.add(amb);
+const hemi = new THREE.HemisphereLight(0xffc077, 0x241a10, 0.085);
+scene.add(hemi);
+
+const spots = [];
+function spot(x, z, tx, ty, tz, intensity, shadow){
+  /* a narrow cone with a soft edge: this is what makes each fitting land as
+     its own pool of light rather than washing the whole room flat */
+  const s = new THREE.SpotLight(0xffb44e, intensity, 12, 0.62, 0.72, 1.4);
+  s.position.set(x, WALL_H - 0.04, z);
+  s.target.position.set(tx, ty, tz);
+  if(shadow){
+    s.castShadow = true;
+    s.shadow.mapSize.set(2048, 2048);
+    s.shadow.camera.near = 0.4;
+    s.shadow.camera.far = 12;
+    s.shadow.bias = -0.0009;
+    s.shadow.radius = 6;                              /* wide penumbra — nothing in here is a hard edge */
+  }
+  scene.add(s); scene.add(s.target);
+  s.userData.base = intensity;
+  spots.push(s);
+  return s;
+}
+spot( 0.0, -3.2,  0.00, 0.90, -3.95, 1.55, true);   /* down the desk */
+spot( 2.1, -3.2,  0.35, 0.30, -2.85, 0.78, true);   /* across the chair */
+spot(-2.1, -3.2, -3.10, 1.10, -2.60, 1.05, false);  /* onto the shelf */
+spot( 0.0, -0.3,  0.20, 0.00,  0.40, 0.60, false);
+spot( 2.1, -0.3,  2.70, 0.70, -1.20, 0.50, false);
+
+/* no daylight: the only things lighting this room are the fittings and the
+   three lamps, which is what keeps it feeling like it is after hours */
+
+/* a stand-in interior, pre-filtered — this is what the aluminium reflects */
+try{
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const env = new THREE.Scene();
+  env.add(new THREE.Mesh(new THREE.BoxGeometry(10,10,10),
+    new THREE.MeshBasicMaterial({color:0x2b2721, side:THREE.BackSide})));
+  const lid = new THREE.Mesh(new THREE.PlaneGeometry(10,10),
+    new THREE.MeshBasicMaterial({color:0x5a4626}));
+  lid.rotation.x = Math.PI/2; lid.position.y = 4.9; env.add(lid);
+  const gnd = new THREE.Mesh(new THREE.PlaneGeometry(10,10),
+    new THREE.MeshBasicMaterial({color:0x1d150d}));
+  gnd.rotation.x = -Math.PI/2; gnd.position.y = -4.9; env.add(gnd);
+  scene.environment = pmrem.fromScene(env, 0.04).texture;
+  pmrem.dispose();
+  scene.traverse(function(o){
+    if(o.isMesh && o.material && o.material.isMeshStandardMaterial){
+      o.material.envMapIntensity = o.material.metalness > 0.5 ? 0.95 : 0.20;
+    }
+  });
+}catch(e){ /* environment is a bonus, not a requirement */ }
+
+/* ============================================================
+   17. INTERACTION
+   ============================================================ */
+const dom = renderer.domElement;
+const pointer = new THREE.Vector2(0,0);
+const look = {x:0, y:0}, target = {x:0, y:0};
+let yaw = 0, yawT = 0, pitch = 0, pitchT = 0;
+let dolly = 0, dollyT = 0;
+let dragging = false, dragged = false, lastX = 0, lastY = 0;
+
+const raycaster = new THREE.Raycaster();
+let hovered = null;
+
+let lightsOn = true, lightLevel = 1;
+
+function toggleLights(){ lightsOn = !lightsOn; }
+
+dom.style.cursor = 'default';
+/* `dragging` no longer turns the room — it only remembers that a press is in
+   flight, so a press that slides off its mark can be told from a click */
+dom.addEventListener('pointerdown', function(e){
+  dragging = true; dragged = false;
+  lastX = e.clientX; lastY = e.clientY;
+  if(dom.setPointerCapture) dom.setPointerCapture(e.pointerId);
+});
+dom.addEventListener('pointermove', function(e){
+  pointer.x =  (e.clientX/innerWidth)*2 - 1;
+  pointer.y = -(e.clientY/innerHeight)*2 + 1;
+  target.x = pointer.x; target.y = pointer.y;
+  /* the room does not follow a held press. all that is left to measure is
+     whether the press wandered far enough to stop being a click */
+  if(dragging && Math.abs(e.clientX - lastX) + Math.abs(e.clientY - lastY) > 12){
+    dragged = true;
+  }
+});
+function endDrag(){
+  if(!dragging) return;
+  dragging = false;
+  dom.style.cursor = hovered && hovered.userData.clickable ? 'pointer' : 'default';
+  if(dragged || !hovered) return;
+  if(hovered.userData.isScreen){ openZoom(); }
+  else if(hovered.userData.isFax){ openFax(); }
+  else if(hovered.userData.lampUnit){ hovered.userData.lampUnit.on = !hovered.userData.lampUnit.on; }
+}
+dom.addEventListener('pointerup', endDrag);
+dom.addEventListener('pointercancel', endDrag);
+dom.addEventListener('wheel', function(e){
+  dollyT = THREE.MathUtils.clamp(dollyT - e.deltaY*0.0026, -0.9, 3.4);
+}, {passive:true});
+
+function updateHover(){
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObjects(hoverables, true)[0];
+  let group = null;
+  if(hit){
+    let o = hit.object;
+    while(o && !o.userData.hoverable) o = o.parent;
+    group = o;
+    /* only the things that answer to a press carry a tag — the pens, the
+       chair and the rest of the dressing stay quiet */
+    if(group && !group.userData.clickable) group = null;
+  }
+  if(group !== hovered){
+    hovered = group;
+    dom.style.cursor = hovered && hovered.userData.clickable ? 'pointer' : 'default';
+  }
+}
+
+/* --- the blown-up screen: filled from the same data the 3D terminal draws --- */
+const zoomEl = document.getElementById('zoom');
+const zoomClose = document.getElementById('zoomClose');
+(function(){
+  document.querySelector('#zoomTerm .zt-title').textContent = SHELL_TITLE;
+  document.getElementById('ztHost').textContent = SHELL_HOST + '  ~/portfolio';
+  document.getElementById('ztCmd').textContent = COMMAND;
+  const list = document.getElementById('ztList');
+  SKILLS.forEach(function(sec){
+    const block = document.createElement('section');
+    const head = document.createElement('h3');
+    head.textContent = sec.group + '/';
+    const ul = document.createElement('ul');
+    sec.items.forEach(function(it){
+      const li = document.createElement('li');
+      li.textContent = it;
+      ul.appendChild(li);
+    });
+    block.appendChild(head);
+    block.appendChild(ul);
+    list.appendChild(block);
+  });
+})();
+
+/* the panel is laid out even while it is faded out, so it can be measured at
+   any time: start at the largest comfortable size and step down until the
+   print stops overflowing. Nothing here ever needs a scrollbar. */
+const ztBody = document.querySelector('.zt-body');
+function fitZoom(){
+  let fs = 19;
+  ztBody.style.setProperty('--zt-fs', fs + 'px');
+  while(fs > 8 && ztBody.scrollHeight > ztBody.clientHeight){
+    fs -= 0.5;
+    ztBody.style.setProperty('--zt-fs', fs + 'px');
+  }
+}
+fitZoom();
+
+function openZoom(){
+  fitZoom();
+  zoomEl.classList.add('open');
+  zoomEl.setAttribute('aria-hidden', 'false');
+  zoomClose.focus();
+}
+function closeZoom(){
+  zoomEl.classList.remove('open');
+  zoomEl.setAttribute('aria-hidden', 'true');
+}
+zoomClose.addEventListener('click', closeZoom);
+zoomEl.addEventListener('click', function(e){ if(e.target === zoomEl) closeZoom(); });
+
+/* --- the printed sheet, opened: the ways to reach me --- */
+const faxEl = document.getElementById('fax');
+const faxClose = document.getElementById('faxClose');
+function openFax(){
+  faxEl.classList.add('open');
+  faxEl.setAttribute('aria-hidden', 'false');
+  faxClose.focus();
+}
+function closeFax(){
+  faxEl.classList.remove('open');
+  faxEl.setAttribute('aria-hidden', 'true');
+}
+faxClose.addEventListener('click', closeFax);
+faxEl.addEventListener('click', function(e){ if(e.target === faxEl) closeFax(); });
+
+addEventListener('keydown', function(e){
+  if(e.key === 'Escape'){
+    if(zoomEl.classList.contains('open')) closeZoom();
+    else if(faxEl.classList.contains('open')) closeFax();
+  }
+  if(e.key === 'l' || e.key === 'L') toggleLights();
+});
+
+/* ============================================================
+   17b. THE TAP BADGES
+   A baked room looks exactly as pressable as a photograph, and
+   the name tag only turns up once the cursor is already on the
+   thing. So the screen, the fax and the lamps each wear a
+   small hand badge, pinned in screen space — which doubles as
+   the keyboard's only route into a WebGL canvas.
+   ============================================================ */
+/* the lamps were built inside their own makers, so they are collected back
+   out of the hoverables rather than by threading a second array through */
+const lampObjs = hoverables.filter(function(o){ return o.userData.lampUnit; });
+const faxMachine = hoverables.filter(function(o){ return o.userData.isFax; })[0];
+
+const hints = TapHints.init({
+  THREE: THREE, camera: camera,
+  /* the blown-up screen and the opened sheet each own the whole screen */
+  enabled: function(){
+    return !zoomEl.classList.contains('open') && !faxEl.classList.contains('open');
+  }
+});
+
+/* the group's own origin is the room's, so these are world numbers: the
+   bottom-right corner of the panel, inside the bezel. Dead centre would
+   sit the badge on top of the one thing it is asking to be read. */
+hints.add({
+  kind: 'tap',
+  object: monitor,
+  local: [PANEL_W/2 - 0.17, MON_Y - PANEL_H/2 + 0.15, MON_Z + 0.22],
+  label: 'Skills',
+  onActivate: function(){ openZoom(); }
+});
+
+/* pinned in the machine's own space rather than off its bounding box —
+   the printed page runs a good way out across the desk, and the middle of
+   the box that holds both is nowhere anyone would press. It floats in front
+   of the standing page, which is the only part of this corner of the desk
+   with nothing on it — over the body it covers the keypad, and over the
+   printed page it covers the headline. */
+if(faxMachine) hints.add({
+  object: faxMachine, local: [0.055, 0.165, 0.14],
+  label: faxMachine.userData.name,
+  onActivate: function(){ openFax(); }
+});
+
+const lampHints = lampObjs.map(function(L){
+  /* the standard lamps are tall enough that the middle of the box already
+     falls on the stem, under the shade. The desk lamp is not: its box centre
+     sits level with the head, which leaves the badge hanging in the air
+     beside the shade. So that one is measured from its own base instead —
+     down on the desk, under the lamp, and pulled forward off the metal. */
+  const cfg = L.userData.isDeskLamp
+    ? { object: L, local: [0, 0.03, 0], offset: [0, 0, 0.20] }
+    : { object: L, offset: [0, 0.10, 0.14] };
+  cfg.label = L.userData.name;
+  cfg.onActivate = function(){
+    L.userData.lampUnit.on = !L.userData.lampUnit.on;
+  };
+  return hints.add(cfg);
+});
+
+/* the badges and the room are two handles on one state, so the labels are
+   painted from that state in the loop rather than hand-synced */
+function paintHints(){
+  lampHints.forEach(function(h, i){
+    const L = lampObjs[i];
+    h.label('Turn ' + L.userData.name.toLowerCase() +
+            (L.userData.lampUnit.on ? ' off' : ' on'));
+  });
+}
+
+/* ============================================================
+   18. LOOP
+   ============================================================ */
+const clock = new THREE.Clock();
+const fwd = new THREE.Vector3(), lookAt = new THREE.Vector3();
+
+function tick(){
+  requestAnimationFrame(tick);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.getElapsedTime();
+  const k = Math.min(1, dt*4.2);
+
+  look.x += (target.x - look.x)*Math.min(1, dt*3.0);
+  look.y += (target.y - look.y)*Math.min(1, dt*3.0);
+  yaw    += (yawT - yaw)*k;
+  pitch  += (pitchT - pitch)*k;
+  dolly  += (dollyT - dolly)*Math.min(1, dt*3.2);
+
+  const ey = yaw   - look.x*0.085;              /* a little drift with the cursor — right
+                                                  exposes the right of the room */
+  const ep = pitch + look.y*0.055;
+  camera.position.set(
+    HOME.x + look.x*0.14,
+    HOME.y + look.y*0.04 + Math.sin(t*0.42)*0.011,
+    HOME.z - dolly
+  );
+  const cp = Math.cos(ep);
+  fwd.set(-Math.sin(ey)*cp, Math.sin(ep), -Math.cos(ey)*cp);
+  lookAt.copy(camera.position).addScaledVector(fwd, 8);
+  camera.lookAt(lookAt);
+
+  updateHover();
+  paintHints();
+  hints.update();
+
+  /* the ceiling comes up and goes down rather than snapping */
+  lightLevel += ((lightsOn ? 1 : 0) - lightLevel) * Math.min(1, dt*4.5);
+  const L = lightLevel;
+  spots.forEach(function(s){ s.intensity = s.userData.base * (0.05 + 0.95*L); });
+  /* the fill tracks the switch but stays tiny at both ends — with the ceiling
+     off the room is meant to be carried by the lamps alone */
+  hemi.intensity = 0.030 + 0.055*L;
+  amb.intensity  = 0.018 + 0.022*L;
+  M.lens.emissiveIntensity = 0.04 + 1.86*L;
+  const flick = 1 + Math.sin(t*7.3)*0.006;
+  halos.forEach(function(h){ h.material.opacity = 0.30*L*flick; });
+  pools.forEach(function(p){ p.material.opacity = p.userData.baseOpacity * L; });
+
+  /* every lamp is its own switch, and each fades rather than snapping */
+  lampUnits.forEach(function(u){
+    u.level += ((u.on ? 1 : 0) - u.level) * Math.min(1, dt*5.0);
+    const v = u.level;
+    u.bulbs.forEach(function(l){ l.intensity = l.userData.base * v; });
+    u.shades.forEach(function(m){ m.emissiveIntensity = m.userData.base * v; });
+    u.washes.forEach(function(w){ w.material.opacity = w.userData.baseOpacity * v; });
+  });
+
+  /* the terminal throws more when the ceiling is off */
+  const spill = 1 - 0.42*L;
+  screenLight.intensity = 0.30 + 0.85*spill;
+  screenPool.material.opacity = 0.05 + 0.15*spill;
+
+  /* the caret blinks */
+  cursorMesh.visible = (t % 1.06) < 0.60;
+
+  renderer.render(scene, camera);
+}
+tick();
+
+addEventListener('resize', function(){
+  renderer.setSize(innerWidth, innerHeight);
+  frameCamera();
+  fitZoom();
+});
+
+/* Lift on a composited frame rather than on a guessed delay. Two rAFs
+   deep, so the first render has actually been painted and not merely
+   queued — the veil comes off a finished picture, never a half-built
+   one, and it comes off the instant that picture exists. */
+requestAnimationFrame(function(){ requestAnimationFrame(function(){
+  fadeEl.classList.add('hidden');
+}); });
+
+})();
+</script>
+<script src="house-nav.js"></script>
+</body>
+</html>

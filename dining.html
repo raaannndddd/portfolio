@@ -1,0 +1,2854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Experience - Rand Halasa</title>
+<style>
+  :root{
+    --ink:#1c1a17;
+    --card:#fffdf9;
+    --shadow:0 8px 30px rgba(28,22,14,.20);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;width:100%;margin:0;padding:0;background:#e9e5de;overflow:hidden}
+  body{
+    font-family:"Helvetica Neue",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+    color:var(--ink);-webkit-font-smoothing:antialiased;
+  }
+  #stage{position:fixed;inset:0;width:100vw;height:100vh}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+
+  /* lens pass */
+  .lens{position:fixed;inset:0;pointer-events:none;z-index:3}
+  #vignette{background:radial-gradient(122% 92% at 50% 46%,
+      rgba(0,0,0,0) 44%, rgba(52,45,36,.14) 74%, rgba(40,34,26,.34) 100%);}
+  #bloom{background:radial-gradient(58% 62% at 74% 38%, rgba(255,250,238,.20), rgba(255,250,238,0) 62%);
+         mix-blend-mode:screen;}
+  #grain{opacity:.05;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>");}
+
+  /* hud */
+  .hud{position:fixed;inset:0;pointer-events:none;z-index:5}
+  .hud > *{pointer-events:auto}
+  .pill{
+    position:absolute;background:var(--card);border-radius:var(--radius);
+    box-shadow:var(--shadow);border:0;color:var(--ink);
+    display:flex;align-items:center;gap:10px;
+    font-size:15px;letter-spacing:.01em;font-family:inherit;
+    padding:12px 16px;cursor:pointer;
+    transition:transform .25s cubic-bezier(.2,.8,.2,1);
+  }
+  .pill:hover{transform:translateY(-2px)}
+  .pill:active{transform:translateY(0)}
+  .pill:focus-visible{outline:2px solid #1c1a17;outline-offset:3px}
+  .square{padding:12px;width:46px;height:46px;justify-content:center}
+
+  #plaque{top:22px;left:22px;cursor:default}
+  #plaque:hover{transform:none}
+  #plaque b{font-weight:600}
+  #plaque span{color:#8c8375}
+  #back{bottom:22px;left:50%;transform:translateX(-50%);opacity:0;pointer-events:none;
+        transition:opacity .3s, transform .25s cubic-bezier(.2,.8,.2,1)}
+  #back.show{opacity:1;pointer-events:auto}
+  #back.show:hover{transform:translateX(-50%) translateY(-2px)}
+
+  /* the experience layer — lives only while you are at the table */
+  #exp{position:absolute;inset:0;pointer-events:none;opacity:0;visibility:hidden;
+       transition:opacity .5s ease}
+  #exp.show{opacity:1;visibility:visible}
+  #expTitle{
+    position:absolute;top:24px;left:50%;transform:translateX(-50%);
+    background:var(--card);color:var(--ink);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:12px 22px;
+    font-size:13px;letter-spacing:.22em;text-transform:uppercase;font-weight:600;
+    white-space:nowrap;
+  }
+  #expTitle small{
+    display:inline-block;margin-left:11px;padding-left:11px;
+    border-left:1px solid rgba(28,26,23,.18);
+    font-size:12px;letter-spacing:.16em;color:#8c8375;font-weight:600;
+  }
+  /* one card, for the one place setting in front of you */
+  #expCard{
+    position:absolute;left:50%;bottom:82px;transform:translateX(-50%);
+    width:min(430px, calc(100vw - 148px));
+    background:var(--card);color:var(--ink);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:16px 22px 15px;text-align:left;
+  }
+  #expText{transition:opacity .18s ease, transform .18s ease}
+  #expText.swap{opacity:0;transform:translateY(5px)}
+  #expText b{display:block;font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:600}
+  #expText .role{display:block;font-size:11.5px;letter-spacing:.05em;color:#8c8375;margin-top:3px}
+  #expText .blurb{display:block;font-size:13px;line-height:1.55;color:#3c3730;margin-top:9px}
+  #expText .blurb ul{margin:0;padding:0;list-style:none}
+  #expText .blurb li{position:relative;padding-left:14px;margin-top:7px}
+  #expText .blurb li:first-child{margin-top:0}
+  #expText .blurb li:before{content:'';position:absolute;left:2px;top:.62em;
+    width:4px;height:4px;border-radius:50%;background:rgba(28,26,23,.42)}
+  #expDots{display:flex;justify-content:flex-start;gap:8px;margin-top:14px;pointer-events:auto}
+  #expDots button{
+    width:8px;height:8px;padding:0;border:0;border-radius:999px;cursor:pointer;
+    background:rgba(28,26,23,.22);transition:background .25s, transform .25s;
+  }
+  #expDots button:hover{background:rgba(28,26,23,.45)}
+  #expDots button.sel{background:var(--ink);transform:scale(1.3)}
+  #expDots button:focus-visible{outline:2px solid #1c1a17;outline-offset:3px}
+  /* the way through to the next setting */
+  .expNav{position:absolute;top:50%;transform:translateY(-50%);pointer-events:auto}
+  #expPrev{left:26px}
+  #expNext{right:26px}
+  #expPrev:hover{transform:translateY(-50%) translateX(-3px)}
+  #expNext:hover{transform:translateY(-50%) translateX(3px)}
+  #expPrev:active,#expNext:active{transform:translateY(-50%)}
+  /* a single employer has nowhere to go */
+  #exp.solo #expDots,#exp.solo .expNav,#exp.solo #expTitle small{display:none}
+
+  /* --- the ways to reach me, off the place card ----------------------- */
+  #contact{position:fixed;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;
+    background:rgba(20,14,8,.72);-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);
+    opacity:0;pointer-events:none;transition:opacity .32s ease;padding:20px}
+  #contact.open{opacity:1;pointer-events:auto}
+  /* cream stock and a gold rule — the place card, opened out to letter size */
+  #fmCard{position:relative;width:min(94vw,440px);max-height:88vh;overflow:auto;
+    background:#f7f2e6;color:#2b2823;border-radius:4px;
+    padding:34px 34px 30px;
+    box-shadow:0 32px 90px rgba(0,0,0,.62);
+    outline:1px solid rgba(200,167,88,.55);outline-offset:-9px;
+    transform:scale(.96);transition:transform .32s cubic-bezier(.2,.8,.2,1)}
+  #contact.open #fmCard{transform:none}
+  #fmClose{position:absolute;top:10px;right:12px;background:none;border:0;
+    color:#8c8375;font-size:17px;line-height:1;cursor:pointer;padding:6px 8px;font-family:inherit}
+  #fmClose:hover{color:#1c1a17}
+  #fmClose:focus-visible{outline:2px solid #9a7c3c;outline-offset:2px;border-radius:6px}
+  #fmCard h2{margin:0 0 6px;font-family:Georgia,"Times New Roman",serif;font-weight:600;
+    font-size:clamp(24px,5vw,31px);line-height:1.12;color:#241f18;padding-right:34px}
+  #fmCard .fm-lede{margin:0 0 18px;font-size:14.5px;line-height:1.65;color:#4d4638}
+  /* one row per way through — the same three the flat page offers, in the
+     same order, so the house and the written site agree */
+  #fmWays{display:flex;flex-direction:column}
+  #fmWays a{display:flex;align-items:center;gap:14px;padding:14px 12px;border-radius:8px;
+    color:#241f18;text-decoration:none;
+    transition:background .25s, transform .2s cubic-bezier(.2,.8,.2,1)}
+  #fmWays a + a{border-top:1px solid rgba(200,167,88,.42)}
+  #fmWays a:hover{background:rgba(200,167,88,.18)}
+  #fmWays a:focus-visible{outline:2px solid #9a7c3c;outline-offset:-2px}
+  #fmWays svg{flex:none;color:#7a6329}
+  #fmWays .what{display:block;font-weight:600;font-size:15px;line-height:1.35}
+  #fmWays .where{display:block;font-size:12.5px;color:#8a7f68;line-height:1.35}
+  /* the honest bit: mail opens their own mail app, and it says so first */
+  #fmNote{margin:16px 0 0;font-size:12.5px;line-height:1.55;color:#8a7f68}
+  #fmNote a{color:#7a6329;text-underline-offset:3px}
+  #fmNote a:hover{color:#241f18}
+  @media (max-width:820px){ #fmCard{padding:28px 20px 24px} }
+
+  #fade{position:fixed;inset:0;background:#efece6;z-index:9;
+        transition:opacity .45s ease;pointer-events:none}
+  #fade.hidden{opacity:0}
+
+  @media (max-width:820px){
+    #plaque{top:14px;left:14px;font-size:13px}
+    #expTitle{top:66px;font-size:11px;letter-spacing:.16em;padding:10px 16px}
+    #expCard{bottom:76px;width:calc(100vw - 112px);padding:13px 16px 12px;max-height:46vh;overflow-y:auto}
+    #expText .blurb{font-size:12.5px}
+    #expPrev{left:12px}#expNext{right:12px}
+    .expNav{width:42px;height:42px;padding:11px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important}}
+</style>
+<!-- the whole house's pictures, started before anything else asks for them -->
+<script src="preload.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+<div class="lens" id="vignette"></div>
+<div class="lens" id="bloom"></div>
+<div class="lens" id="grain"></div>
+
+<div class="hud">
+  <div class="pill" id="plaque">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1c1a17" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 3v8"/><path d="M5.5 3v4a2.5 2.5 0 0 0 5 0V3"/><path d="M8 11v10"/>
+      <path d="M17 3c-2 1.4-2.6 4-2.6 6.2 0 1.6 1 2.8 2.6 2.8V21"/>
+    </svg>
+    <b>Experience</b>
+  </div>
+
+  <button class="pill" id="back">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1c1a17" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 6 4 12l6 6"/><path d="M4 12h16"/>
+    </svg>
+    Step back
+  </button>
+
+
+  <div id="exp" aria-hidden="true">
+    <div id="expTitle">Experience<small id="expCount"></small></div>
+
+    <button class="pill square expNav" id="expPrev" aria-label="Previous place setting">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1c1a17" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 6 8 12l6 6"/>
+      </svg>
+    </button>
+    <button class="pill square expNav" id="expNext" aria-label="Next place setting">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1c1a17" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m10 6 6 6-6 6"/>
+      </svg>
+    </button>
+
+    <div id="expCard">
+      <div id="expText" aria-live="polite">
+        <b id="expName"></b>
+        <span class="role" id="expRole"></span>
+        <div class="blurb" id="expBlurb"></div>
+      </div>
+      <!-- one dot per employer, injected from the EXPERIENCE list -->
+      <div id="expDots"></div>
+    </div>
+  </div>
+
+</div>
+
+<div id="contact" aria-hidden="true">
+  <div id="fmCard" role="dialog" aria-modal="true" aria-labelledby="fmTitle">
+    <button id="fmClose" aria-label="Put the card back">&#10005;</button>
+    <h2 id="fmTitle">The seat across from me is set for you</h2>
+    <p class="fm-lede">Work, a project, or a strong opinion on coffee &mdash;
+    here is where to find me.</p>
+
+    <nav id="fmWays" aria-label="Ways to reach me">
+      <a href="mailto:hello@randhalasa.com">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>
+        </svg>
+        <span><span class="what">Email</span><span class="where">hello@randhalasa.com</span></span>
+      </a>
+      <a href="https://github.com/raaannndddd" rel="me" target="_blank">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/>
+        </svg>
+        <span><span class="what">GitHub</span><span class="where">github.com/raaannndddd</span></span>
+      </a>
+      <a href="https://linkedin.com/in/randhalasa" rel="me" target="_blank">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4V8h4v2a5 5 0 0 1 2-2z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/>
+        </svg>
+        <span><span class="what">LinkedIn</span><span class="where">linkedin.com/in/randhalasa</span></span>
+      </a>
+    </nav>
+
+    <p id="fmNote">Email opens your own mail app &mdash; nothing is typed or
+    stored here. The same three are on the
+    <a href="contact.html">written contact page</a>.</p>
+  </div>
+</div>
+
+<div id="fade"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="tap-hints.js"></script>
+<script>
+(function(){
+"use strict";
+if(!window.THREE) return;
+
+/* ============================================================
+   0. HUD
+   ============================================================ */
+const fadeEl = document.getElementById('fade');
+const backBtn= document.getElementById('back');
+
+/* ============================================================
+   1. PALETTE
+   ============================================================ */
+/*  >>> EVERY COLOUR IN THE ROOM IS SET HERE. Edit a hex, reload. <<< */
+const P = {
+  /* walls */
+  wall:      '#c9b7ae',   // mushroom-taupe side wall
+  feature:   '#2b2723',   // the near-black wall behind the credenza
+  wallLight: '#cdbb9a',   // the pale window wall
+  ceiling:   '#040406',   // black ceiling — the LED does all the work up there
+  ledLens:   '#ffc069',   // the perimeter LED itself — warm, not white
+  ledChan:   '#26242b',   // the matte channel it is recessed into
+  skirt:     '#d8c9ae',
+
+  /* floor: big cream porcelain tiles */
+  tileA:  '#b7a382',
+  tileB:  '#ac9877',
+  grout:  '#8d7a60',
+
+  /* gold, lacquer, marble */
+  gold:     '#c8a04b',
+  goldDeep: '#8f6b26',
+  lacquer:  '#1d1a17',    // the credenza
+  marble:   '#e0d5bf',    // console and credenza tops
+
+  /* glass, leather */
+  leather: '#e5dac3',     // the white chairs
+  glassT:  '#e8efec',     // table-top tint
+
+  /* textiles */
+  mat:     '#3d372f',     // espresso woven placemats
+  napkin:  '#1f3d2c',     // emerald velvet napkins
+  curtain: '#1e3a2c',     // and the drapes to match
+  rug: { field:'#232019', border:'#b08c3a', accent:'#8a815f' },
+
+  /* the centrepiece */
+  vessel:    '#3f9c81',   // the bowl is tinted glass, not clear
+  pebble:    '#232327',
+  pebbleLt:  '#b9b4aa',
+  airplant:  '#9fae94',
+  airplant2: '#bcc7ae',
+  orchid:  ['#7c1f4e', '#93295d', '#5e1638'],
+  orchidHeart: '#f2d4e2',
+  stem:    '#5c7042',
+
+  /* the props */
+  artglass: ['#3a5f8a', '#b96a3a', '#7a4a6e', '#d8cfc2'],
+  artInk:   '#201d19',    // ground of the big framed abstract
+  bottle:   '#17301f',    // champagne glass
+  wax:      '#f3ead9',    // taper candles
+  pot:      '#bdb2a1',    // the stone planter in the corner
+  soil:     '#2a231c',
+  leaf:     '#2f4a2c',    // the fiddle-leaf fig
+  books:  ['#22201c', '#5c2a25', '#1e3529'],
+
+  /* the meadow through the window */
+  meadow: { sky0:'#33507c', sky1:'#c98a63', sky2:'#f7d193', far:'#5a5748',
+            grass0:'#9c8a4d', grass1:'#3f3a24', poppy:'#a8412f',
+            corn:'#535e88', daisy:'#efe2c4', butter:'#dfaa3b' }
+};
+
+/* ============================================================
+   1b. EXPERIENCE
+   ============================================================ */
+/*  >>> EDIT YOUR EXPERIENCE HERE. One entry per employer, up to six. <<<
+    Each entry becomes a plate on the table: the logo lands on the plate,
+    the name, role and blurb go on the card underneath. Until the logo
+    file exists the plate shows the employer's initials in gold.       */
+const EXPERIENCE = [
+  { name:'Search It Local', role:'Junior Product Engineer', dates:'Aug 2026 – Present',
+  points:[
+    'Built and shipped a full-stack web application (React, Node.js, PostgreSQL) that opened a new revenue stream of AUD $2,000 per client.',
+    'Partnered with process owners across SEO and sales teams to automate manual workflows.'
+  ],
+  logo:'images/logos/searchitlocal.jpeg' },
+
+{ name:'Search It Local', role:'SEO Specialist', dates:'Apr 2026 – Aug 2026',
+  points:[
+    'Automated a recurring reporting process from 5 hours to 20 minutes, returning over 80 hours to the team each month.',
+    'Built retrieval tooling across four SEO APIs serving 100 client accounts, contributing to page-one Google rankings for 13 client sites.'
+  ],
+  logo:'images/logos/searchitlocal.jpeg' },
+  { name:'Arab Bank', role:'Data Science & AI Intern', dates:'Jan 2026 \u2013 Feb 2026',
+    points:[
+      'Developed machine learning models and built GenAI agents with tool-calling loops',
+      'Built APIs, microservices and pipelines serving model outputs and performance metrics, with analysis feeding business decisions.'
+    ],
+    logo:'images/logos/arabbank.png' },
+  { name:'WinBoard', role:'Software Engineering Intern', dates:'Aug 2024 \u2013 Nov 2024',
+    points:[
+      'Built a real time computer vision pipeline in Python scoring ad engagement from live and recorded footage.',
+      'Extracted dwell time, sentiment and demographics with YOLOv8 and FairFace under GDPR compliant anonymisation.'
+    ],
+    logo:'images/logos/winboard.jpeg' },
+  { name:'MobiSoft Mobility', role:'AI Development Intern', dates:'Nov 2023 \u2013 Feb 2024',
+    points:[
+      'Built AI tooling that automated customs tracking workflows for government clients across the Middle East.',
+      'Integrated multilingual semantic search over item descriptions using Apache Solr and Vectara indexes.'
+    ],
+    logo:'images/logos/mobisoft.jpg' },
+  { name:'Self-Employed', role:'Programming Tutor', dates:'Feb 2023 \u2013 March 2026',
+    points:[
+      'Tutored university students one on one in Java and Python, working through their coursework each week.',
+      'Lifted average assessment scores by roughly 20 percent across the students tutored since 2023.'
+    ],
+    logo:'' }
+];
+
+/* ============================================================
+   2. RENDERER / CAMERA
+   ============================================================ */
+const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.86;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.getElementById('stage').appendChild(renderer.domElement);
+const ANISO = renderer.capabilities.getMaxAnisotropy();
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#150f0a');
+/* the far corners fall away into warm dark — that is what makes a big room
+   feel like a small one */
+scene.fog = new THREE.Fog(0x1d150e, 6, 26);
+
+const BACK_Z = -7, SIDE_X = 6.5, WALL_H = 3.05, FRONT_Z = 9;
+const SIDE_LEN = FRONT_Z - BACK_Z, SIDE_MID = (BACK_Z + FRONT_Z)/2;
+const HOME = new THREE.Vector3(0.2, 1.52, 1.9);      /* stood back and turned into the corner */
+const TABLE = new THREE.Vector3(2.7, 0, -3.8);       /* the table is pushed into the back-right corner */
+
+/* the resting aim: straight down the diagonal, a little past the table, so the
+   two walls meeting behind it stay in frame and the room stops reading as open */
+const LOOK_BASE = TABLE.clone().sub(HOME).multiplyScalar(1.25).add(HOME);
+LOOK_BASE.y = 1.28;
+/* strafe, dolly and pan all run along the view, not along world x/z */
+const FWD   = new THREE.Vector3(LOOK_BASE.x - HOME.x, 0, LOOK_BASE.z - HOME.z).normalize();
+const RIGHT = new THREE.Vector3(-FWD.z, 0, FWD.x);
+
+const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 200);
+camera.position.copy(HOME);
+
+const H_HALF = 30 * Math.PI/180;                 /* constant horizontal FOV */
+function frameCamera(){
+  camera.aspect = innerWidth / innerHeight;
+  const v = 2 * Math.atan(Math.tan(H_HALF) / camera.aspect) * 180/Math.PI;
+  camera.fov = THREE.MathUtils.clamp(v, 24, 54);
+  camera.updateProjectionMatrix();
+}
+frameCamera();
+
+/* ============================================================
+   3. TEXTURE FOUNDRY
+   ============================================================ */
+function cvs(w,h){ const c = document.createElement('canvas'); c.width=w; c.height=h; return c; }
+function tex(canvas, rx, ry){
+  const t = new THREE.CanvasTexture(canvas);
+  t.encoding = THREE.sRGBEncoding;
+  t.anisotropy = ANISO;
+  if(rx){ t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry || rx); }
+  return t;
+}
+function shift(hex, dL, dS){
+  const c = new THREE.Color(hex), hsl = {};
+  c.getHSL(hsl);
+  c.setHSL(hsl.h, THREE.MathUtils.clamp(hsl.s + (dS||0), 0, 1),
+                  THREE.MathUtils.clamp(hsl.l + dL, 0.02, 0.98));
+  return '#' + c.getHexString();
+}
+function rgba(hex, a){
+  const c = new THREE.Color(hex);
+  return 'rgba(' + Math.round(c.r*255) + ',' + Math.round(c.g*255) + ',' + Math.round(c.b*255) + ',' + a + ')';
+}
+function blotch(g, w, h, base, count, spread, alpha){
+  for(let i=0;i<count;i++){
+    const x = Math.random()*w, y = Math.random()*h;
+    const r = (0.04 + Math.random()*0.22) * Math.max(w,h) * spread;
+    const c = shift(base, (Math.random()-0.5)*0.08, (Math.random()-0.5)*0.05);
+    const grd = g.createRadialGradient(x,y,0,x,y,r);
+    grd.addColorStop(0, rgba(c, alpha));
+    grd.addColorStop(1, rgba(c, 0));
+    g.fillStyle = grd; g.fillRect(x-r, y-r, r*2, r*2);
+  }
+}
+function speckle(g, w, h, count, alpha){
+  for(let i=0;i<count;i++){
+    g.fillStyle = 'rgba(60,54,44,' + (Math.random()*alpha).toFixed(3) + ')';
+    g.fillRect(Math.random()*w, Math.random()*h, 1.6, 1.1);
+  }
+}
+function ao(g, w, h, x0,y0,x1,y1, a){
+  const d = g.createLinearGradient(x0,y0,x1,y1);
+  d.addColorStop(0, 'rgba(64,56,44,' + a + ')');
+  d.addColorStop(1, 'rgba(64,56,44,0)');
+  g.fillStyle = d; g.fillRect(0,0,w,h);
+}
+
+/* smooth modern plaster — far quieter than a period wall */
+function wallCanvas(w, h, base, o){
+  o = o || {};
+  const c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = base; g.fillRect(0,0,w,h);
+  blotch(g, w, h, base, 60, 1.0, 0.30);
+  blotch(g, w, h, shift(base,-0.03), 26, 0.5, 0.18);
+  speckle(g, w, h, Math.round(w*h/2400), 0.03);
+  if(o.bottom) ao(g, w, h, 0, h, 0, h*(1-o.bottom), 0.20);
+  if(o.top)    ao(g, w, h, 0, 0, 0, h*o.top, 0.14);
+  if(o.left)   ao(g, w, h, 0, 0, w*o.left, 0, 0.20);
+  if(o.right)  ao(g, w, h, w, 0, w*(1-o.right), 0, 0.20);
+  return c;
+}
+
+/* big cream porcelain tiles, 4×4 to a canvas, thin grout */
+function tileCanvas(){
+  const S = 1024, per = S/4, c = cvs(S,S), g = c.getContext('2d');
+  g.fillStyle = P.grout; g.fillRect(0,0,S,S);
+  for(let ty=0;ty<4;ty++) for(let tx=0;tx<4;tx++){
+    const x = tx*per, y = ty*per;
+    const base = shift((tx+ty)%2 ? P.tileA : P.tileB, (Math.random()-0.5)*0.03);
+    g.fillStyle = base;
+    g.fillRect(x+2.5, y+2.5, per-5, per-5);
+    /* faint mineral cloud in each tile */
+    g.save();
+    g.beginPath(); g.rect(x+2.5, y+2.5, per-5, per-5); g.clip();
+    blotch(g, per, per, base, 8, 0.9, 0.25);
+    g.globalAlpha = 0.08;
+    for(let i=0;i<4;i++){
+      g.strokeStyle = shift(base, 0.10);
+      g.lineWidth = 0.8 + Math.random()*1.6;
+      let vx = x + Math.random()*per, vy = y + Math.random()*per;
+      g.beginPath(); g.moveTo(vx,vy);
+      for(let k=0;k<3;k++){
+        vx += (Math.random()-0.3)*per*0.3; vy += (Math.random()-0.5)*per*0.25;
+        g.lineTo(vx,vy);
+      }
+      g.stroke();
+    }
+    g.globalAlpha = 1;
+    /* soft sheen pooled off-centre, like light on a polished tile */
+    const sx = x + per*(0.3+Math.random()*0.4), sy = y + per*(0.3+Math.random()*0.4);
+    const sheen = g.createRadialGradient(sx,sy,0,sx,sy,per*0.6);
+    sheen.addColorStop(0, 'rgba(255,255,252,.07)');
+    sheen.addColorStop(1, 'rgba(255,255,252,0)');
+    g.fillStyle = sheen; g.fillRect(x,y,per,per);
+    g.restore();
+  }
+  speckle(g, S, S, 800, 0.025);
+  return c;
+}
+
+/* brushed metal — tint it with the material colour */
+function brushedCanvas(base){
+  const w = 512, h = 512, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = base; g.fillRect(0,0,w,h);
+  for(let i=0;i<600;i++){
+    g.globalAlpha = 0.05 + Math.random()*0.15;
+    g.strokeStyle = shift(base, (Math.random()-0.5)*0.22);
+    g.lineWidth = 0.5 + Math.random()*1.8;
+    const y = Math.random()*h;
+    g.beginPath(); g.moveTo(0,y); g.lineTo(w, y + (Math.random()-0.5)*3); g.stroke();
+  }
+  g.globalAlpha = 1;
+  speckle(g, w, h, 500, 0.04);
+  return c;
+}
+
+/* honed marble: grey and gold veins in a pale ground */
+function marbleCanvas(){
+  const w = 512, h = 512, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = P.marble; g.fillRect(0,0,w,h);
+  blotch(g, w, h, P.marble, 60, 0.9, 0.35);
+  function vein(color, alpha, width){
+    let x = Math.random()*w, y = Math.random()*h;
+    g.strokeStyle = rgba(color, alpha);
+    g.lineWidth = width;
+    g.beginPath(); g.moveTo(x,y);
+    for(let i=0;i<7;i++){
+      const nx = x + (Math.random()-0.3)*w*0.22, ny = y + (Math.random()-0.5)*h*0.20;
+      g.quadraticCurveTo(x + (Math.random()-0.5)*40, y + (Math.random()-0.5)*40, nx, ny);
+      x = nx; y = ny;
+    }
+    g.stroke();
+  }
+  for(let i=0;i<14;i++) vein('#6a6c78', 0.10 + Math.random()*0.16, 0.7 + Math.random()*2.4);
+  for(let i=0;i<6;i++)  vein(P.goldDeep, 0.10 + Math.random()*0.10, 0.6 + Math.random()*1.4);
+  speckle(g, w, h, 900, 0.04);
+  return c;
+}
+
+/* velvet: a directional nap with a soft sheen pooled in the middle */
+function velvetCanvas(base){
+  const w = 256, h = 256, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = base; g.fillRect(0,0,w,h);
+  blotch(g, w, h, base, 30, 0.8, 0.35);
+  g.globalAlpha = 0.10;
+  for(let i=0;i<700;i++){
+    g.strokeStyle = shift(base, (Math.random()-0.5)*0.22);
+    g.lineWidth = 1;
+    const x = Math.random()*w, y = Math.random()*h;
+    g.beginPath(); g.moveTo(x,y); g.lineTo(x + (Math.random()-0.5)*3, y + 5 + Math.random()*9); g.stroke();
+  }
+  g.globalAlpha = 1;
+  const sheen = g.createRadialGradient(w/2,h/2,0,w/2,h/2,w*0.7);
+  sheen.addColorStop(0, rgba(shift(base, 0.13), 0.30));
+  sheen.addColorStop(1, rgba(shift(base, 0.13), 0));
+  g.fillStyle = sheen; g.fillRect(0,0,w,h);
+  return c;
+}
+
+/* the credenza's fluted front: vertical ribs in black lacquer */
+function flutedCanvas(){
+  const w = 512, h = 256, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = P.lacquer; g.fillRect(0,0,w,h);
+  const rib = 24;
+  for(let x=0;x<w;x+=rib){
+    const d = g.createLinearGradient(x,0,x+rib,0);
+    d.addColorStop(0.00, shift(P.lacquer,-0.02));
+    d.addColorStop(0.35, shift(P.lacquer, 0.10));
+    d.addColorStop(0.55, shift(P.lacquer, 0.16));
+    d.addColorStop(0.75, shift(P.lacquer, 0.05));
+    d.addColorStop(1.00, shift(P.lacquer,-0.03));
+    g.fillStyle = d; g.fillRect(x,0,rib,h);
+    g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(x,0,1.6,h);
+  }
+  speckle(g, w, h, 300, 0.05);
+  return c;
+}
+
+/* a fiddle-leaf fig leaf: a green ground, a pale midrib, veins running off it */
+function figLeafCanvas(){
+  const w = 128, h = 256, c = cvs(w,h), g = c.getContext('2d');
+  const base = P.leaf;
+  const d = g.createLinearGradient(0,h,0,0);
+  d.addColorStop(0.00, shift(base,-0.06));
+  d.addColorStop(0.55, base);
+  d.addColorStop(1.00, shift(base, 0.07));
+  g.fillStyle = d; g.fillRect(0,0,w,h);
+  blotch(g, w, h, base, 22, 0.7, 0.22);
+  g.strokeStyle = 'rgba(198,216,162,.42)'; g.lineWidth = 3.4;
+  g.beginPath(); g.moveTo(w/2, h); g.lineTo(w/2, 8); g.stroke();
+  g.lineWidth = 1.5;
+  g.strokeStyle = 'rgba(188,208,152,.28)';
+  for(let i=0;i<11;i++){
+    const y = h - 20 - i*(h-42)/11, sp = 1 - i/13;
+    [-1,1].forEach(function(s){
+      g.beginPath(); g.moveTo(w/2, y);
+      g.quadraticCurveTo(w/2 + s*w*0.22*sp, y - 11, w/2 + s*w*0.44*sp, y - 28);
+      g.stroke();
+    });
+  }
+  speckle(g, w, h, 300, 0.05);
+  return c;
+}
+
+/* basketweave placemat. The tile is 16 cells square and is repeated 4x3 across
+   the mat, which puts one woven cell at about 7mm — the plate close-up stands
+   half a metre away, and at one cell per mat-sixteenth the weave magnified into
+   noise rather than fabric. */
+function matCanvas(){
+  const s = 512, c = cvs(s,s), g = c.getContext('2d');
+  g.fillStyle = shift(P.mat, -0.10); g.fillRect(0,0,s,s);
+  const u = 32;
+  for(let y=0;y<s;y+=u) for(let x=0;x<s;x+=u){
+    const horiz = ((x/u + y/u) % 2) === 0;
+    const col = shift(P.mat, (Math.random()-0.5)*0.06);
+    g.fillStyle = col;
+    g.fillRect(x+2, y+2, u-4, u-4);
+    g.globalAlpha = 0.35;
+    g.strokeStyle = shift(col, -0.10);
+    g.lineWidth = 2;
+    for(let k=6;k<u-4;k+=8){
+      g.beginPath();
+      if(horiz){ g.moveTo(x+2, y+k); g.lineTo(x+u-2, y+k); }
+      else     { g.moveTo(x+k, y+2); g.lineTo(x+k, y+u-2); }
+      g.stroke();
+    }
+    g.globalAlpha = 1;
+  }
+  speckle(g, s, s, 520, 0.05);
+  return c;
+}
+
+/* the rug: near-black field, double gold border, a whisper of lattice */
+function rugCanvas(){
+  const w = 1024, h = 768, c = cvs(w,h), g = c.getContext('2d');
+  const R = P.rug;
+  g.fillStyle = R.field; g.fillRect(0,0,w,h);
+  blotch(g, w, h, R.field, 50, 0.8, 0.30);
+  g.strokeStyle = R.border; g.lineWidth = 10;
+  g.strokeRect(26, 26, w-52, h-52);
+  g.strokeStyle = R.border; g.lineWidth = 3;
+  g.strokeRect(52, 52, w-104, h-104);
+  g.strokeStyle = R.accent; g.lineWidth = 2;
+  g.strokeRect(70, 70, w-140, h-140);
+  /* faint gold lattice over the field */
+  g.globalAlpha = 0.07;
+  g.strokeStyle = R.border; g.lineWidth = 1.6;
+  const step = 96;
+  for(let x=-h;x<w+h;x+=step){
+    g.beginPath(); g.moveTo(x,0); g.lineTo(x+h,h); g.stroke();
+    g.beginPath(); g.moveTo(x+h,0); g.lineTo(x,h); g.stroke();
+  }
+  g.globalAlpha = 1;
+  /* corner blossoms */
+  [[96,96],[w-96,96],[96,h-96],[w-96,h-96]].forEach(function(p){
+    g.globalAlpha = 0.8;
+    g.fillStyle = R.border;
+    for(let i=0;i<4;i++){
+      g.save(); g.translate(p[0],p[1]); g.rotate(i*Math.PI/2);
+      g.beginPath();
+      g.moveTo(0,-4); g.quadraticCurveTo(9,-16, 0,-26); g.quadraticCurveTo(-9,-16, 0,-4);
+      g.fill();
+      g.restore();
+    }
+    g.globalAlpha = 1;
+  });
+  /* pile */
+  g.globalAlpha = 0.05;
+  for(let i=0;i<6000;i++){
+    const x = Math.random()*w, y = Math.random()*h;
+    g.strokeStyle = Math.random() < 0.6 ? '#000' : '#cab98a';
+    g.lineWidth = 1 + Math.random()*1.2;
+    g.beginPath(); g.moveTo(x,y); g.lineTo(x+(Math.random()-0.5)*7, y+(Math.random()-0.5)*7); g.stroke();
+  }
+  g.globalAlpha = 1;
+  return c;
+}
+
+/* the big framed abstract: ink ground, gold gesture */
+function artCanvas(){
+  const w = 640, h = 480, c = cvs(w,h), g = c.getContext('2d');
+  g.fillStyle = P.artInk; g.fillRect(0,0,w,h);
+  blotch(g, w, h, P.artInk, 40, 0.9, 0.4);
+  g.lineCap = 'round';
+  /* broad gold sweeps */
+  for(let i=0;i<5;i++){
+    g.strokeStyle = rgba(shift(P.gold, (Math.random()-0.5)*0.14), 0.5 + Math.random()*0.4);
+    g.lineWidth = 10 + Math.random()*26;
+    const y0 = h*(0.2 + Math.random()*0.6);
+    g.beginPath();
+    g.moveTo(w*0.08, y0);
+    g.bezierCurveTo(w*(0.3+Math.random()*0.2), y0 - h*(0.2+Math.random()*0.3),
+                    w*(0.5+Math.random()*0.2), y0 + h*(0.1+Math.random()*0.3),
+                    w*0.92, y0 - h*(Math.random()*0.35));
+    g.stroke();
+  }
+  /* a heavy moon of gold leaf */
+  const mx = w*0.66, my = h*0.34;
+  const leaf = g.createRadialGradient(mx,my,4,mx,my,74);
+  leaf.addColorStop(0, shift(P.gold, 0.16));
+  leaf.addColorStop(0.7, P.gold);
+  leaf.addColorStop(1, P.goldDeep);
+  g.fillStyle = leaf;
+  g.beginPath(); g.arc(mx,my,74,0,Math.PI*2); g.fill();
+  /* thin ivory scratches */
+  g.globalAlpha = 0.5;
+  for(let i=0;i<7;i++){
+    g.strokeStyle = '#e8e0cc';
+    g.lineWidth = 1 + Math.random()*1.6;
+    const y0 = h*Math.random();
+    g.beginPath(); g.moveTo(w*Math.random()*0.3, y0);
+    g.lineTo(w*(0.6+Math.random()*0.38), y0 + (Math.random()-0.5)*h*0.3);
+    g.stroke();
+  }
+  g.globalAlpha = 1;
+  /* canvas tooth */
+  g.globalAlpha = 0.06;
+  for(let i=0;i<1200;i++){
+    g.strokeStyle = Math.random()<0.5 ? '#fff' : '#000';
+    g.lineWidth = 1;
+    const x = Math.random()*w, y = Math.random()*h;
+    g.beginPath(); g.moveTo(x,y); g.lineTo(x+4+Math.random()*10, y+(Math.random()-0.5)*3); g.stroke();
+  }
+  g.globalAlpha = 1;
+  ao(g, w, h, 0,0,0,h*0.2,0.25); ao(g, w, h, 0,h,0,h*0.8,0.3);
+  return c;
+}
+
+/* the swirled art-glass vase, now on the credenza */
+function artglassCanvas(){
+  const s = 256, c = cvs(s,s), g = c.getContext('2d');
+  g.fillStyle = P.artglass[3]; g.fillRect(0,0,s,s);
+  for(let i=0;i<46;i++){
+    const col = P.artglass[i % P.artglass.length];
+    g.strokeStyle = rgba(shift(col,(Math.random()-0.5)*0.10), 0.35 + Math.random()*0.35);
+    g.lineWidth = 5 + Math.random()*16;
+    g.lineCap = 'round';
+    const y = Math.random()*s, amp = 14 + Math.random()*30, ph = Math.random()*7;
+    g.beginPath();
+    for(let x=0;x<=s;x+=8){
+      const yy = y + Math.sin(x*0.03 + ph)*amp;
+      if(x===0) g.moveTo(x,yy); else g.lineTo(x,yy);
+    }
+    g.stroke();
+  }
+  const sheen = g.createLinearGradient(0,0,s,0);
+  sheen.addColorStop(0.35,'rgba(255,255,255,0)');
+  sheen.addColorStop(0.5,'rgba(255,255,255,.30)');
+  sheen.addColorStop(0.62,'rgba(255,255,255,0)');
+  g.fillStyle = sheen; g.fillRect(0,0,s,s);
+  return c;
+}
+
+/* every lit wick in the room, so the tick can flicker them together */
+const flames = [];
+
+/* the meadow out the window: open country an hour before dark.
+   the only window in the house that looks past the garden — long grass,
+   poppies and cornflowers, and cirrus combed thin instead of cumulus.
+   the sun sits low and just off frame, so the whole view is gold at the
+   horizon and going blue overhead — it has to agree with the room. */
+function meadowCanvas(){
+  const w = 1024, h = 512, c = cvs(w,h), g = c.getContext('2d');
+  const C = P.meadow;
+  const sky = g.createLinearGradient(0,0,0,h*0.55);
+  sky.addColorStop(0, C.sky0); sky.addColorStop(0.55, C.sky1); sky.addColorStop(1, C.sky2);
+  g.fillStyle = sky; g.fillRect(0,0,w,h);
+  /* the sun itself, low and swollen, just above the tree line */
+  const sun = g.createRadialGradient(w*0.30,h*0.44,12,w*0.30,h*0.44,235);
+  sun.addColorStop(0,'rgba(255,240,200,.88)');
+  sun.addColorStop(0.30,'rgba(255,190,104,.34)');
+  sun.addColorStop(1,'rgba(255,168,86,0)');
+  g.fillStyle = sun; g.fillRect(0,0,w,h);
+  /* cirrus: long translucent threads combed across the blue, nothing
+     with a base or a body — the high-altitude answer to a cloud */
+  for(let i=0;i<6;i++){
+    const cy = h*(0.06 + Math.random()*0.28), cx = Math.random()*w;
+    const len = w*(0.18 + Math.random()*0.28), lift = -len*(0.04 + Math.random()*0.05);
+    g.strokeStyle = 'rgba(255,214,158,' + (0.12 + Math.random()*0.20).toFixed(2) + ')';
+    g.lineWidth = 5 + Math.random()*9; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(cx, cy);
+    g.quadraticCurveTo(cx + len*0.5, cy + lift, cx + len, cy + lift*0.4);
+    g.stroke();
+    /* a fainter echo under each streak, slightly offset, feathers it */
+    g.strokeStyle = 'rgba(255,190,132,0.09)'; g.lineWidth = 14;
+    g.beginPath(); g.moveTo(cx + 14, cy + 6);
+    g.quadraticCurveTo(cx + len*0.5, cy + lift + 6, cx + len - 10, cy + lift*0.4 + 5);
+    g.stroke();
+  }
+  /* the far tree line, blued by the miles — a solid band first, then
+     crowns packed close along it, so the distance reads as woods */
+  g.fillStyle = rgba(shift(C.far, 0.02, -0.08), 0.85);
+  g.fillRect(0, h*0.49, w, h*0.04);
+  g.globalAlpha = 0.8;
+  for(let i=0;i<52;i++){
+    const tx = (i + Math.random()*0.8)*w/52, ty = h*(0.487 + Math.random()*0.012), tr = 6 + Math.random()*10;
+    g.fillStyle = shift(C.far, (Math.random()-0.5)*0.06, -0.28);
+    g.beginPath(); g.arc(tx, ty, tr, 0, Math.PI*2); g.fill();
+  }
+  g.globalAlpha = 1;
+  /* the meadow itself, darkening as it nears */
+  const grd = g.createLinearGradient(0, h*0.52, 0, h);
+  grd.addColorStop(0, shift(C.grass0, 0.10, -0.08));
+  grd.addColorStop(0.4, C.grass0);
+  grd.addColorStop(1, C.grass1);
+  g.fillStyle = grd; g.fillRect(0, h*0.52, w, h*0.48);
+  /* long grass: strokes that lean with a wind out of the left, taller
+     and looser toward the foot of the canvas */
+  for(let i=0;i<1500;i++){
+    const t = Math.random();
+    const x = Math.random()*w, y = h*(0.54 + t*0.46);
+    const tall = 3 + t*14, lean = 1 + t*4;
+    g.strokeStyle = rgba(shift(t < 0.4 ? C.grass0 : C.grass1, (Math.random()-0.5)*0.16), 0.35);
+    g.lineWidth = 0.8 + t*1.2;
+    g.beginPath(); g.moveTo(x, y);
+    g.quadraticCurveTo(x + lean*0.4, y - tall*0.6, x + lean, y - tall);
+    g.stroke();
+  }
+  /* the flowers, sown in drifts the way they actually seed: each drift
+     one species, dots at the tree line growing to open blooms up close */
+  function bloom(x, y, r, kind){
+    if(r < 2.2){                                        /* too far to draw petals */
+      g.fillStyle = rgba(kind === 0 ? C.poppy : kind === 1 ? C.corn : kind === 2 ? C.daisy : C.butter, 0.85);
+      g.beginPath(); g.arc(x, y, Math.max(1, r*0.8), 0, Math.PI*2); g.fill();
+      return;
+    }
+    if(r > 4){                                          /* the near ones stand on stems */
+      g.strokeStyle = 'rgba(92,84,44,0.7)'; g.lineWidth = 1.4;
+      g.beginPath(); g.moveTo(x, y + r*2.4); g.quadraticCurveTo(x + 2, y + r, x, y); g.stroke();
+    }
+    if(kind === 0){                                     /* poppy — red bowl, dark heart */
+      g.fillStyle = shift(C.poppy, (Math.random()-0.5)*0.08);
+      g.beginPath(); g.arc(x, y, r*0.9, 0, Math.PI*2); g.fill();
+      g.fillStyle = rgba(shift(C.poppy, 0.12), 0.8);
+      g.beginPath(); g.arc(x - r*0.25, y - r*0.25, r*0.45, 0, Math.PI*2); g.fill();
+      g.fillStyle = 'rgba(38,30,30,0.85)';
+      g.beginPath(); g.arc(x, y, r*0.26, 0, Math.PI*2); g.fill();
+    }else if(kind === 1){                               /* cornflower — ragged blue star */
+      for(let p=0;p<6;p++){
+        const a = p/6*Math.PI*2 + Math.random()*0.3;
+        g.fillStyle = rgba(shift(C.corn, (Math.random()-0.5)*0.10), 0.9);
+        g.beginPath();
+        g.ellipse(x + Math.cos(a)*r*0.55, y + Math.sin(a)*r*0.42, r*0.42, r*0.2, a, 0, Math.PI*2);
+        g.fill();
+      }
+      g.fillStyle = rgba(shift(C.corn, -0.18), 0.9);
+      g.beginPath(); g.arc(x, y, r*0.24, 0, Math.PI*2); g.fill();
+    }else if(kind === 2){                               /* daisy */
+      for(let p=0;p<6;p++){
+        const a = p/6*Math.PI*2 + Math.random()*0.4;
+        g.fillStyle = rgba(C.daisy, 0.92);
+        g.beginPath();
+        g.ellipse(x + Math.cos(a)*r*0.6, y + Math.sin(a)*r*0.42, r*0.5, r*0.24, a, 0, Math.PI*2);
+        g.fill();
+      }
+      g.fillStyle = C.butter;
+      g.beginPath(); g.arc(x, y, r*0.28, 0, Math.PI*2); g.fill();
+    }else{                                              /* buttercup — a small gold cup */
+      g.fillStyle = rgba(shift(C.butter, (Math.random()-0.5)*0.08), 0.95);
+      g.beginPath(); g.arc(x, y, r*0.6, 0, Math.PI*2); g.fill();
+      g.fillStyle = rgba(shift(C.butter, 0.14), 0.9);
+      g.beginPath(); g.arc(x - r*0.15, y - r*0.15, r*0.3, 0, Math.PI*2); g.fill();
+    }
+  }
+  for(let d=0;d<9;d++){
+    const kind = d % 4;
+    const dx = Math.random()*w, dy = h*(0.56 + Math.random()*0.34), spread = w*(0.05 + Math.random()*0.08);
+    const n = 10 + Math.floor(Math.random()*14);
+    for(let i=0;i<n;i++){
+      const fx = dx + (Math.random()-0.5)*spread*2, fy = dy + (Math.random()-0.5)*spread*0.5;
+      if(fy < h*0.53 || fy > h) continue;
+      const t = (fy/h - 0.52)/0.48;                     /* 0 at the horizon, 1 up close */
+      bloom(fx, fy, 1.2 + t*6, kind);
+    }
+  }
+  /* gold haze pooled low over the ground, the way it goes at this hour */
+  const haze = g.createLinearGradient(0,h*0.66,0,h*0.40);
+  haze.addColorStop(0,'rgba(255,190,110,.17)'); haze.addColorStop(1,'rgba(255,190,110,0)');
+  g.fillStyle = haze; g.fillRect(0,0,w,h);
+  return c;
+}
+
+/* plain white dinner plate, seen from above.
+   The cap UVs run right to the edge of the square, so the china has to be
+   painted edge to edge as well: a drawn circle leaves an unpainted margin
+   outside it, and unpainted is transparent black — which is what put the
+   speckled dark ring around every plate at close range. */
+function plateCanvas(){
+  const s = 512, c = cvs(s,s), g = c.getContext('2d');
+  g.fillStyle = '#f5f4f0'; g.fillRect(0,0,s,s);
+  /* the faintest turn of the rim, so the edge is not a dead flat white */
+  const rim = g.createRadialGradient(s/2,s/2,s*0.40,s/2,s/2,s*0.50);
+  rim.addColorStop(0, 'rgba(255,255,255,0)');
+  rim.addColorStop(1, 'rgba(255,255,255,.55)');
+  g.fillStyle = rim; g.fillRect(0,0,s,s);
+  g.strokeStyle = rgba(P.gold, 0.9); g.lineWidth = s*0.016;
+  g.beginPath(); g.arc(s/2,s/2,s*0.45,0,Math.PI*2); g.stroke();
+  g.strokeStyle = rgba(P.gold, 0.55); g.lineWidth = s*0.006;
+  g.beginPath(); g.arc(s/2,s/2,s*0.35,0,Math.PI*2); g.stroke();
+  g.fillStyle = 'rgba(0,0,0,.045)';
+  g.beginPath(); g.arc(s/2,s/2,s*0.33,0,Math.PI*2); g.fill();
+  return c;
+}
+
+function radialCanvas(inner, mid){
+  const s = 256, c = cvs(s,s), g = c.getContext('2d');
+  const grd = g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+  grd.addColorStop(0, 'rgba(255,255,255,' + inner + ')');
+  grd.addColorStop(mid || 0.45, 'rgba(255,255,255,' + (inner*0.5) + ')');
+  grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd; g.fillRect(0,0,s,s);
+  return c;
+}
+
+/* an employer's mark for the middle of a plate: the logo file if it loads,
+   the initials in gold until it does */
+function logoTexture(emp){
+  const s = 256, c = cvs(s,s), g = c.getContext('2d');
+  g.fillStyle = rgba(P.goldDeep, 0.92);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = '600 88px "Helvetica Neue", Helvetica, Arial, sans-serif';
+  const initials = emp.name.split(/\s+/).map(function(w){ return w[0]; })
+                     .join('').slice(0,3).toUpperCase();
+  g.fillText(initials, s/2, s/2 + 4);
+  const t = tex(c);
+  if(emp.logo){
+    /* the initials stay underneath as the fallback; the logo replaces
+       them the moment it exists. preload.js usually means that is now,
+       not one paint later — and never a second download. */
+    const stamp = function(img){
+      if(!img || !img.width) return;
+      g.clearRect(0,0,s,s);
+      const fit = s*0.74, r = Math.min(fit/img.width, fit/img.height);
+      g.drawImage(img, (s - img.width*r)/2, (s - img.height*r)/2,
+                  img.width*r, img.height*r);
+      t.needsUpdate = true;
+    };
+    const ready = window.HOUSE_PRELOAD && HOUSE_PRELOAD.image(emp.logo);
+    if(ready) stamp(ready);
+    else {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function(){ stamp(img); };
+      img.src = emp.logo;
+    }
+  }
+  return t;
+}
+
+/* ============================================================
+   4. MATERIALS
+   ============================================================ */
+const tileTex    = tex(tileCanvas(), 14, 14);
+const goldTex    = tex(brushedCanvas(P.gold));
+const marbleTex  = tex(marbleCanvas());
+const matTex     = tex(matCanvas(), 4, 3);   /* 4x3 tiles over the 0.46 x 0.33 mat */
+const napkinTex  = tex(velvetCanvas(P.napkin));
+const curtainTex = tex(velvetCanvas(P.curtain), 1, 3);
+const flutedTex  = tex(flutedCanvas(), 3, 1);
+const rugTex     = tex(rugCanvas());
+const artglassTex= tex(artglassCanvas());
+const meadowTex  = tex(meadowCanvas());
+const leafTex    = tex(figLeafCanvas());
+
+const M = {
+  ceiling: new THREE.MeshStandardMaterial({color:P.ceiling, roughness:0.92, metalness:0}),
+  skirt:   new THREE.MeshStandardMaterial({color:P.skirt, roughness:0.6}),
+  floor:   new THREE.MeshPhysicalMaterial({map:tileTex, bumpMap:tileTex, bumpScale:0.004,
+                                           roughness:0.30, metalness:0,
+                                           clearcoat:0.8, clearcoatRoughness:0.14}),
+  gold:    new THREE.MeshStandardMaterial({map:goldTex, bumpMap:goldTex, bumpScale:0.0012,
+                                           color:'#d8b562', roughness:0.20, metalness:0.95}),
+  goldPolish:new THREE.MeshStandardMaterial({color:'#e2c070', roughness:0.08, metalness:1}),
+  /* the same gold, drawn on both faces — the spoon bowl is a shell with no
+     thickness, so its inside is the back of the surface you see outside */
+  goldShell: new THREE.MeshStandardMaterial({color:'#e2c070', roughness:0.10, metalness:1,
+    side:THREE.DoubleSide}),
+  mirror:  new THREE.MeshStandardMaterial({color:'#e3e7ea', roughness:0.03, metalness:1}),
+  lacquer: new THREE.MeshPhysicalMaterial({color:P.lacquer, roughness:0.14,
+                                           clearcoat:1, clearcoatRoughness:0.08}),
+  fluted:  new THREE.MeshPhysicalMaterial({map:flutedTex, bumpMap:flutedTex, bumpScale:0.012,
+                                           roughness:0.22, clearcoat:0.8, clearcoatRoughness:0.15}),
+  marble:  new THREE.MeshPhysicalMaterial({map:marbleTex, roughness:0.16, metalness:0,
+                                           clearcoat:0.8, clearcoatRoughness:0.12}),
+  frame:   new THREE.MeshStandardMaterial({color:'#e6dac4', roughness:0.4}),
+  leather: new THREE.MeshPhysicalMaterial({color:P.leather, roughness:0.55,
+                                           clearcoat:0.2, clearcoatRoughness:0.5}),
+  glass:   new THREE.MeshPhysicalMaterial({color:'#e6edeb', transparent:true, opacity:0.08,
+                                           roughness:0.04, metalness:0, side:THREE.DoubleSide}),
+  glassTop:new THREE.MeshPhysicalMaterial({color:P.glassT, transparent:true, opacity:0.26,
+                                           roughness:0.03, metalness:0,
+                                           clearcoat:1, clearcoatRoughness:0.03, side:THREE.DoubleSide}),
+  crystal: new THREE.MeshPhysicalMaterial({color:'#eef4f8', transparent:true, opacity:0.5,
+                                           roughness:0.02, metalness:0, flatShading:true,
+                                           clearcoat:1, clearcoatRoughness:0.05}),
+  stemware:new THREE.MeshPhysicalMaterial({color:'#eef4f8', transparent:true, opacity:0.42,
+                                           roughness:0.02, metalness:0,
+                                           clearcoat:1, clearcoatRoughness:0.04, side:THREE.DoubleSide}),
+  vessel:  new THREE.MeshPhysicalMaterial({color:P.vessel, transparent:true, opacity:0.46,
+                                           roughness:0.03, metalness:0,
+                                           clearcoat:1, clearcoatRoughness:0.04, side:THREE.DoubleSide}),
+  china:   new THREE.MeshStandardMaterial({color:'#efe7d6', roughness:0.25}),
+  mat:     new THREE.MeshStandardMaterial({map:matTex, bumpMap:matTex, bumpScale:0.003,
+                                           roughness:0.95}),
+  /* the mat's 5mm edge takes the weave's own colour rather than a tile of it
+     squashed flat — the close-up looks straight down the near edge */
+  matEdge: new THREE.MeshStandardMaterial({color:shift(P.mat, -0.06), roughness:0.95}),
+  napkin:  new THREE.MeshStandardMaterial({map:napkinTex, bumpMap:napkinTex, bumpScale:0.002,
+                                           roughness:0.92}),
+  curtain: new THREE.MeshStandardMaterial({map:curtainTex, bumpMap:curtainTex, bumpScale:0.003,
+                                           roughness:0.95}),
+  rug:     new THREE.MeshStandardMaterial({map:rugTex, bumpMap:rugTex, bumpScale:0.010,
+                                           roughness:0.97}),
+  wax:     new THREE.MeshStandardMaterial({color:P.wax, roughness:0.55}),
+  pebble:  new THREE.MeshPhysicalMaterial({color:P.pebble, roughness:0.18,
+                                           clearcoat:0.9, clearcoatRoughness:0.15}),
+  pebbleLt:new THREE.MeshPhysicalMaterial({color:P.pebbleLt, roughness:0.3,
+                                           clearcoat:0.6, clearcoatRoughness:0.25}),
+  airplant:new THREE.MeshStandardMaterial({color:P.airplant, roughness:0.85, side:THREE.DoubleSide}),
+  airplant2:new THREE.MeshStandardMaterial({color:P.airplant2, roughness:0.85, side:THREE.DoubleSide}),
+  stem:    new THREE.MeshStandardMaterial({color:P.stem, roughness:0.8}),
+  artglass:new THREE.MeshPhysicalMaterial({map:artglassTex, roughness:0.10,
+                                           clearcoat:1, clearcoatRoughness:0.05}),
+  bottle:  new THREE.MeshPhysicalMaterial({color:P.bottle, roughness:0.10,
+                                           clearcoat:1, clearcoatRoughness:0.06}),
+  pot:     new THREE.MeshStandardMaterial({color:P.pot, roughness:0.88, metalness:0}),
+  soil:    new THREE.MeshStandardMaterial({color:P.soil, roughness:1}),
+  bark:    new THREE.MeshStandardMaterial({color:'#372b1d', roughness:0.94}),
+  leaf:    new THREE.MeshStandardMaterial({map:leafTex, bumpMap:leafTex, bumpScale:0.004,
+                                           roughness:0.48, side:THREE.DoubleSide}),
+  leafDk:  new THREE.MeshStandardMaterial({map:leafTex, bumpMap:leafTex, bumpScale:0.004,
+                                           color:'#b4c2a6', roughness:0.6, side:THREE.DoubleSide}),
+  frost:   new THREE.MeshPhysicalMaterial({color:'#ffe9c6', transparent:true, opacity:0.8,
+                                           roughness:0.5, clearcoat:0.4}),
+  glowCore:new THREE.MeshBasicMaterial({color:'#ffcf82'}),
+  flame:   new THREE.MeshBasicMaterial({color:'#ffd489', transparent:true, opacity:0.95,
+                                        fog:false, depthWrite:false,
+                                        blending:THREE.AdditiveBlending}),
+  flameHalo:new THREE.MeshBasicMaterial({color:'#ff9a36', transparent:true, opacity:0.22,
+                                        fog:false, depthWrite:false,
+                                        blending:THREE.AdditiveBlending}),
+  black:   new THREE.MeshStandardMaterial({color:'#1e1e20', roughness:0.4}),
+  lightLens:new THREE.MeshBasicMaterial({color:P.ledLens})
+};
+
+/* ============================================================
+   5. HELPERS
+   ============================================================ */
+function box(w,h,d,mat,x,y,z){
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
+  m.position.set(x||0,y||0,z||0);
+  m.castShadow = true; m.receiveShadow = true;
+  return m;
+}
+function moulding(w,h,t,d,mat){
+  const g = new THREE.Group();
+  g.add(box(w,t,d,mat,0, h/2-t/2,0));
+  g.add(box(w,t,d,mat,0,-h/2+t/2,0));
+  g.add(box(t,h-t*2,d,mat,-w/2+t/2,0,0));
+  g.add(box(t,h-t*2,d,mat, w/2-t/2,0,0));
+  return g;
+}
+/* a rounded, bevelled slab — how a cushion actually meets the light */
+function roundedGeo(w,h,d,r){
+  r = Math.min(r, w/2-0.002, h/2-0.002);
+  const s = new THREE.Shape(), x = -w/2, y = -h/2;
+  s.moveTo(x+r,y);
+  s.lineTo(x+w-r,y);   s.quadraticCurveTo(x+w,y,x+w,y+r);
+  s.lineTo(x+w,y+h-r); s.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  s.lineTo(x+r,y+h);   s.quadraticCurveTo(x,y+h,x,y+h-r);
+  s.lineTo(x,y+r);     s.quadraticCurveTo(x,y,x+r,y);
+  const g = new THREE.ExtrudeGeometry(s,{depth:Math.max(0.015,d-0.03), bevelEnabled:true,
+    bevelSize:0.014, bevelThickness:0.014, bevelSegments:3, curveSegments:6});
+  g.center();
+  return g;
+}
+function soft(w,h,d,r,mat,x,y,z){
+  const m = new THREE.Mesh(roundedGeo(w,h,d,r), mat);
+  m.position.set(x||0,y||0,z||0);
+  m.castShadow = true; m.receiveShadow = true;
+  return m;
+}
+function turned(profile, segs){
+  return new THREE.LatheGeometry(profile.map(function(p){
+    return new THREE.Vector2(p[0], p[1]);
+  }), segs || 48);
+}
+function tube(points, r, segs){
+  const curve = new THREE.CatmullRomCurve3(points);
+  return new THREE.TubeGeometry(curve, segs || 24, r, 8, false);
+}
+function contact(size, opacity, x, z){
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(size,size),
+    new THREE.MeshBasicMaterial({map:tex(radialCanvas(1, 0.20)), color:0x46403a, transparent:true,
+      opacity:opacity, depthWrite:false}));
+  m.rotation.x = -Math.PI/2;
+  m.position.set(x, 0.012, z);
+  m.renderOrder = 2;
+  return m;
+}
+
+/* ============================================================
+   6. WALLS / FLOOR / CEILING / WINDOW
+   ============================================================ */
+function buildWall(width, base, occ){
+  const g = new THREE.Group();
+  const pTex = tex(wallCanvas(Math.min(2048, Math.round(width*120)), 384, base, occ));
+  const pm = new THREE.MeshStandardMaterial({map:pTex, bumpMap:pTex, bumpScale:0.002,
+                                             roughness:0.95});
+  const plaster = new THREE.Mesh(new THREE.BoxGeometry(width, WALL_H, 0.24), pm);
+  plaster.position.set(0, WALL_H/2, -0.12);
+  plaster.receiveShadow = true;
+  g.add(plaster);
+  g.add(box(width, 0.09, 0.035, M.skirt, 0, 0.045, 0.017));   /* modern flat skirting */
+  g.traverse(function(o){ if(o.isMesh) o.castShadow = false; });
+  return g;
+}
+
+/* the feature wall behind the credenza is near-black — that's the contrast */
+const backWall = buildWall(16, P.feature, {bottom:0.10, top:0.06, left:0.04, right:0.04});
+backWall.position.set(0, 0, BACK_Z);
+scene.add(backWall);
+
+const leftWall = buildWall(SIDE_LEN, P.wall, {bottom:0.10, top:0.06, left:0.06});
+leftWall.rotation.y = Math.PI/2;
+leftWall.position.set(-SIDE_X, 0, SIDE_MID);
+scene.add(leftWall);
+
+/* the right wall is pale and mostly window */
+const WIN = { z0:-4.3, z1:0.7, sill:0.85, head:2.55 };
+(function(){
+  function seg(len, midZ, y, h){
+    const w = buildWall(len, P.wallLight, {});
+    /* strip the skirting on segments that don't touch the floor */
+    if(y > 0.01) w.children = w.children.filter(function(o){ return o.geometry === undefined || o.geometry.parameters.height !== 0.09; });
+    w.rotation.y = -Math.PI/2;
+    w.position.set(SIDE_X, 0, midZ);
+    if(h){                       /* re-cut a partial-height band */
+      w.children.forEach(function(o){
+        if(o.geometry && o.geometry.parameters && o.geometry.parameters.height > 1){
+          o.scale.y = h / WALL_H;
+          o.position.y = y + h/2;
+        }
+      });
+    }
+    return w;
+  }
+  /* full-height stretches either side of the opening */
+  const backLen  = WIN.z0 - BACK_Z;
+  const frontLen = FRONT_Z - WIN.z1;
+  scene.add(seg(backLen,  BACK_Z + backLen/2));
+  scene.add(seg(frontLen, WIN.z1 + frontLen/2));
+  /* band below the sill and above the head */
+  const openLen = WIN.z1 - WIN.z0, openMid = (WIN.z0 + WIN.z1)/2;
+  scene.add(seg(openLen, openMid, 0, WIN.sill));
+  scene.add(seg(openLen, openMid, WIN.head, WALL_H - WIN.head));
+})();
+
+const windowG = new THREE.Group();          /* frame + glass + the view */
+(function(){
+  const openLen = WIN.z1 - WIN.z0, openMid = (WIN.z0 + WIN.z1)/2;
+  const winH = WIN.head - WIN.sill, winMidY = (WIN.sill + WIN.head)/2;
+  /* white surround */
+  windowG.add(box(0.10, 0.07, openLen + 0.16, M.frame, SIDE_X - 0.05, WIN.sill - 0.035, openMid));
+  windowG.add(box(0.10, 0.07, openLen + 0.16, M.frame, SIDE_X - 0.05, WIN.head + 0.035, openMid));
+  [WIN.z0 - 0.045, WIN.z1 + 0.045].forEach(function(z){
+    windowG.add(box(0.10, winH + 0.14, 0.09, M.frame, SIDE_X - 0.05, winMidY, z));
+  });
+  /* a deep white sill inside */
+  windowG.add(box(0.22, 0.04, openLen + 0.20, M.frame, SIDE_X - 0.12, WIN.sill - 0.02, openMid));
+  /* two mullions -> three big panes */
+  const paneLen = openLen/3;
+  [WIN.z0 + paneLen, WIN.z0 + paneLen*2].forEach(function(z){
+    windowG.add(box(0.07, winH, 0.06, M.frame, SIDE_X - 0.045, winMidY, z));
+  });
+  for(let i=0;i<3;i++){
+    const pane = new THREE.Mesh(new THREE.BoxGeometry(0.012, winH - 0.04, paneLen - 0.08), M.glass);
+    pane.position.set(SIDE_X - 0.03, winMidY, WIN.z0 + paneLen*(i + 0.5));
+    windowG.add(pane);
+  }
+  /* the meadow, unlit so it stays bright */
+  const meadow = new THREE.Mesh(new THREE.PlaneGeometry(9, 4.4),
+    new THREE.MeshBasicMaterial({map:meadowTex, fog:false}));
+  meadow.rotation.y = -Math.PI/2;
+  meadow.position.set(SIDE_X + 0.9, 1.85, openMid);
+  windowG.add(meadow);
+  windowG.traverse(function(o){ if(o.isMesh){ o.castShadow = false; o.receiveShadow = true; } });
+})();
+/* the view is scenery, not a destination — deliberately not pickable */
+scene.add(windowG);
+
+/* emerald velvet drapes on a gold rod, floor to head */
+(function(){
+  const rodY = 2.78, rodX = SIDE_X - 0.20;
+  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, (WIN.z1 - WIN.z0) + 1.3, 14), M.gold);
+  rod.rotation.x = Math.PI/2;
+  rod.position.set(rodX, rodY, (WIN.z0 + WIN.z1)/2);
+  rod.castShadow = true;
+  scene.add(rod);
+  [WIN.z0 - 0.65, WIN.z1 + 0.65].forEach(function(z){
+    const fin = new THREE.Mesh(new THREE.SphereGeometry(0.045, 14, 10), M.goldPolish);
+    fin.position.set(rodX, rodY, z);
+    scene.add(fin);
+  });
+  /* each panel is a cluster of vertical velvet folds */
+  [WIN.z0 - 0.30, WIN.z1 + 0.30].forEach(function(zc, side){
+    const panelG = new THREE.Group();
+    const folds = 6;
+    for(let i=0;i<folds;i++){
+      const r = 0.055 + Math.random()*0.035;
+      const fold = new THREE.Mesh(new THREE.CylinderGeometry(r, r*1.12, rodY - 0.10, 12), M.curtain);
+      fold.position.set(rodX - 0.16 - Math.random()*0.10,
+                        (rodY - 0.10)/2 + 0.02,
+                        zc + (i - folds/2)*0.085 + (Math.random()-0.5)*0.02);
+      fold.castShadow = true; fold.receiveShadow = true;
+      panelG.add(fold);
+    }
+    /* gold tieback cinching the panel */
+    const tie = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.014, 10, 24), M.gold);
+    tie.rotation.x = Math.PI/2;
+    tie.rotation.z = Math.PI/2;
+    tie.position.set(rodX - 0.20, 1.05, zc);
+    tie.scale.set(1, 1, 1.5);
+    panelG.add(tie);
+    scene.add(panelG);
+    scene.add(contact(0.9, 0.20, rodX - 0.2, zc));
+  });
+})();
+
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(34,34), M.floor);
+floor.rotation.x = -Math.PI/2; floor.receiveShadow = true;
+scene.add(floor);
+
+const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(34,34), M.ceiling);
+ceiling.rotation.x = Math.PI/2; ceiling.position.y = WALL_H;
+scene.add(ceiling);
+
+/* ---- the perimeter LED --------------------------------------------------
+   One continuous square of light recessed into the black ceiling, run right
+   round the edge of the room. It is the only ceiling fitting left. */
+(function(){
+  const INSET = 0.55, W = 0.055;
+  const x0 = -SIDE_X + INSET, x1 = SIDE_X - INSET;
+  const z0 =  BACK_Z + INSET, z1 = FRONT_Z - INSET;
+  const yLens = WALL_H - 0.004;
+
+  const chanM = new THREE.MeshStandardMaterial({color:P.ledChan, roughness:0.9});
+
+  /* the soft bleed the strip throws onto the ceiling either side of itself */
+  function bleedCanvas(acrossU){
+    const s = 64, c = cvs(s,s), g = c.getContext('2d');
+    const d = acrossU ? g.createLinearGradient(0,0,s,0) : g.createLinearGradient(0,0,0,s);
+    d.addColorStop(0.00, rgba(P.ledLens, 0));
+    d.addColorStop(0.40, rgba(P.ledLens, 0.24));
+    d.addColorStop(0.50, rgba(P.ledLens, 0.50));
+    d.addColorStop(0.60, rgba(P.ledLens, 0.24));
+    d.addColorStop(1.00, rgba(P.ledLens, 0));
+    g.fillStyle = d; g.fillRect(0,0,s,s);
+    return c;
+  }
+  function bleedMat(acrossU){
+    return new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(bleedCanvas(acrossU)),
+      transparent:true, opacity:0.32, depthWrite:false,
+      blending:THREE.AdditiveBlending, fog:false});
+  }
+  const bleedX = bleedMat(false), bleedZ = bleedMat(true);
+
+  /* a run is three stacked planes, all facing straight down */
+  function run(w, d, x, z, bleedMaterial){
+    [[w + 0.08, d + 0.08, WALL_H - 0.002, chanM],
+     [w,        d,        yLens,          M.lightLens]].forEach(function(L){
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(L[0], L[1]), L[3]);
+      m.rotation.x = Math.PI/2;
+      m.position.set(x, L[2], z);
+      scene.add(m);
+    });
+    const gw = (d > w) ? 0.95 : w, gd = (d > w) ? d : 0.95;
+    const glow = new THREE.Mesh(new THREE.PlaneGeometry(gw, gd), bleedMaterial);
+    glow.rotation.x = Math.PI/2;
+    glow.position.set(x, WALL_H - 0.008, z);
+    glow.renderOrder = 3;
+    scene.add(glow);
+  }
+  const spanX = (x1 - x0) + W, spanZ = (z1 - z0) + W, midX = (x0 + x1)/2, midZ = (z0 + z1)/2;
+  run(spanX, W, midX, z0, bleedX);      /* back edge   */
+  run(spanX, W, midX, z1, bleedX);      /* front edge  */
+  run(W, spanZ, x0, midZ, bleedZ);      /* left edge   */
+  run(W, spanZ, x1, midZ, bleedZ);      /* right edge  */
+
+  /* and the light it actually casts, hung just under the channel */
+  [[0, -5.0], [-4.6, 0.0], [4.6, -3.0], [0, 3.0]].forEach(function(p){
+    const l = new THREE.PointLight(0xffb35e, 0.55, 7, 2);
+    l.position.set(p[0], WALL_H - 0.55, p[1]);
+    scene.add(l);
+  });
+})();
+
+/* floor-to-skirting occlusion */
+(function(){
+  const s = 512, c = cvs(s,s), g = c.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0,0,s,s);
+  g.globalCompositeOperation = 'destination-out';
+  g.filter = 'blur(26px)'; g.fillStyle = '#fff';
+  g.fillRect(34,34,s-68,s-68); g.filter = 'none';
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(SIDE_X*2, SIDE_LEN),
+    new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c), color:0x513c26,
+      transparent:true, opacity:0.28, depthWrite:false}));
+  m.rotation.x = -Math.PI/2;
+  m.position.set(0, 0.008, SIDE_MID);
+  m.renderOrder = 1;
+  scene.add(m);
+})();
+
+/* ============================================================
+   7. THE CREDENZA — black lacquer, gold and marble, on the dark wall
+   ============================================================ */
+const credenza = new THREE.Group();
+(function(){
+  const CW = 2.3, CH = 0.72, CD = 0.5;
+  const CX = 1.2, CZ = BACK_Z + 0.33;
+
+  /* gold base frame, then the fluted lacquer body floating on it */
+  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(function(p){
+    credenza.add(box(0.035, 0.16, 0.035, M.gold, CX + p[0]*(CW/2 - 0.08), 0.08, CZ + p[1]*(CD/2 - 0.08)));
+  });
+  credenza.add(box(CW - 0.10, 0.03, CD - 0.10, M.gold, CX, 0.155, CZ));
+  credenza.add(box(CW, CH, CD, M.lacquer, CX, 0.17 + CH/2, CZ));
+  /* fluted door fronts, split in three */
+  [-CW/3, 0, CW/3].forEach(function(dx){
+    credenza.add(box(CW/3 - 0.03, CH - 0.06, 0.02, M.fluted, CX + dx, 0.17 + CH/2, CZ + CD/2 + 0.005));
+  });
+  /* slim vertical gold pulls at the door splits */
+  [-CW/6, CW/6].forEach(function(dx){
+    const pull = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.26, 10), M.goldPolish);
+    pull.position.set(CX + dx, 0.17 + CH/2, CZ + CD/2 + 0.030);
+    credenza.add(pull);
+  });
+  /* marble slab on top, gold pencil line under its nose */
+  credenza.add(box(CW + 0.06, 0.035, CD + 0.05, M.marble, CX, 0.17 + CH + 0.018, CZ));
+  credenza.add(box(CW + 0.062, 0.008, CD + 0.052, M.gold, CX, 0.17 + CH - 0.002, CZ));
+
+  const topY = 0.17 + CH + 0.036;
+
+  /* round gold mirror above, on the near-black wall */
+  const mir = new THREE.Group();
+  const mirRing = new THREE.Mesh(new THREE.TorusGeometry(0.54, 0.035, 14, 48), M.gold);
+  mir.add(mirRing);
+  const mirGlass = new THREE.Mesh(new THREE.CircleGeometry(0.52, 48), M.mirror);
+  mirGlass.position.z = -0.012;
+  mir.add(mirGlass);
+  mir.position.set(CX, 2.0, BACK_Z + 0.14);
+  credenza.add(mir);
+
+  /* what sits on the marble: the art-glass vase, gold bowl, books, a knot */
+  const vase = new THREE.Mesh(turned([
+    [0.000,0.000],[0.052,0.000],[0.078,0.020],[0.108,0.085],[0.102,0.150],
+    [0.062,0.215],[0.068,0.245],[0.058,0.258]
+  ], 36), M.artglass);
+  vase.position.set(CX - 0.85, topY, CZ);
+  vase.rotation.y = 1.2;
+  credenza.add(vase);
+
+  const bowl = new THREE.Mesh(turned([
+    [0.000,0.000],[0.050,0.002],[0.060,0.010],[0.130,0.055],[0.140,0.075],[0.132,0.082]
+  ], 36), M.gold);
+  bowl.position.set(CX + 0.15, topY, CZ + 0.03);
+  credenza.add(bowl);
+
+  /* a short stack of art books with gilt edges */
+  P.books.forEach(function(col, i){
+    const b = box(0.30 - i*0.02, 0.035, 0.22 - i*0.015,
+      new THREE.MeshStandardMaterial({color:col, roughness:0.6}),
+      CX - 0.38, topY + 0.0175 + i*0.035, CZ + 0.02);
+    b.rotation.y = (i - 1)*0.12;
+    credenza.add(b);
+    const gilt = box(0.006, 0.027, 0.20 - i*0.015, M.goldPolish,
+      CX - 0.38 + (0.30 - i*0.02)/2, topY + 0.0175 + i*0.035, CZ + 0.02);
+    gilt.rotation.y = (i - 1)*0.12;
+    credenza.add(gilt);
+  });
+
+  /* a small gold knot on the books */
+  const knot = new THREE.Mesh(new THREE.TorusKnotGeometry(0.045, 0.016, 64, 10), M.goldPolish);
+  knot.position.set(CX - 0.38, topY + 0.105 + 0.05, CZ + 0.02);
+  credenza.add(knot);
+
+  /* champagne, waiting in its gold bucket */
+  const bucket = new THREE.Mesh(turned([
+    [0.000,0.000],[0.062,0.000],[0.072,0.010],[0.082,0.120],[0.098,0.155],[0.092,0.162]
+  ], 30), M.gold);
+  bucket.position.set(CX + 0.78, topY, CZ + 0.02);
+  credenza.add(bucket);
+  const bottle = new THREE.Mesh(turned([
+    [0.000,0.000],[0.042,0.000],[0.046,0.020],[0.046,0.140],[0.030,0.185],
+    [0.015,0.210],[0.014,0.270]
+  ], 22), M.bottle);
+  bottle.position.set(CX + 0.78, topY + 0.06, CZ + 0.02);
+  bottle.rotation.z = 0.16;
+  credenza.add(bottle);
+  const foil = new THREE.Mesh(new THREE.CylinderGeometry(0.0155, 0.0165, 0.07, 14), M.goldPolish);
+  foil.position.set(CX + 0.78 - Math.sin(0.16)*0.245, topY + 0.06 + Math.cos(0.16)*0.245, CZ + 0.02);
+  foil.rotation.z = 0.16;
+  credenza.add(foil);
+
+  credenza.traverse(function(o){ if(o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
+  scene.add(credenza);
+  scene.add(contact(1.6, 0.24, CX - 0.6, CZ + 0.35));
+  scene.add(contact(1.6, 0.24, CX + 0.6, CZ + 0.35));
+})();
+
+/* ============================================================
+   8. THE CONSOLE — marble and gold under the big gold abstract
+   ============================================================ */
+const consoleG = new THREE.Group();
+(function(){
+  const NX = -SIDE_X + 0.24, NZ = -2.9;   /* against the left wall */
+  const NW = 1.5, ND = 0.36, NH = 0.80;
+
+  /* slim gold frame: legs and stretchers */
+  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(function(p){
+    consoleG.add(box(0.025, NH, 0.025, M.gold, NX + p[1]*(ND/2 - 0.02), NH/2, NZ + p[0]*(NW/2 - 0.02)));
+  });
+  consoleG.add(box(ND - 0.02, 0.02, 0.025, M.gold, NX, 0.14, NZ - NW/2 + 0.02));
+  consoleG.add(box(ND - 0.02, 0.02, 0.025, M.gold, NX, 0.14, NZ + NW/2 - 0.02));
+  consoleG.add(box(0.025, 0.02, NW - 0.06, M.gold, NX + ND/2 - 0.02, 0.14, NZ));
+  consoleG.add(box(0.025, 0.02, NW - 0.06, M.gold, NX - ND/2 + 0.02, 0.14, NZ));
+  /* marble top */
+  consoleG.add(box(ND + 0.04, 0.03, NW + 0.04, M.marble, NX, NH + 0.015, NZ));
+
+  const topY = NH + 0.03;
+
+  /* crystal decanter with a gold stopper */
+  const decanter = new THREE.Mesh(turned([
+    [0.000,0.000],[0.055,0.000],[0.068,0.020],[0.070,0.090],[0.040,0.130],
+    [0.016,0.150],[0.015,0.210],[0.020,0.218]
+  ], 12), M.crystal);
+  decanter.position.set(NX, topY, NZ - 0.35);
+  consoleG.add(decanter);
+  const stopper = new THREE.Mesh(new THREE.SphereGeometry(0.024, 12, 10), M.goldPolish);
+  stopper.position.set(NX, topY + 0.24, NZ - 0.35);
+  consoleG.add(stopper);
+
+  /* two cut tumblers beside it */
+  [-0.16, -0.05].forEach(function(dz, i){
+    const t = new THREE.Mesh(turned([
+      [0.030,0.000],[0.037,0.003],[0.033,0.010],[0.035,0.045],[0.041,0.090],[0.043,0.104]
+    ], 12), M.crystal);
+    t.position.set(NX + (i ? 0.08 : -0.02), topY, NZ + dz + 0.12);
+    consoleG.add(t);
+  });
+
+  /* a low gold tray under the glasses */
+  const tray = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.175, 0.012, 30), M.gold);
+  tray.position.set(NX, topY + 0.006, NZ - 0.08);
+  consoleG.add(tray);
+
+  /* a candlestick pair at the other end */
+  [0.34, 0.50].forEach(function(dz, i){
+    const stick = new THREE.Mesh(turned([
+      [0.000,0.000],[0.045,0.000],[0.048,0.010],[0.018,0.028],[0.013,0.16 + i*0.06],
+      [0.024,0.185 + i*0.06],[0.019,0.195 + i*0.06]
+    ], 20), M.gold);
+    stick.position.set(NX, topY, NZ + dz);
+    consoleG.add(stick);
+    const taper = new THREE.Mesh(new THREE.CylinderGeometry(0.010, 0.011, 0.20, 12), M.wax);
+    const tipY = topY + 0.295 + i*0.06;
+    taper.position.set(NX, tipY, NZ + dz);
+    consoleG.add(taper);
+    /* lit, like the pair on the table — flame and bloom only, the console
+       is far enough back that a light of its own would not be seen */
+    const cf = new THREE.Mesh(new THREE.SphereGeometry(0.014, 12, 10), M.flame);
+    cf.scale.set(1, 2.1, 1);
+    cf.position.set(NX, tipY + 0.12, NZ + dz);
+    cf.renderOrder = 4;
+    consoleG.add(cf);
+    const ch = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 10), M.flameHalo.clone());
+    ch.scale.set(1, 1.5, 1);
+    ch.position.copy(cf.position);
+    ch.renderOrder = 4;
+    consoleG.add(ch);
+    flames.push({flame:cf, halo:ch, light:null, phase:1.7 + i*2.6});
+  });
+
+  /* the big gold-on-ink abstract above, in a deep gold frame */
+  const art = new THREE.Group();
+  const artW = 1.7, artH = 1.22;
+  const outer = moulding(artW + 0.16, artH + 0.16, 0.08, 0.07, M.gold);
+  art.add(outer);
+  const liner = moulding(artW + 0.02, artH + 0.02, 0.03, 0.045, M.lacquer);
+  liner.position.z = 0.008;
+  art.add(liner);
+  const canvasM = new THREE.MeshStandardMaterial({map:tex(artCanvas()), roughness:0.85});
+  const face = new THREE.Mesh(new THREE.BoxGeometry(artW, artH, 0.03), canvasM);
+  face.position.z = -0.005;
+  art.add(face);
+  art.rotation.y = Math.PI/2;
+  art.position.set(-SIDE_X + 0.13, 1.85, NZ);
+  consoleG.add(art);
+
+  consoleG.traverse(function(o){ if(o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
+  scene.add(consoleG);
+  scene.add(contact(1.5, 0.22, NX + 0.2, NZ));
+})();
+
+/* a fiddle-leaf fig in a stone pot fills the back-left corner — real leaves on
+   real stems, because the old ball-of-foliage tree read as topiary, not a plant */
+
+/* one blade: a violin-waisted outline, cupped across its width and nodding at
+   the tip, with UVs rebuilt so the vein texture actually lands on it */
+function figLeafGeo(L, W){
+  const s = new THREE.Shape();
+  s.moveTo(0,0);
+  s.bezierCurveTo( W*0.30, L*0.10,  W*0.36, L*0.28,  W*0.24, L*0.44);
+  s.bezierCurveTo( W*0.14, L*0.56,  W*0.58, L*0.68,  W*0.42, L*0.87);
+  s.bezierCurveTo( W*0.32, L*0.96,  W*0.14, L*1.00,  0,      L);
+  s.bezierCurveTo(-W*0.14, L*1.00, -W*0.32, L*0.96, -W*0.42, L*0.87);
+  s.bezierCurveTo(-W*0.58, L*0.68, -W*0.14, L*0.56, -W*0.24, L*0.44);
+  s.bezierCurveTo(-W*0.36, L*0.28, -W*0.30, L*0.10,  0,      0);
+  const g = new THREE.ShapeGeometry(s, 14);
+  const p = g.attributes.position, uv = g.attributes.uv;
+  for(let i=0;i<p.count;i++){
+    const x = p.getX(i), y = p.getY(i);
+    const t = THREE.MathUtils.clamp(y/L, 0, 1);
+    p.setZ(i, -(x*x)*2.2 - t*t*L*0.16);
+    uv.setXY(i, x/(W*0.95) + 0.5, t);
+  }
+  p.needsUpdate = true; uv.needsUpdate = true;
+  g.computeVertexNormals();
+  return g;
+}
+
+(function(){
+  const px = -SIDE_X + 1.05, pz = BACK_Z + 1.05;
+  const POT_H = 0.44;
+
+  /* matte stone planter, one gold line at the lip to keep it in the room */
+  const pot = new THREE.Mesh(turned([
+    [0.000,0.000],[0.168,0.000],[0.188,0.026],[0.232,0.230],[0.250,0.410],[0.246,0.440]
+  ], 34), M.pot);
+  pot.position.set(px, 0, pz);
+  pot.castShadow = true; pot.receiveShadow = true;
+  scene.add(pot);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.249, 0.009, 10, 42), M.gold);
+  rim.rotation.x = Math.PI/2;
+  rim.position.set(px, POT_H - 0.014, pz);
+  scene.add(rim);
+
+  /* soil, dressed with the same black stones as the centrepiece */
+  const soil = new THREE.Mesh(new THREE.CylinderGeometry(0.236, 0.236, 0.02, 32), M.soil);
+  soil.position.set(px, POT_H - 0.032, pz);
+  soil.receiveShadow = true;
+  scene.add(soil);
+  for(let i=0;i<16;i++){
+    const a = Math.random()*Math.PI*2, rr = 0.205*Math.sqrt(Math.random());
+    const st = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 6), M.pebble);
+    st.position.set(px + Math.cos(a)*rr, POT_H - 0.024, pz + Math.sin(a)*rr);
+    st.scale.set(0.85, 0.34, 0.68);
+    st.rotation.y = Math.random()*3;
+    scene.add(st);
+  }
+
+  const LEAF_BIG = figLeafGeo(0.42, 0.29);
+  const LEAF_SML = figLeafGeo(0.30, 0.21);
+
+  /* three stems of different heights, each leaning its own way */
+  [{lx: 0.20, lz: 0.12, h:1.66, n:11},
+   {lx:-0.17, lz: 0.24, h:1.30, n:9},
+   {lx: 0.07, lz:-0.25, h:1.02, n:6}].forEach(function(tr, ti){
+    const pts = [];
+    for(let i=0;i<=4;i++){
+      const t = i/4;
+      pts.push(new THREE.Vector3(px + tr.lx*t*t, POT_H - 0.07 + tr.h*t, pz + tr.lz*t*t));
+    }
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const stem = new THREE.Mesh(new THREE.TubeGeometry(curve, 18, 0.021, 7, false), M.bark);
+    stem.castShadow = true;
+    scene.add(stem);
+
+    for(let i=0;i<tr.n;i++){
+      const t = 0.22 + (i/(tr.n - 1))*0.76;
+      const holder = new THREE.Group();
+      holder.position.copy(curve.getPoint(t));
+      holder.rotation.y = i*2.399 + ti*1.1;          /* golden angle, so nothing stacks */
+
+      const pet = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.006, 0.12, 6), M.bark);
+      pet.position.set(0, 0.030, 0.050);
+      pet.rotation.x = 1.0;
+      holder.add(pet);
+
+      const leaf = new THREE.Mesh(t > 0.55 ? LEAF_BIG : LEAF_SML,
+                                  (i % 3 === 2) ? M.leafDk : M.leaf);
+      leaf.position.set(0, 0.062, 0.100);
+      leaf.rotation.x = 0.95 + Math.random()*0.45;   /* out from the stem, then nodding */
+      leaf.rotation.z = (Math.random() - 0.5)*0.55;
+      leaf.scale.setScalar(0.88 + Math.random()*0.34);
+      holder.add(leaf);
+
+      holder.traverse(function(o){ if(o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
+      scene.add(holder);
+    }
+  });
+
+  scene.add(contact(1.1, 0.26, px, pz));
+})();
+
+/* ============================================================
+   9. THE TABLE — gold and glass, laid for six, alone in the room
+   ============================================================ */
+const TABLE_TOP = 0.752;                 /* the glass surface everything sits on */
+
+/* the rug grounds the whole arrangement — near-black, gold border */
+const RUG_TOP = 0.024;
+(function(){
+  const rug = new THREE.Mesh(new THREE.BoxGeometry(4.0, RUG_TOP, 3.0),
+    [M.rug, M.rug, M.rug, M.rug, M.rug, M.rug]);
+  rug.position.set(TABLE.x, RUG_TOP/2, TABLE.z);
+  rug.receiveShadow = true;
+  scene.add(rug);
+})();
+
+const table = new THREE.Group();
+(function(){
+  const w = 2.0, d = 1.05;
+  /* gold frame just below the glass */
+  const railY = 0.705;
+  table.add(box(w - 0.16, 0.05, 0.05, M.gold, 0, railY,  d/2 - 0.09));
+  table.add(box(w - 0.16, 0.05, 0.05, M.gold, 0, railY, -d/2 + 0.09));
+  table.add(box(0.05, 0.05, d - 0.16, M.gold,  w/2 - 0.09, railY, 0));
+  table.add(box(0.05, 0.05, d - 0.16, M.gold, -w/2 + 0.09, railY, 0));
+  /* square gold legs */
+  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(function(p){
+    table.add(box(0.055, 0.70, 0.055, M.gold, p[0]*(w/2 - 0.11), 0.35, p[1]*(d/2 - 0.11)));
+    table.add(box(0.065, 0.012, 0.065, M.goldPolish, p[0]*(w/2 - 0.11), RUG_TOP + 0.006, p[1]*(d/2 - 0.11)));
+  });
+  /* the glass slab, overhanging the frame all round */
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(w, 0.016, d), M.glassTop);
+  glass.position.y = 0.744;
+  glass.castShadow = false; glass.receiveShadow = false;
+  table.add(glass);
+  /* its green-tinted edge, the tell of real float glass. The frame is sized
+     so its inner face lands just *outside* the slab: the old size put a 11mm
+     band of tinted edge inside the slab all the way round, two transparent
+     surfaces sharing the same space, which read as static crawling along the
+     table edge whenever the camera moved. It now touches, it does not overlap,
+     and it is a hair shallower so its cap never lands on the slab's. */
+  const EDGE_T = 0.012;
+  const edge = moulding(w + EDGE_T*2 + 0.0006, d + EDGE_T*2 + 0.0006, EDGE_T, 0.0148,
+    new THREE.MeshStandardMaterial({color:'#7fa596', roughness:0.2, transparent:true, opacity:0.7}));
+  edge.rotation.x = Math.PI/2;
+  edge.position.y = 0.744;
+  table.add(edge);
+  table.traverse(function(o){ if(o.isMesh && (o.material === M.gold || o.material === M.goldPolish)){ o.castShadow = true; o.receiveShadow = true; } });
+})();
+table.position.copy(TABLE);
+/* pressing the table brings you down onto one place setting at a time */
+table.userData.pick = {name:'Come to the table', exp:0};
+scene.add(table);
+[[-0.55,0],[0.55,0]].forEach(function(p){
+  const cs = contact(2.4, 0.26, TABLE.x + p[0], TABLE.z + p[1]);
+  cs.position.y = RUG_TOP + 0.008;
+  scene.add(cs);
+});
+
+/* ---- chairs: white leather over a gold frame ------------------ */
+function makeChair(){
+  const g = new THREE.Group();                 /* built facing +z */
+  /* slim gold legs, slightly splayed */
+  [[-0.185,-0.17,-1,-1],[0.185,-0.17,1,-1],[-0.185,0.17,-1,1],[0.185,0.17,1,1]].forEach(function(p){
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.011, 0.47, 12), M.gold);
+    leg.position.set(p[0], 0.235, p[1]);
+    leg.rotation.z = -p[2]*0.05;
+    leg.rotation.x =  p[3]*0.05;
+    g.add(leg);
+  });
+  /* white leather seat */
+  const seat = soft(0.44, 0.42, 0.075, 0.06, M.leather, 0, 0.49, 0);
+  seat.rotation.x = -Math.PI/2;
+  g.add(seat);
+  /* gold back posts — they run straight up the *back* of the chair, tucking
+     into the seat's rear edge and passing behind the leather, so nothing metal
+     ever crosses the face the sitter leans against */
+  [-0.165, 0.165].forEach(function(x){
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.013, 0.51, 12), M.gold);
+    post.position.set(x, 0.696, -0.222);
+    g.add(post);
+  });
+  /* the leather back panel, sitting flat against the face of the two posts */
+  const back = soft(0.42, 0.42, 0.05, 0.055, M.leather, 0, 0.885, -0.185);
+  g.add(back);
+  g.traverse(function(o){ if(o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
+  return g;
+}
+
+/* ---- one place setting ---------------------------------------- */
+/* the cutlery is cut from real silhouettes — extruded outlines with a
+   bevel, so every edge carries a highlight the way metal does */
+/* every flatware part is an outline extruded downward once it is laid flat, so
+   each one remembers how far it stands off the cloth. Without this the thin
+   pieces sank through the placemat and the shared surface flickered. */
+function thick(geo, depth, bevel){ geo.userData.stand = depth + bevel; return geo; }
+function handleGeo(len, w){
+  const s = new THREE.Shape();
+  s.moveTo(-w*0.45,0);
+  s.quadraticCurveTo(-w*0.62,-len*0.35, -w*0.30,-len*0.78);
+  s.quadraticCurveTo(-w*0.55,-len*0.90, -w*0.42,-len*0.97);
+  s.quadraticCurveTo(0,-len*1.05, w*0.42,-len*0.97);
+  s.quadraticCurveTo(w*0.55,-len*0.90, w*0.30,-len*0.78);
+  s.quadraticCurveTo(w*0.62,-len*0.35, w*0.45,0);
+  s.closePath();
+  return thick(new THREE.ExtrudeGeometry(s,{depth:0.0032, bevelEnabled:true,
+    bevelThickness:0.0011, bevelSize:0.0011, bevelSegments:2, curveSegments:8}), 0.0032, 0.0011);
+}
+function forkHeadGeo(){
+  const s = new THREE.Shape();
+  const top = 0.062;
+  /* the neck flares out of the handle rather than stepping off it — a fork
+     that changes width in one straight line reads as two parts glued together */
+  s.moveTo(-0.0074, -0.012);
+  s.quadraticCurveTo(-0.0150, 0.002, -0.0188, 0.026);
+  /* four narrow tines: 2.6 mm of metal with 6.8 mm of air between, so the head
+     reads as a fork rather than a paddle with slots cut in it. */
+  for(let i=0;i<4;i++){
+    const x0 = -0.0188 + i*0.0094 + 0.0034, x1 = x0 + 0.0026;
+    const tip = top - Math.abs(i-1.5)*0.0045;
+    s.lineTo(x0, 0.028);
+    s.quadraticCurveTo(x0 + 0.0001, tip - 0.006, x0 + 0.0005, tip);
+    s.quadraticCurveTo((x0+x1)/2, tip + 0.0010, x1 - 0.0005, tip);
+    s.quadraticCurveTo(x1 - 0.0001, tip - 0.006, x1, 0.028);
+  }
+  s.lineTo(0.0188, 0.026);
+  s.quadraticCurveTo(0.0150, 0.002, 0.0074, -0.012);
+  s.closePath();
+  return thick(new THREE.ExtrudeGeometry(s,{depth:0.0022, bevelEnabled:true,
+    bevelThickness:0.0008, bevelSize:0.0008, bevelSegments:2, curveSegments:6}), 0.0022, 0.0008);
+}
+/* the spoon's neck: the handle's width drawn out to the width of the bowl */
+function spoonNeckGeo(){
+  const s = new THREE.Shape();
+  s.moveTo(-0.0050, -0.010);
+  s.quadraticCurveTo(-0.0042, 0.008, -0.0075, 0.022);
+  s.lineTo(0.0075, 0.022);
+  s.quadraticCurveTo(0.0042, 0.008, 0.0050, -0.010);
+  s.closePath();
+  return thick(new THREE.ExtrudeGeometry(s,{depth:0.0016, bevelEnabled:true,
+    bevelThickness:0.0006, bevelSize:0.0006, bevelSegments:2, curveSegments:6}), 0.0016, 0.0006);
+}
+function bladeGeo(){
+  const s = new THREE.Shape();
+  s.moveTo(-0.0085, 0);
+  s.lineTo(-0.0092, 0.075);
+  s.quadraticCurveTo(-0.009, 0.112, -0.001, 0.120);
+  s.quadraticCurveTo(0.007, 0.112, 0.0082, 0.088);
+  s.lineTo(0.0085, 0);
+  s.closePath();
+  return thick(new THREE.ExtrudeGeometry(s,{depth:0.0016, bevelEnabled:true,
+    bevelThickness:0.0007, bevelSize:0.0007, bevelSegments:2, curveSegments:8}), 0.0016, 0.0007);
+}
+const FORK_HANDLE  = handleGeo(0.095, 0.016);
+const KNIFE_HANDLE = handleGeo(0.088, 0.019);
+const SPOON_HANDLE = handleGeo(0.094, 0.011);   /* slim, so the bowl carries the eye */
+const SPOON_NECK = spoonNeckGeo();
+const FORK_HEAD = forkHeadGeo();
+const BLADE = bladeGeo();
+
+function cutleryPiece(geos){        /* parts share one flat-lying rotation */
+  const g = new THREE.Group();
+  geos.forEach(function(gg){
+    const m = new THREE.Mesh(gg, M.goldPolish);
+    m.rotation.x = Math.PI/2;       /* shape +y now points at the table centre */
+    m.position.y = gg.userData.stand;   /* the extrusion hangs below: lift it clear */
+    m.castShadow = true;
+    g.add(m);
+  });
+  return g;
+}
+
+/* a cut-crystal tumbler — few lathe segments, flat-shaded, so it reads faceted */
+const tumblerGeo = turned([
+  [0.030,0.000],[0.037,0.003],[0.033,0.010],[0.035,0.045],[0.041,0.090],[0.043,0.104]
+], 12);
+/* and a wine glass with a gold lip */
+const wineGlassGeo = turned([
+  [0.033,0.000],[0.035,0.004],[0.030,0.007],[0.010,0.010],[0.006,0.013],
+  [0.005,0.100],[0.007,0.105],[0.020,0.112],[0.032,0.122],[0.040,0.140],
+  [0.043,0.165],[0.042,0.190],[0.040,0.205]
+], 64);
+
+const plateTopTex = tex(plateCanvas());
+const plateFaceMat = new THREE.MeshStandardMaterial({map:plateTopTex, roughness:0.25});
+
+/* the plate close-up is the tightest shot in the room, so the two discs it is
+   made of are cut fine enough that the silhouette reads as a circle rather
+   than a polygon. One geometry each, shared by all six settings. */
+const CHARGER_GEO = new THREE.CylinderGeometry(0.152, 0.138, 0.009, 160);
+const PLATE_GEO   = new THREE.CylinderGeometry(0.122, 0.106, 0.012, 160);
+
+function makeSetting(emp, ry){
+  const g = new THREE.Group();      /* +z points at the middle of the table */
+
+  /* the espresso woven placemat */
+  const mat = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.005, 0.28),
+    [M.matEdge, M.matEdge, M.mat, M.mat, M.matEdge, M.matEdge]);
+  mat.position.y = 0.0025;
+  mat.receiveShadow = true;
+  g.add(mat);
+
+  /* a gold charger under the gold-rimmed plate */
+  const charger = new THREE.Mesh(CHARGER_GEO, M.gold);
+  charger.position.y = 0.0075;
+  charger.castShadow = true;
+  g.add(charger);
+  const plate = new THREE.Mesh(PLATE_GEO, [M.china, plateFaceMat, M.china]);
+  plate.position.y = 0.018;
+  g.add(plate);
+
+  if(emp){
+    /* the employer's plate carries its logo, turned to read from the table view */
+    const holder = new THREE.Group();
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(0.085, 128),
+      new THREE.MeshStandardMaterial({map:logoTexture(emp), transparent:true, roughness:0.35}));
+    disc.rotation.x = -Math.PI/2;
+    holder.add(disc);
+    holder.rotation.y = Math.atan2(-FWD.x, -FWD.z) - (ry || 0);
+    holder.position.y = 0.0255;
+    g.add(holder);
+  } else {
+    /* the emerald velvet napkin, folded to a diamond, banded in gold */
+    const nap = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.008, 0.15), M.napkin);
+    nap.rotation.y = Math.PI/4;
+    nap.position.y = 0.028;
+    g.add(nap);
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.036, 0.005, 12, 64), M.goldPolish);
+    band.rotation.x = Math.PI/2;
+    band.position.y = 0.031;
+    g.add(band);
+  }
+
+  /* Gold flatware, laid the way a table is actually laid, and — since the
+     plate close-up is the tightest shot in the room — laid with real gaps.
+     The plate ends at 0.122; every piece keeps at least 1.4 cm of cloth from
+     it and from its neighbour, so nothing intersects anything. */
+  const CUT_Y = 0.0052;             /* just clear of the placemat's top face */
+
+  const fork = cutleryPiece([FORK_HANDLE, FORK_HEAD]);
+  fork.position.set(-0.156, CUT_Y, 0.012);
+  fork.rotation.y = 0.02;
+  g.add(fork);
+
+  const knife = cutleryPiece([KNIFE_HANDLE, BLADE]);
+  /* a bolster where the blade leaves the handle — the join a real knife has */
+  const bolster = new THREE.Mesh(new THREE.BoxGeometry(0.0176, 0.0046, 0.009), M.goldPolish);
+  bolster.position.set(0, 0.0023, 0.0015);
+  bolster.castShadow = true;
+  knife.add(bolster);
+  knife.position.set(0.148, CUT_Y, 0.012);
+  knife.rotation.y = -0.03;
+  g.add(knife);
+
+  const spoon = cutleryPiece([SPOON_HANDLE, SPOON_NECK]);
+  /* the bowl is a shell, not a blob: the lower half of a squashed sphere drawn
+     on both faces, so it is convex underneath and hollow from above, the way a
+     spoon catches light in two places at once. It is placed by its underside —
+     the cap hangs a full radius below its own centre, and centring it on the
+     handle is what drove it down through the table. */
+  /* 32 mm across, 46 mm nose to back, 7 mm deep, carried on a slim stem — the
+     contrast is what makes it read as a spoon. It clears the knife by 2 cm and
+     still sits inside the placemat. */
+  const BOWL_R = 0.0158, BOWL_DEEP = 0.45, BOWL_LONG = 1.45, BOWL_Z = 0.0425;
+  const bowl = new THREE.Mesh(
+    new THREE.SphereGeometry(BOWL_R, 32, 16, 0, Math.PI*2, Math.PI/2, Math.PI/2),
+    M.goldShell);
+  bowl.scale.set(1, BOWL_DEEP, BOWL_LONG);
+  bowl.position.set(0, BOWL_R*BOWL_DEEP + 0.0002, BOWL_Z);   /* rests on the cloth */
+  bowl.castShadow = true;
+  spoon.add(bowl);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(BOWL_R, 0.0008, 8, 48), M.goldPolish);
+  rim.rotation.x = Math.PI/2;
+  rim.scale.set(1, BOWL_LONG, 1);
+  rim.position.set(0, BOWL_R*BOWL_DEEP + 0.0002, BOWL_Z);
+  spoon.add(rim);
+  spoon.position.set(0.196, CUT_Y, 0.006);
+  spoon.rotation.y = -0.05;
+  g.add(spoon);
+
+  /* crystal: a faceted tumbler and a wine glass lipped in gold */
+  const tumbler = new THREE.Mesh(tumblerGeo, M.crystal);
+  tumbler.position.set(0.21, 0.005, 0.145);
+  g.add(tumbler);
+  const wine = new THREE.Mesh(wineGlassGeo, M.stemware);
+  wine.position.set(0.115, 0.005, 0.205);
+  g.add(wine);
+  const lip = new THREE.Mesh(new THREE.TorusGeometry(0.040, 0.0016, 8, 64), M.goldPolish);
+  lip.rotation.x = Math.PI/2;
+  lip.position.set(0.115, 0.210, 0.205);
+  g.add(lip);
+
+  g.traverse(function(o){ if(o.isMesh){ o.receiveShadow = true; } });
+  return g;
+}
+
+/* ---- the centrepiece: orchids over black stones --------------- */
+function makeCenterpiece(){
+  const g = new THREE.Group();
+
+  /* the big open glass vessel */
+  const vessel = new THREE.Mesh(turned([
+    [0.090,0.000],[0.130,0.020],[0.185,0.100],[0.195,0.180],
+    [0.176,0.260],[0.152,0.310],[0.148,0.328]
+  ], 40), M.vessel);
+  vessel.castShadow = false;
+  g.add(vessel);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.088, 0.092, 0.012, 32), M.vessel);
+  base.position.y = 0.006;
+  g.add(base);
+
+  /* black river stones, a few pale ones in the mix */
+  const pebGeo = new THREE.SphereGeometry(0.026, 10, 8);
+  const nP = 64;
+  const peb = new THREE.InstancedMesh(pebGeo, M.pebble, nP);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(),
+        v = new THREE.Vector3(), sc = new THREE.Vector3();
+  for(let i=0;i<nP;i++){
+    const rr = 0.145*Math.sqrt(Math.random());
+    const a = Math.random()*Math.PI*2;
+    v.set(Math.cos(a)*rr, 0.035 + Math.random()*0.075, Math.sin(a)*rr);
+    e.set(Math.random()*3, Math.random()*3, Math.random()*3);
+    q.setFromEuler(e);
+    sc.set(0.7 + Math.random()*0.6, 0.42 + Math.random()*0.25, 0.6 + Math.random()*0.5);
+    m4.compose(v, q, sc);
+    peb.setMatrixAt(i, m4);
+  }
+  g.add(peb);
+  for(let i=0;i<5;i++){
+    const p = new THREE.Mesh(pebGeo, M.pebbleLt);
+    const rr = 0.13*Math.sqrt(Math.random()), a = Math.random()*Math.PI*2;
+    p.position.set(Math.cos(a)*rr, 0.10 + Math.random()*0.02, Math.sin(a)*rr);
+    p.scale.set(0.8, 0.45, 0.7);
+    p.rotation.y = Math.random()*3;
+    g.add(p);
+  }
+
+  /* air plants: silvery rosettes riding on the stones */
+  function airPlant(x, z, r, mat){
+    const p = new THREE.Group();
+    const n = 12;
+    for(let i=0;i<n;i++){
+      const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.014, r*(0.7 + Math.random()*0.6), 6), mat);
+      leaf.geometry.translate(0, r*0.35, 0);
+      leaf.scale.z = 0.35;
+      leaf.rotation.x = -(0.55 + Math.random()*0.55);
+      const holder = new THREE.Group();
+      holder.rotation.y = i*(Math.PI*2/n) + Math.random()*0.4;
+      holder.add(leaf);
+      p.add(holder);
+    }
+    for(let i=0;i<4;i++){
+      const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.012, r*0.8, 6), mat);
+      leaf.geometry.translate(0, r*0.3, 0);
+      leaf.scale.z = 0.35;
+      leaf.rotation.x = -(Math.random()*0.35);
+      leaf.rotation.y = Math.random()*Math.PI*2;
+      p.add(leaf);
+    }
+    p.position.set(x, 0.115, z);
+    return p;
+  }
+  g.add(airPlant(-0.055, 0.02, 0.20, M.airplant2));   /* the big silvery one */
+  g.add(airPlant(0.075, -0.05, 0.14, M.airplant));
+  g.add(airPlant(0.045, 0.09, 0.11, M.airplant));
+
+  /* orchid stems arcing up out of the bowl */
+  const bloomPetalGeo = new THREE.SphereGeometry(0.017, 8, 6);
+  function bloom(mat){
+    const b = new THREE.Group();
+    for(let i=0;i<5;i++){
+      const petal = new THREE.Mesh(bloomPetalGeo, mat);
+      const a = i*Math.PI*2/5;
+      petal.position.set(Math.cos(a)*0.018, Math.sin(a)*0.018, 0);
+      petal.scale.set(1, 0.62, 0.28);
+      petal.rotation.z = a;
+      b.add(petal);
+    }
+    const heart = new THREE.Mesh(new THREE.SphereGeometry(0.007, 8, 6),
+      new THREE.MeshStandardMaterial({color:P.orchidHeart, roughness:0.7}));
+    heart.position.z = 0.006;
+    b.add(heart);
+    return b;
+  }
+  [[-0.16, 0.62, -0.4], [0.10, 0.72, 0.9], [0.05, 0.55, 2.4]].forEach(function(def, s){
+    const lean = def[0], top = def[1], yaw = def[2];
+    const mat = new THREE.MeshStandardMaterial({color:P.orchid[s % P.orchid.length], roughness:0.65});
+    const pts = [
+      new THREE.Vector3(0, 0.10, 0),
+      new THREE.Vector3(lean*0.35, top*0.5, 0),
+      new THREE.Vector3(lean*0.85, top*0.88, 0),
+      new THREE.Vector3(lean*1.25, top, 0)
+    ];
+    const holder = new THREE.Group();
+    holder.rotation.y = yaw;
+    const stemMesh = new THREE.Mesh(tube(pts, 0.0042, 20), M.stem);
+    stemMesh.castShadow = true;
+    holder.add(stemMesh);
+    const curve = new THREE.CatmullRomCurve3(pts);
+    for(let i=0;i<5;i++){
+      const t = 0.55 + i*0.11;
+      const pos = curve.getPoint(Math.min(t, 1));
+      const b = bloom(mat);
+      b.position.copy(pos);
+      b.position.x += 0.02 + (i%2)*0.015;
+      b.rotation.y = -0.6 + Math.random()*1.2;
+      b.rotation.x = (Math.random()-0.5)*0.6;
+      const k = 0.75 + (i/5)*0.4;
+      b.scale.setScalar(k);
+      holder.add(b);
+    }
+    /* one bud at the very tip */
+    const bud = new THREE.Mesh(new THREE.SphereGeometry(0.009, 8, 6), mat);
+    bud.position.copy(curve.getPoint(1));
+    bud.scale.set(1, 1.4, 1);
+    holder.add(bud);
+    g.add(holder);
+  });
+
+  g.traverse(function(o){ if(o.isMesh && o.material !== M.vessel){ o.receiveShadow = true; } });
+  return g;
+}
+
+const centre = makeCenterpiece();
+centre.position.set(TABLE.x, TABLE_TOP, TABLE.z);
+centre.userData.pick = table.userData.pick;   /* pressing the orchids is pressing the table */
+scene.add(centre);
+
+/* a pair of gold candlesticks flanking the centrepiece */
+[[-0.52, 0.10, 0], [0.52, -0.10, 1]].forEach(function(p){
+  const stick = new THREE.Mesh(turned([
+    [0.000,0.000],[0.042,0.000],[0.045,0.008],[0.016,0.024],[0.012,0.15 + p[2]*0.05],
+    [0.022,0.175 + p[2]*0.05],[0.017,0.185 + p[2]*0.05]
+  ], 20), M.gold);
+  stick.position.set(TABLE.x + p[0], TABLE_TOP, TABLE.z + p[1]);
+  stick.castShadow = true;
+  scene.add(stick);
+  const taper = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.010, 0.19, 12), M.wax);
+  const tipY = TABLE_TOP + 0.28 + p[2]*0.05;
+  taper.position.set(TABLE.x + p[0], tipY, TABLE.z + p[1]);
+  taper.castShadow = true;
+  scene.add(taper);
+
+  /* and lit — a teardrop of flame, a soft bloom around it, and the little
+     pool of light it actually throws onto the glass and the gold */
+  const fx = TABLE.x + p[0], fz = TABLE.z + p[1], fy = tipY + 0.115;
+  const flame = new THREE.Mesh(new THREE.SphereGeometry(0.014, 12, 10), M.flame);
+  flame.scale.set(1, 2.1, 1);
+  flame.position.set(fx, fy, fz);
+  flame.renderOrder = 4;
+  scene.add(flame);
+  const halo = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 10), M.flameHalo.clone());
+  halo.scale.set(1, 1.5, 1);
+  halo.position.set(fx, fy, fz);
+  halo.renderOrder = 4;
+  scene.add(halo);
+  const cl = new THREE.PointLight(0xffa843, 0.55, 2.6, 2);
+  cl.position.set(fx, fy, fz);
+  scene.add(cl);
+  /* candles are never still — a slow, uneven flicker, small enough to read
+     as a draught rather than a strobe */
+  flames.push({flame:flame, halo:halo, light:cl, phase:p[2]*2.1 + p[0]});
+});
+
+/* six chairs, six settings */
+const TW = 2.0, TD = 1.05;
+const chairDefs = [
+  {x:-0.52, z: TD/2 + 0.30, ry: Math.PI},        /* near side, backs to us */
+  {x: 0.52, z: TD/2 + 0.30, ry: Math.PI},
+  {x:-0.52, z:-TD/2 - 0.30, ry: 0},              /* far side */
+  {x: 0.52, z:-TD/2 - 0.30, ry: 0},
+  {x:-TW/2 - 0.12, z: 0, ry:  Math.PI/2},        /* the ends — drawn right up to the table */
+  {x: TW/2 + 0.12, z: 0, ry: -Math.PI/2}
+];
+const chairs = [];
+chairDefs.forEach(function(d){
+  const chair = makeChair();
+  chair.position.set(TABLE.x + d.x, RUG_TOP, TABLE.z + d.z);
+  chair.rotation.y = d.ry;
+  scene.add(chair);
+  chairs.push(chair);
+  const cs = contact(0.8, 0.20, chair.position.x, chair.position.z);
+  cs.position.y = RUG_TOP + 0.008;
+  scene.add(cs);
+});
+/* The four side mats run 0.44 across and 0.28 deep; the two end mats are the
+   same box turned a quarter, so their long side runs in z. Laid any closer in
+   than this the end mats reached under the side mats, and two coplanar mats
+   sharing a top face is z-fighting — the static the corners used to show. The
+   numbers below leave 1.5 cm of bare walnut between every pair. */
+const settingDefs = [
+  {x:-0.52, z: TD/2 - 0.15, ry: Math.PI},
+  {x: 0.52, z: TD/2 - 0.15, ry: Math.PI},
+  {x:-0.52, z:-TD/2 + 0.15, ry: 0},
+  {x: 0.52, z:-TD/2 + 0.15, ry: 0},
+  {x:-TW/2 + 0.22, z: 0, ry:  Math.PI/2},        /* their settings turned with them */
+  {x: TW/2 - 0.22, z: 0, ry: -Math.PI/2}
+];
+/* the employers take the seats that read best from the table camera:
+   the two ends first, then the far side, then the near side */
+const EXP_SEATS = [4, 5, 2, 3, 0, 1];
+const expAnchors = [], expDots = [], allSettings = [], bareSeats = [];
+const expEl = document.getElementById('exp');
+let selectedExp = 0;
+
+settingDefs.forEach(function(d, i){
+  const slot = EXP_SEATS.indexOf(i);
+  const emp = (slot > -1 && slot < EXPERIENCE.length) ? EXPERIENCE[slot] : null;
+  const s = makeSetting(emp, d.ry);
+  s.position.set(TABLE.x + d.x, TABLE_TOP + 0.0006, TABLE.z + d.z);
+  s.rotation.y = d.ry;
+  /* a setting that carries an employer takes you straight to that plate;
+     the bare ones are just pressing the table */
+  s.userData.pick = emp ? {name:emp.name, exp:slot} : table.userData.pick;
+  allSettings.push(s);
+  scene.add(s);
+  if(emp){
+    s.userData.exp = slot;
+    expAnchors[slot] = new THREE.Vector3(TABLE.x + d.x, TABLE_TOP + 0.02, TABLE.z + d.z);
+  } else {
+    bareSeats.push(i);
+  }
+});
+
+/* one dot per plate, in the order you move through them */
+const dotsEl = document.getElementById('expDots');
+EXPERIENCE.forEach(function(emp, k){
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.setAttribute('aria-label', emp.name);
+  b.addEventListener('click', function(){ selectEmployer(k); });
+  dotsEl.appendChild(b);
+  expDots[k] = b;
+});
+if(EXPERIENCE.length < 2) expEl.classList.add('solo');
+
+/* ============================================================
+   9c. THE PLACE CARD — the seat that is set for you
+   Five of the six settings belong to somewhere I have worked.
+   The sixth is the visitor's, and it is laid the same way: mat,
+   charger, napkin — and a folded card standing on the glass with
+   nothing written on it yet. Pressing it opens the ways to reach me.
+
+   The card is geometry because it has to look laid; the links are
+   DOM because a link has to be a link — a real href, a real target,
+   copyable, and a screen reader that can read it out.
+   ============================================================ */
+/* Which chair is free depends on how many employers are in EXPERIENCE, so the
+   seat is chosen rather than hard-coded — adding a job stays a one-line edit.
+   First choice is seat 0: the near-side chair on the far end of the table,
+   turned to face the back wall, so its back rail stands square to the door
+   camera with nothing in front of it — the badge that rides that rail is the
+   first thing the room offers, and sat inboard of the window end it keeps
+   clear of the curtain and the light coming off the glass. Then the rest;
+   employers claim seats in EXP_SEATS order, so seat 0 is a long way down the
+   list of seats anyone else would take. */
+const CARD_SEATS = [0, 2, 1, 3];
+const CARD_SEAT = CARD_SEATS.filter(function(i){ return bareSeats.indexOf(i) > -1; })[0];
+const placeCard = new THREE.Group();
+if(CARD_SEAT !== undefined) (function(){
+  const d = settingDefs[CARD_SEAT];
+
+  /* the printed face: cream stock, a gold rule, and a ruled line waiting for
+     a name. Drawn upside-down-safe — the tent folds away from the camera, so
+     this canvas only ever shows on the leaf that leans toward the room. */
+  function cardCanvas(){
+    const W = 360, H = 232, c = cvs(W, H), g = c.getContext('2d');
+    g.fillStyle = '#f7f2e6'; g.fillRect(0, 0, W, H);
+    blotch(g, W, H, '#f7f2e6', 22, 0.9, 0.22);
+    g.strokeStyle = '#c8a758'; g.lineWidth = 3;
+    g.strokeRect(13, 13, W - 26, H - 26);
+    g.strokeStyle = 'rgba(200,167,88,.55)'; g.lineWidth = 1.4;
+    g.strokeRect(21, 21, W - 42, H - 42);
+    g.fillStyle = '#6d6250';
+    g.font = 'italic 30px Georgia, "Times New Roman", serif';
+    g.textAlign = 'center';
+    g.fillText('reserved for', W/2, 84);
+    /* the blank line a name would be written on */
+    g.strokeStyle = 'rgba(90,80,62,.5)'; g.lineWidth = 2.2; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(W*0.20, 148); g.lineTo(W*0.80, 148); g.stroke();
+    g.fillStyle = '#9d9384';
+    g.font = '17px Georgia, "Times New Roman", serif';
+    g.fillText('you', W/2, 186);
+    speckle(g, W, H, 500, 0.05);
+    return c;
+  }
+  const faceMat = new THREE.MeshStandardMaterial({map:tex(cardCanvas()), roughness:0.86});
+  const backMat = new THREE.MeshStandardMaterial({color:'#f0e9d9', roughness:0.9,
+                                                  side:THREE.DoubleSide});
+
+  /* a tent card: two leaves hinged at the top, leaning apart just enough to
+     stand. The printed leaf faces the room; the blank one props it up. */
+  const CW = 0.145, CH = 0.098, LEAN = 0.20;
+  const front = new THREE.Mesh(new THREE.PlaneGeometry(CW, CH), faceMat);
+  front.position.set(0, CH*0.5*Math.cos(LEAN), CH*0.5*Math.sin(LEAN));
+  front.rotation.x = -LEAN;
+  front.castShadow = true;
+  placeCard.add(front);
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(CW, CH), backMat);
+  back.position.set(0, CH*0.5*Math.cos(LEAN), -CH*0.5*Math.sin(LEAN));
+  back.rotation.x = LEAN;
+  back.castShadow = true;
+  placeCard.add(back);
+
+  /* It stands past the plate, toward the middle of the table, so the charger
+     is not hiding it and it is not hiding the charger. `d.ry` places it —
+     the setting's own +z runs at the middle of the table — but the printed
+     leaf is then turned to face the way the room is actually looked at, the
+     same trick the employers' plate logos use to stay the right way up. */
+  placeCard.position.set(TABLE.x + d.x, TABLE_TOP + 0.0006, TABLE.z + d.z);
+  placeCard.rotation.y = d.ry;
+  placeCard.translateZ(0.215);
+  placeCard.rotation.y = Math.atan2(-FWD.x, -FWD.z);
+  placeCard.userData.pick = {name:'Ways to reach me', contact:true};
+  scene.add(placeCard);
+
+  /* one flat box over the card takes the press — two leaning planes are a
+     target you can miss between, and a 10 cm card seen across a room is
+     small enough already */
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(CW + 0.05, CH + 0.05, 0.11),
+    new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false}));
+  hit.position.y = CH*0.5;
+  hit.userData.pick = placeCard.userData.pick;
+  placeCard.add(hit);
+})();
+
+/* ---- the gold ring chandelier over the table ------------------ */
+/* It is on a switch, so everything it lights is gathered here: the point
+   light itself, the frosted globes, the warm cores inside them and the
+   halo sprites. Turning it off dims the glass instead of deleting it —
+   an unlit globe is still a globe. */
+const ringLamp = {light:null, globes:[], cores:[], halos:[], group:new THREE.Group()};
+const haloTex = tex(radialCanvas(0.62, 0.26));
+(function(){
+  const cx = TABLE.x, cz = TABLE.z, ringY = 2.14, ringR = 0.52;
+  const canopy = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.025, 20), M.gold);
+  canopy.position.set(cx, WALL_H - 0.013, cz);
+  ringLamp.group.add(canopy);
+  for(let i=0;i<3;i++){
+    const a = i*Math.PI*2/3 + 0.4;
+    const rod = new THREE.Mesh(tube([
+      new THREE.Vector3(cx + Math.cos(a)*0.05, WALL_H - 0.02, cz + Math.sin(a)*0.05),
+      new THREE.Vector3(cx + Math.cos(a)*ringR, ringY + 0.02, cz + Math.sin(a)*ringR)
+    ], 0.006, 8), M.gold);
+    ringLamp.group.add(rod);
+  }
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(ringR, 0.020, 12, 96), M.gold);
+  ring.rotation.x = Math.PI/2;
+  ring.position.set(cx, ringY, cz);
+  ring.castShadow = true;
+  ringLamp.group.add(ring);
+  /* six frosted globes riding the ring, warm cores inside */
+  for(let i=0;i<6;i++){
+    const a = i*Math.PI/3;
+    const above = (i % 2) === 0;
+    const gx = cx + Math.cos(a)*ringR, gz = cz + Math.sin(a)*ringR;
+    const gy = ringY + (above ? 0.075 : -0.075);
+    const globe = new THREE.Mesh(new THREE.SphereGeometry(0.055, 24, 18), M.frost.clone());
+    globe.position.set(gx, gy, gz);
+    ringLamp.group.add(globe);
+    ringLamp.globes.push(globe);
+    const core = new THREE.Mesh(new THREE.SphereGeometry(0.02, 14, 10), M.glowCore.clone());
+    core.position.set(gx, gy, gz);
+    ringLamp.group.add(core);
+    ringLamp.cores.push(core);
+    /* the bloom each globe throws — the part you actually read as "lit".
+       A sprite, not a sphere: a sphere's silhouette is a hard-edged disc,
+       and glow that ends on an edge reads as a decal. */
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+      map:haloTex, color:0xffb257, transparent:true, opacity:0.85,
+      fog:false, depthWrite:false, blending:THREE.AdditiveBlending}));
+    halo.scale.set(0.42, 0.42, 1);
+    halo.position.set(gx, gy, gz);
+    halo.renderOrder = 4;
+    ringLamp.group.add(halo);
+    ringLamp.halos.push(halo);
+  }
+  /* its warmth pooled over the glass and gold */
+  const warm = new THREE.PointLight(0xffb257, 1.55, 6.5, 2);
+  warm.position.set(cx, ringY - 0.1, cz);
+  ringLamp.group.add(warm);
+  ringLamp.light = warm;
+  /* the whole fixture is the switch — press it and the lights go out */
+  ringLamp.group.userData.pick = {name:'Turn the lights off', lamp:true};
+  scene.add(ringLamp.group);
+})();
+
+/* ---- the switch ----------------------------------------------- */
+/* Off is not black: the perimeter LED and the two candles carry the room,
+   which is the whole point of being able to turn this off. The ambient and
+   hemisphere levels ease down with it so the drop actually reads. */
+const LAMP_KEY = 'dining-ring-lamp';
+let lampOn = true, lampMix = 1;          /* mix is the eased value the loop uses */
+function setLamp(on, instant){
+  lampOn = on;
+  if(instant) lampMix = on ? 1 : 0;
+  ringLamp.group.userData.pick.name = on ? 'Turn the lights off' : 'Turn the lights on';
+  try{ localStorage.setItem(LAMP_KEY, on ? '1' : '0'); }catch(e){}
+}
+function toggleLamp(){ setLamp(!lampOn); }
+
+/* the two ends of the fade, so the loop only ever lerps between them */
+const CORE_ON   = new THREE.Color('#ffcf82'), CORE_OFF  = new THREE.Color('#3a3129');
+const GLOBE_ON  = new THREE.Color('#ffe9c6'), GLOBE_OFF = new THREE.Color('#cfc6b6');
+
+/* what the eased mix drives, once per frame */
+function paintLamp(){
+  const m = lampMix;
+  /* intensity only — hiding a light changes the light count, and three
+     recompiles every material in the room when that happens */
+  ringLamp.light.intensity = 1.55*m;
+  for(let i=0;i<ringLamp.cores.length;i++){
+    ringLamp.cores[i].material.color.copy(CORE_OFF).lerp(CORE_ON, m);
+    ringLamp.halos[i].material.opacity = 0.85*m;
+    ringLamp.halos[i].visible = m > 0.01;
+    const gm = ringLamp.globes[i].material;
+    gm.color.copy(GLOBE_OFF).lerp(GLOBE_ON, m);
+    gm.opacity = 0.62 + 0.18*m;
+  }
+  /* the room's own fill leans back a little with it, so the drop reads */
+  hemi.intensity = 0.13 + 0.07*m;
+  amb.intensity  = 0.10 + 0.04*m;
+}
+
+/* ============================================================
+   10. LIGHT — a low gold evening, lit from inside the room
+   ============================================================ */
+/* Almost none of the light in here comes from outside any more. The
+   perimeter LED, the ring over the table and two candles do the work;
+   everything below is only there to keep the shadows from going flat. */
+const hemi = new THREE.HemisphereLight(0xffcf96, 0x3a2c1e, 0.20);
+scene.add(hemi);
+
+/* an even wash of candle-warm so nothing reads as a black hole */
+const amb = new THREE.AmbientLight(0xffc487, 0.14);
+scene.add(amb);
+
+/* the last of the sun, raking in low through the window on the right */
+const sun = new THREE.DirectionalLight(0xffb163, 0.34);
+sun.position.set(11, 2.6, 2.2);
+sun.target.position.set(-3, 0.7, -2.5);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left = -12; sun.shadow.camera.right = 12;
+sun.shadow.camera.top = 12;   sun.shadow.camera.bottom = -8;
+sun.shadow.camera.near = 1;   sun.shadow.camera.far = 40;
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.02;   /* the plate close-up is 0.4 m out — without this the
+                                   shadow map's own texels speckle the placemat */
+sun.shadow.radius = 3;
+scene.add(sun); scene.add(sun.target);
+
+/* the faintest dusk bounce from the left — warm, or it fights the room */
+const fill = new THREE.DirectionalLight(0xc98f5a, 0.10);
+fill.position.set(-7, 4.5, 6);
+scene.add(fill);
+
+/* a warm, dim interior baked into an environment map, so the gold,
+   glass and lacquer have something honest to reflect */
+try{
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const env = new THREE.Scene();
+  env.add(new THREE.Mesh(new THREE.BoxGeometry(10,10,10),
+    new THREE.MeshBasicMaterial({color:0x40311f, side:THREE.BackSide})));
+  const win = new THREE.Mesh(new THREE.PlaneGeometry(4,3),
+    new THREE.MeshBasicMaterial({color:0xffc27a}));
+  win.rotation.y = -Math.PI/2; win.position.set(4.9, 1.5, 0);
+  env.add(win);
+  const dark = new THREE.Mesh(new THREE.PlaneGeometry(4,3),
+    new THREE.MeshBasicMaterial({color:0x1a1410}));
+  dark.position.set(0, 1.5, -4.9);
+  env.add(dark);
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(4,4),
+    new THREE.MeshBasicMaterial({color:0x141010}));   /* the ceiling reflects black now */
+  ceil.rotation.x = Math.PI/2; ceil.position.y = 4.9;
+  env.add(ceil);
+  scene.environment = pmrem.fromScene(env, 0.04).texture;
+  pmrem.dispose();
+  scene.traverse(function(o){
+    if(o.isMesh && o.material && o.material.isMeshStandardMaterial){
+      o.material.envMapIntensity = o.material.metalness > 0.5 ? 1.35 : 0.38;
+    }
+  });
+}catch(e){ /* the environment is a bonus, not a requirement */ }
+
+/* ============================================================
+   11. INTERACTION
+   ============================================================ */
+const dom = renderer.domElement;
+const pointer = new THREE.Vector2(0,0);
+const look = {x:0,y:0}, target = {x:0,y:0};
+let dolly = 0, dollyTarget = 0, yaw = 0, pitch = 0;
+let dragging = false, dragged = false, lastX = 0, lastY = 0, pressX = 0, pressY = 0;
+let swipe = 0, wheelAcc = 0, wheelLock = 0;   /* the gestures that change plate */
+
+const raycaster = new THREE.Raycaster();
+let hovered = null;
+/* the table — glass, centrepiece, settings and all — plus the place card
+   standing at the sixth setting */
+const clickable = [table, centre, ringLamp.group, placeCard].concat(allSettings);
+
+/* ---- the ways to reach me --------------------------------------
+   There is no server behind this house, so the card does not ask
+   for anything. It hands over the three ways through — mail,
+   GitHub, LinkedIn — the same three, in the same order, as the
+   written contact page, which stays the one that is correct. */
+const fmEl    = document.getElementById('contact');
+const fmClose = document.getElementById('fmClose');
+const fmWays  = document.getElementById('fmWays');
+let contactOpen = false;
+
+function openContact(){
+  if(contactOpen) return;
+  contactOpen = true;
+  fmEl.classList.add('open');
+  fmEl.setAttribute('aria-hidden', 'false');
+  /* the first way through takes focus, so a keyboard lands on a link
+     rather than on the button that puts the card back */
+  const first = fmWays.querySelector('a');
+  (first || fmClose).focus();
+}
+function closeContact(){
+  if(!contactOpen) return;
+  contactOpen = false;
+  fmEl.classList.remove('open');
+  fmEl.setAttribute('aria-hidden', 'true');
+}
+fmClose.addEventListener('click', closeContact);
+fmEl.addEventListener('click', function(e){ if(e.target === fmEl) closeContact(); });
+
+const walk = {state:'idle', t:0,
+              from:new THREE.Vector3(), to:new THREE.Vector3(),
+              lookFrom:new THREE.Vector3(), lookTo:new THREE.Vector3()};
+const restLook = LOOK_BASE.clone();
+const ORIGIN = HOME.clone();
+const atLook = new THREE.Vector3();
+const REDUCED = matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+/* ---- one plate at a time -------------------------------------- */
+/* the close-up stands back along the room's own view axis and looks down, so
+   the logo still reads the right way up, and close enough that a single plate
+   and the silver either side of it are the whole frame */
+const PLATE_R    = 0.158;   /* the gold charger — the widest thing on the mat */
+const PLATE_TILT = 0.80;    /* radians above the glass, a shade over 45° */
+const PLATE_FILL = 0.60;    /* how much of the tighter screen axis it takes */
+const PLATE_LIFT = 0.06;    /* aims a touch low, lifting the plate off the card */
+
+/* where the camera has to stand for this plate to fill the frame. A narrow
+   phone in portrait steps further back and looks down harder rather than
+   cropping the rim, so the framing survives any aspect */
+function plateView(i, pos, aim){
+  const a = expAnchors[i] || expAnchors[0];
+  if(!a) return;
+  const tilt  = THREE.MathUtils.clamp(PLATE_TILT + (1.25 - camera.aspect)*0.30, PLATE_TILT, 1.30);
+  const vHalf = THREE.MathUtils.degToRad(camera.fov)*0.5;
+  const hHalf = Math.atan(Math.tan(vHalf)*camera.aspect);
+  const d = Math.max(PLATE_R / (PLATE_FILL*Math.tan(hHalf)),
+                     PLATE_R*Math.sin(tilt) / (PLATE_FILL*Math.tan(vHalf)));
+  const back = Math.cos(tilt)*d;
+  pos.set(a.x - FWD.x*back, a.y + Math.sin(tilt)*d, a.z - FWD.z*back);
+  aim.set(a.x, a.y - PLATE_LIFT, a.z);
+}
+
+const expName  = document.getElementById('expName');
+const expRole  = document.getElementById('expRole');
+const expBlurb = document.getElementById('expBlurb');
+const expText  = document.getElementById('expText');
+const expCount = document.getElementById('expCount');
+let swapTimer = null;
+
+function paintCard(){
+  const e = EXPERIENCE[selectedExp];
+  if(!e) return;
+  expName.textContent  = e.name;
+  expRole.textContent  = e.dates ? (e.role + '  \u00b7  ' + e.dates) : e.role;
+  /* a blurb stays one paragraph; a list of points becomes a real <ul> so a
+     screen reader announces how many there are */
+  expBlurb.textContent = '';
+  if(e.points && e.points.length){
+    const ul = document.createElement('ul');
+    e.points.forEach(function(t){
+      const li = document.createElement('li');
+      li.textContent = t;
+      ul.appendChild(li);
+    });
+    expBlurb.appendChild(ul);
+  } else {
+    expBlurb.textContent = e.blurb || '';
+  }
+  expCount.textContent = (selectedExp + 1) + ' / ' + EXPERIENCE.length;
+  expDots.forEach(function(b, k){ b.classList.toggle('sel', k === selectedExp); });
+}
+
+/* choosing a plate is choosing where the camera stands */
+function selectEmployer(i, instant){
+  if(!expAnchors[i]) return;
+  const changed = i !== selectedExp;
+  selectedExp = i;
+  plateView(i, walk.to, walk.lookTo);
+  clearTimeout(swapTimer);
+  if(instant || REDUCED || !changed){
+    paintCard();
+    expText.classList.remove('swap');
+  } else {
+    /* the card swaps under the camera move rather than snapping with it */
+    expText.classList.add('swap');
+    swapTimer = setTimeout(function(){
+      paintCard();
+      expText.classList.remove('swap');
+    }, 180);
+  }
+}
+function stepEmployer(d){
+  const n = EXPERIENCE.length;
+  if(walk.state !== 'at' || n < 2) return;
+  selectEmployer((selectedExp + d + n) % n);
+}
+document.getElementById('expPrev').addEventListener('click', function(){ stepEmployer(-1); });
+document.getElementById('expNext').addEventListener('click', function(){ stepEmployer(1); });
+selectEmployer(0, true);
+
+function approachTo(pick){
+  if(!expAnchors.length) return;      /* no employers, nothing to come to */
+  const i = (pick && expAnchors[pick.exp]) ? pick.exp : 0;
+  selectEmployer(i, true);            /* which also fills walk.to / walk.lookTo */
+  walk.from.copy(camera.position);
+  walk.lookFrom.copy(restLook);
+  walk.t = 0; walk.state = 'in';
+  backBtn.classList.add('show');
+}
+function stepBack(){
+  if(walk.state !== 'at') return;
+  walk.from.copy(camera.position);
+  walk.to.copy(ORIGIN);
+  walk.lookFrom.copy(atLook);
+  walk.lookTo.copy(restLook);
+  walk.t = 0; walk.state = 'out';
+  backBtn.classList.remove('show');
+  expEl.classList.remove('show');
+  expEl.setAttribute('aria-hidden', 'true');
+  hovered = null;
+  dom.style.cursor = 'default';
+}
+backBtn.addEventListener('click', stepBack);
+
+dom.style.cursor = 'default';
+/* in the room `dragging` no longer turns anything — it only remembers that a
+   press is in flight. At the table it still carries the lateral swipe. */
+dom.addEventListener('pointerdown', function(e){
+  dragging = true; dragged = false; swipe = 0;
+  lastX = pressX = e.clientX; lastY = pressY = e.clientY;
+  if(dom.setPointerCapture) dom.setPointerCapture(e.pointerId);
+});
+dom.addEventListener('pointermove', function(e){
+  pointer.x =  (e.clientX/innerWidth)*2 - 1;
+  pointer.y = -(e.clientY/innerHeight)*2 + 1;
+  target.x = pointer.x; target.y = pointer.y;
+  if(dragging){
+    /* measured from where the press landed, not step to step, so a slow slide
+       still counts as a slide rather than a click */
+    if(Math.abs(e.clientX-pressX) + Math.abs(e.clientY-pressY) > 12) dragged = true;
+    if(walk.state === 'at'){
+      /* at the table the drag is lateral — it walks you along the settings.
+         It never turns the room; it steps between plates. */
+      swipe += e.clientX - lastX;
+      if(Math.abs(swipe) > 70){ stepEmployer(swipe < 0 ? 1 : -1); swipe = 0; }
+    }
+    /* out in the room a held press moves nothing — the cursor does the looking */
+    lastX = e.clientX; lastY = e.clientY;
+  }
+});
+function endDrag(){
+  if(!dragging) return;
+  dragging = false;
+  dom.style.cursor = hovered ? 'pointer' : 'default';
+  if(dragged) return;
+  if(walk.state === 'at'){
+    /* at the table a press is the way out, wherever it lands — the plate fills
+       the frame at this range, so anything narrower than "press to step back"
+       reads as a dead click. Dragging, scrolling and the arrows move you
+       between settings; pressing takes you back to the room. */
+    stepBack();
+    return;
+  }
+  if(hovered && walk.state === 'idle'){
+    const pick = hovered.userData.pick;
+    if(pick.lamp){ toggleLamp(); }
+    else if(pick.contact){ openContact(); }
+    else approachTo(pick);
+  }
+}
+dom.addEventListener('pointerup', endDrag);
+dom.addEventListener('pointercancel', endDrag);
+dom.addEventListener('wheel', function(e){
+  if(walk.state === 'at'){
+    /* one notch of scroll, one setting — held off until the glide has landed */
+    const now = performance.now();
+    if(now < wheelLock) return;
+    wheelAcc += e.deltaY;
+    if(Math.abs(wheelAcc) > 110){
+      stepEmployer(wheelAcc > 0 ? 1 : -1);
+      wheelAcc = 0; wheelLock = now + 460;
+    }
+    return;
+  }
+  if(walk.state !== 'idle') return;
+  dollyTarget = THREE.MathUtils.clamp(dollyTarget - e.deltaY*0.0024, -1.8, 2.3);
+}, {passive:true});
+
+function updateHover(){
+  if(contactOpen){ hovered = null; return; }
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObjects(clickable, true)[0];
+  let group = null;
+  if(hit){
+    let o = hit.object;
+    while(o && !o.userData.pick) o = o.parent;
+    group = o;
+  }
+  if(group !== hovered){
+    hovered = group;
+    dom.style.cursor = hovered ? 'pointer' : 'default';
+  }
+}
+
+/* at the table there is nothing left to pick — a press anywhere steps back —
+   so the frame does no raycasting at the range where fill rate is tightest.
+   The cursor is the whole affordance. */
+function updateHoverAt(){
+  if(!dragging) dom.style.cursor = 'zoom-out';
+}
+
+addEventListener('keydown', function(e){
+  if(contactOpen){
+    if(e.key === 'Escape') closeContact();
+    return;                       /* the arrows belong to the textarea now */
+  }
+  if(e.key === 'Escape'){ stepBack(); }
+  if(walk.state === 'at'){
+    if(e.key === 'ArrowLeft'){  e.preventDefault(); stepEmployer(-1); }
+    if(e.key === 'ArrowRight'){ e.preventDefault(); stepEmployer(1); }
+  }
+});
+
+/* ============================================================
+   11b. THE TAP BADGES
+   A baked room looks exactly as pressable as a photograph, and
+   the name tag only turns up once the cursor is already on the
+   thing. So each laid place and the ring lamp wear a small hand
+   badge, pinned in screen space — which doubles as the keyboard's
+   only route into a WebGL canvas.
+   ============================================================ */
+const hints = TapHints.init({
+  THREE: THREE, camera: camera,
+  /* once the walk to the table starts, or the card is open, the badges are
+     in the way */
+  enabled: function(){ return walk.state === 'idle' && !contactOpen; }
+});
+
+/* one badge per laid place — the bare settings are just table, and the
+   table already takes a press anywhere on it */
+/* one place, not four. The settings are all the same kind of thing, and
+   once you are at the table the arrows and a swipe walk you along the rest
+   — so the hand only marks the one the room opens on. */
+if(expAnchors[0]) hints.add({
+  kind: 'tap',
+  position: [expAnchors[0].x, expAnchors[0].y + 0.05, expAnchors[0].z],
+  /* the badge names the section, not the first employer on it — a visitor
+     who has never heard of the company cannot tell what pressing it does,
+     and the plate itself is already carrying the name */
+  label: 'Experience',
+  onActivate: function(){ approachTo({exp:0}); }
+});
+
+/* the ring itself, not the whole fitting — the group runs up to the canopy
+   at the ceiling, and its middle is a metre of empty rod */
+const lampRing = ringLamp.group.children.filter(function(c){
+  return c.geometry && c.geometry.type === 'TorusGeometry';
+})[0];
+/* under the ring, not over it. A badge above the fixture sits against the
+   dark ceiling with nothing behind it, and the visitor presses it looking at
+   the wrong half of the room. Below the globes it hangs in the light the
+   switch actually controls, so the change happens where the eye already is. */
+const lampHint = lampRing && hints.add({
+  object: lampRing, offset: [0, -0.24, 0],
+  label: 'Switch the lamp off',
+  onActivate: function(){ toggleLamp(); }
+});
+
+/* the sixth setting, the one nobody has been seated at. Its card is the way
+   to reach me, so it wears the pen.
+
+   The badge rides on the back of the empty chair, not over the card. Over
+   the card it sat inside the table's own press target, and a press that
+   missed the 29-pixel disc by a few pixels did not do nothing — it walked
+   the camera down onto the plates, into the experience section, which is a
+   long way from "ways to reach me" and takes a step back to undo. The
+   chair is not clickable, so a near-miss there costs nothing at all. The
+   badge also carries `roomy`, which widens what counts as a press well past
+   the drawn circle — the one badge in the house where being slightly off
+   ought to still work. */
+/* Which chair wears it used to depend on a seat being free, and with six
+   employers at a six-seat table there is none — so the badge quietly stopped
+   being added, and the room offered no way to write to me at all. It rides
+   seat 0 instead when the table is full: the near-side chair at the far end,
+   whose rail stands square to the door camera with nothing in front of it. */
+const HELLO_SEAT = (CARD_SEAT !== undefined) ? CARD_SEAT : 0;
+hints.add({
+  kind: 'write',
+  roomy: true,
+  object: chairs[HELLO_SEAT],
+  local: [0, 1.00, -0.16],          /* the top rail of the chair's back */
+  label: 'Say hello',
+  onActivate: function(){ openContact(); }
+});
+
+/* the badge, the room and the remembered setting are three handles on one
+   state, so the label is painted from that state in the loop */
+function paintHints(){
+  if(lampHint) lampHint.label(lampOn ? 'Switch the lamp off' : 'Switch the lamp on');
+}
+
+/* ============================================================
+   12. LOOP
+   ============================================================ */
+const lookAt = new THREE.Vector3();
+const clock = new THREE.Clock();
+
+function easeInOut(p){ return p < 0.5 ? 2*p*p : 1 - Math.pow(-2*p + 2, 2)/2; }
+
+function tick(){
+  requestAnimationFrame(tick);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.getElapsedTime();
+
+  /* the ring lights come up and go down rather than snapping */
+  const want = lampOn ? 1 : 0;
+  if(lampMix !== want){
+    lampMix = REDUCED ? want
+            : Math.abs(want - lampMix) < 0.004 ? want
+            : lampMix + (want - lampMix)*Math.min(1, dt*7);
+    paintLamp();
+  }
+
+  /* the candles breathe — two sine rates beaten against each other so the
+     flicker never finds a loop the eye can catch. Held still if the visitor
+     has asked for reduced motion; they stay lit, they just stop moving. */
+  if(!REDUCED){
+    for(let i=0;i<flames.length;i++){
+      const f = flames[i];
+      const n = Math.sin(t*8.3 + f.phase)*0.5 + Math.sin(t*3.1 + f.phase*2.3)*0.5;
+      f.flame.scale.set(1 + n*0.10, 2.1 + n*0.28, 1 + n*0.10);
+      f.halo.material.opacity = 0.22 + n*0.06;
+      if(f.light) f.light.intensity = 0.55 + n*0.14;
+    }
+  }
+
+  if(walk.state === 'in' || walk.state === 'out'){
+    walk.t = Math.min(1, walk.t + dt/1.5);
+    const e = easeInOut(walk.t);
+    camera.position.lerpVectors(walk.from, walk.to, e);
+    lookAt.lerpVectors(walk.lookFrom, walk.lookTo, e);
+    camera.lookAt(lookAt);
+    if(walk.t >= 1){
+      if(walk.state === 'out'){
+        walk.state = 'idle';
+        yaw = pitch = 0; dolly = dollyTarget = 0;
+        look.x = look.y = target.x = target.y = 0;
+      } else {
+        walk.state = 'at';
+        atLook.copy(walk.lookTo);
+        expEl.classList.add('show');
+        expEl.setAttribute('aria-hidden', 'false');
+      }
+    }
+  } else if(walk.state === 'at'){
+    /* the camera slides along the table to the chosen plate rather than cutting */
+    const k = REDUCED ? 1 : Math.min(1, dt*4.6);
+    camera.position.lerp(walk.to, k);
+    atLook.lerp(walk.lookTo, k);
+    camera.lookAt(atLook);
+    updateHoverAt();
+  } else {
+    const k = Math.min(1, dt*3.0);
+    look.x += (target.x - look.x)*k;
+    look.y += (target.y - look.y)*k;
+    dolly  += (dollyTarget - dolly)*Math.min(1, dt*3.2);
+    const strafe = look.x*0.30 + yaw*1.0;      /* a little parallax, in camera space */
+    const pan    = look.x*1.20 + yaw*7.5;      /* the aim does the turning */
+    camera.position.set(
+      HOME.x + RIGHT.x*strafe + FWD.x*dolly,
+      HOME.y + look.y*0.16 + pitch*2.0 + Math.sin(t*0.4)*0.012,
+      HOME.z + RIGHT.z*strafe + FWD.z*dolly
+    );
+    lookAt.set(
+      LOOK_BASE.x + RIGHT.x*pan,
+      LOOK_BASE.y + look.y*0.26 + pitch*1.5,
+      LOOK_BASE.z + RIGHT.z*pan
+    );
+    camera.lookAt(lookAt);
+    updateHover();
+  }
+
+  paintHints();
+  hints.update();
+
+  renderer.render(scene, camera);
+}
+tick();
+
+addEventListener('resize', function(){
+  renderer.setSize(innerWidth, innerHeight);
+  frameCamera();
+  /* the lens just changed, so how far back the plate wants the camera did too */
+  if(walk.state === 'in' || walk.state === 'at') plateView(selectedExp, walk.to, walk.lookTo);
+});
+
+/* a returning visitor gets the room the way they left it */
+let lampSaved = null;
+try{ lampSaved = localStorage.getItem(LAMP_KEY); }catch(e){}
+setLamp(lampSaved !== '0', true);
+paintLamp();
+
+/* Lift on a composited frame rather than on a guessed delay. Two rAFs
+   deep, so the first render has actually been painted and not merely
+   queued — the veil comes off a finished picture, never a half-built
+   one, and it comes off the instant that picture exists. */
+requestAnimationFrame(function(){ requestAnimationFrame(function(){
+  fadeEl.classList.add('hidden');
+}); });
+
+})();
+</script>
+<script src="house-nav.js"></script>
+</body>
+</html>

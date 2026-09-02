@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>In writing — Rand Halasa</title>
+<style>
+  :root{
+    --paper:#f4ede0;
+    --paper-edge:#dcd2bc;
+    --card:#fffdf9;
+    --ink:#1c1a17;
+    --ink-soft:#7c7263;
+    --accent:#33474a;
+    --shadow:0 8px 30px rgba(28,22,14,.14);
+    --radius:14px;
+    /* the rail and the column are sized from one place: the column is 720
+       wide, the rail 200, with 30 between them. Everything that has to line
+       up with the middle of the page is derived from these three. */
+    --col:720px;
+    --rail:224px;
+    --rail-gap:30px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{background:var(--paper)}
+  @media (prefers-reduced-motion:no-preference){
+    html{scroll-behavior:smooth}
+  }
+  body{
+    font-family:"Helvetica Neue",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+    color:var(--ink);-webkit-font-smoothing:antialiased;
+    line-height:1.65;
+  }
+  main{
+    max-width:var(--col);margin:0 auto;
+    padding:clamp(28px,6vw,72px) clamp(18px,5vw,32px) 140px;
+  }
+
+  header.masthead{margin-bottom:clamp(36px,7vw,64px)}
+  .kicker{
+    font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--ink-soft);margin-bottom:14px;
+  }
+  h1{
+    font-family:Georgia,"Times New Roman",serif;font-weight:600;
+    font-size:clamp(34px,6vw,52px);line-height:1.08;letter-spacing:.01em;
+  }
+  .lede{margin-top:18px;font-size:16.5px;color:#3c3730;max-width:58ch}
+
+  section{margin-top:clamp(44px,8vw,76px)}
+  .room-tag{
+    font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+  h2{
+    font-family:Georgia,"Times New Roman",serif;font-weight:600;
+    font-size:clamp(24px,4vw,32px);margin:6px 0 8px;
+  }
+  .section-note{color:#3c3730;font-size:15px;max-width:60ch;margin-bottom:26px}
+  hr.rule{border:0;height:1px;background:var(--paper-edge);margin:14px 0 26px}
+
+  article.entry{margin-bottom:28px}
+  /* a hairline between entries. With nine of them in a chapter the eye needs
+     somewhere to land between one and the next, and the rule is quieter than
+     the whitespace it would otherwise take to do the same job. */
+  article.entry + article.entry{
+    border-top:1px solid var(--paper-edge);padding-top:26px;
+  }
+  h3{
+    font-family:Georgia,"Times New Roman",serif;font-weight:600;
+    font-size:19px;margin-bottom:4px;
+  }
+  .entry .meta{font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-soft);margin-bottom:8px}
+  .entry p{font-size:15px;color:#3c3730;max-width:62ch}
+  .entry p + p{margin-top:11px}
+  .entry ul{margin:10px 0 0 19px;max-width:62ch}
+  .entry ul li{font-size:15px;color:#3c3730;margin-bottom:6px}
+  .entry .tech{margin-top:8px;font-size:13px;color:var(--accent)}
+  .entry .visit{display:inline-block;margin-top:10px;font-size:13.5px}
+
+  /* a jump from the rail has to clear whatever furniture is pinned at the
+     top, or the heading you asked for lands underneath it */
+  section[id],h3[id]{scroll-margin-top:24px}
+
+  ul.skills{
+    list-style:none;display:flex;flex-wrap:wrap;gap:10px;max-width:62ch;
+  }
+  ul.skills li{
+    background:var(--card);border:1px solid var(--paper-edge);
+    border-radius:999px;padding:8px 15px;font-size:13.5px;
+    box-shadow:0 2px 8px rgba(28,22,14,.06);
+  }
+
+  a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:3px}
+  a:hover{color:var(--ink)}
+  a:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:3px}
+
+  .card{
+    background:var(--card);border:1px solid var(--paper-edge);
+    border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:22px 26px;max-width:62ch;
+  }
+
+  footer.colophon{
+    margin-top:clamp(50px,9vw,84px);padding-top:22px;
+    border-top:1px solid var(--paper-edge);
+    font-size:13px;color:var(--ink-soft);max-width:62ch;
+  }
+
+  /* ============================================================
+     THE CHAPTERS RAIL
+     A table of contents that keeps up with the reader: the chapter
+     you are inside opens to show its own headings, every other one
+     stays a single line. Built from the page in script, so adding a
+     section or an entry adds its chapter without touching the nav.
+     Empty until then, and the page reads perfectly well without it.
+     ============================================================ */
+  #chapters{
+    font-size:15.5px;line-height:1.5;
+  }
+  #chapters:empty{display:none}
+  #chapters .ch-title{
+    font-size:12px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--ink-soft);margin-bottom:12px;
+  }
+  #chapters ol{list-style:none}
+  #chapters a{
+    display:block;text-decoration:none;color:var(--ink-soft);
+    padding:5px 0 5px 14px;border-left:2px solid var(--paper-edge);
+    transition:color .22s,border-color .22s;
+  }
+  #chapters a:hover{color:var(--ink)}
+  #chapters a:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:3px}
+  #chapters .ch-main > a{color:#3c3730}
+  #chapters .ch-main.active > a{
+    color:var(--ink);border-left-color:var(--ink);font-weight:600;
+  }
+
+  /* the sublist is laid out as a single grid row so it can be animated from
+     nothing to its own height without anyone having to guess that height.
+     `visibility` is what actually takes the collapsed links out of the tab
+     order and off the screen reader — opacity alone leaves them reachable. */
+  #chapters .ch-sub{
+    display:grid;grid-template-rows:0fr;opacity:0;visibility:hidden;
+    transition:grid-template-rows .32s ease,opacity .22s ease,visibility 0s linear .32s;
+  }
+  #chapters .ch-sub > ol{overflow:hidden;min-height:0}
+  #chapters .ch-main.active > .ch-sub{
+    grid-template-rows:1fr;opacity:1;visibility:visible;
+    transition-delay:0s,0s,0s;
+  }
+  #chapters .ch-sub a{
+    padding:4px 0 4px 26px;font-size:14px;border-left-color:transparent;
+  }
+  #chapters .ch-sub li.active > a{color:var(--ink);border-left-color:var(--paper-edge)}
+
+  /* --- wide: a fixed rail down the left of the column ---------- */
+  @media (min-width:1240px){
+    #chapters{
+      position:fixed;top:clamp(28px,6vw,72px);
+      left:calc(50% - var(--col)/2 - var(--rail-gap) - var(--rail));
+      width:var(--rail);
+      /* stops short of the room nav pinned along the bottom */
+      max-height:calc(100vh - 160px);overflow-y:auto;
+      scrollbar-width:none;
+    }
+    #chapters::-webkit-scrollbar{display:none}
+  }
+
+  /* --- narrow: a sticky strip of the main chapters only -------- */
+  @media (max-width:1239px){
+    #chapters{
+      position:sticky;top:0;z-index:30;
+      background:rgba(244,237,224,.92);
+      -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+      border-bottom:1px solid var(--paper-edge);
+      padding:9px clamp(18px,5vw,32px);
+    }
+    #chapters .ch-title{display:none}
+    #chapters > ol{
+      display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;
+      -webkit-overflow-scrolling:touch;
+    }
+    #chapters > ol::-webkit-scrollbar{display:none}
+    #chapters .ch-main{flex:0 0 auto}
+    #chapters .ch-main > a{
+      padding:7px 14px;border-left:0;border-radius:999px;white-space:nowrap;
+    }
+    #chapters .ch-main.active > a{background:var(--ink);color:var(--card)}
+    /* no room for the subchapters on a strip — the headings are a scroll away */
+    #chapters .ch-sub{display:none}
+    section[id],h3[id]{scroll-margin-top:64px}
+  }
+
+  #fade{position:fixed;inset:0;background:#f4ede0;z-index:90;
+        transition:opacity .8s ease;pointer-events:none}
+  #fade.hidden{opacity:0}
+  @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important}}
+</style>
+<!-- the whole house's pictures, started before anything else asks for them -->
+<script src="preload.js"></script>
+</head>
+<body>
+
+<nav id="chapters" aria-label="Chapters"></nav>
+
+<main>
+  <header class="masthead">
+    <p class="kicker">Rand &middot; portfolio</p>
+    <h1>The whole house, in writing</h1>
+    <p class="lede">Welcome. My name is Rand, and I&rsquo;m a software engineer.
+    This is everything the rooms show, laid out flat on one page &mdash; no
+    dragging, no doors, nothing to click. If you would rather wander and
+    discover the quirks of the place,
+    <a href="entrance.html">the entrance is this way</a>.</p>
+  </header>
+
+  <section id="about" aria-labelledby="about-h" data-chapter="About me">
+    <p class="room-tag">The kitchen</p>
+    <h2 id="about-h">About me</h2>
+    <hr class="rule" />
+    <p class="section-note">Software engineering graduate from the University of
+    Sydney, building full-stack sites end to end and tuning them to be found &mdash;
+    on Google and in AI assistants alike. The rest of me is on the fridge:</p>
+
+    <article class="entry">
+      <h3>Food</h3>
+      <p>I'm not the first to say it but I'll be one to emphasise it: food is amazing. The dopamine from a good bite, the smiles and laughter from good company, and the whole experience of sharing a delicious meal with the people you love is one of the greatest things. If I had to eat 3 cuisines for the rest of my life, I'll have to go with Arabic, Chinese, and Italian. But still, I'll struggle to live without K-BBQ, pho, sushi, and a juicy mushroom Swiss burger 🤤. Anyways, I'll stop now before I get hungry again…</p>
+    </article>
+
+    <article class="entry">
+      <h3>Karaz</h3>
+      <p>Let me introduce you to my dog, Karaz. Karaz is a proud pug with the confidence of a German Shepherd, audacity of a Chihuahua, and the stomach of a competitive eater. Take Karaz to an all-you-can-eat and she <i>will</i> all-you-can-eat. Put Karaz in front of a bigger dog and she will try to overtake them (underdog? I veto her proving the theory right). Tell Karaz not to go somewhere, and she will test your rule to the absolute limit. Nonetheless, all this comes with being a funny dog with a big personality and even bigger menacing tendencies.</p>
+    </article>
+
+    <article class="entry">
+      <h3>BodyPump</h3>
+      <p>I love challenging myself through fitness. In March 2025, my friend took me to my first ever Les Mills BodyPump class. I enjoyed going to the classes but was looking for more. Therefore, I signed up to become a certified BodyPump instructor in August and got my certification at the end of November. My journey to get certified introduced me to more than new choreography, music, and public speaking opportunities. Training 2+ hours a day for months taught me to keep going through my own self-doubt, and that no matter what, my squats can always <i>always</i> be deeper and my core more braced.</p>
+    </article>
+
+    <article class="entry">
+      <h3>Brisbane Marathon 2026</h3>
+      <p>After my BodyPump certification, I started looking for my next fitness challenge. In December, I watched a YouTube video of a girl running a marathon for the first time, which planted the seed that this could be something I attempt, too. I juggled the thought for a month, and in January, I bought my entry to the Brisbane Marathon 2026!</p>
+      <p>If getting a BodyPump certificate was difficult, then the marathon was a whole other beast. My average week for 6 months looked like this: running for 20 hours, working 3 days, attending university full time, and building my thesis project. Despite everything, the motto remained one foot in front of the other, and go go go! Running the marathon was a joy like no other. All the weeks of training, the nights of doubting if I'll even be able to finish, and the Strava updates were so worth it 🫶.</p>
+    </article>
+
+    <article class="entry">
+      <h3>Nature</h3>
+      <p>Nature is beautiful in its variety and diversity. I grew up in Jordan, where nature's beauty is displayed in the vast desert, the Dead Sea, the Red Sea, the greenery of the North and the history of Petra and Jerash. Coming to Australia, I was stunned by its endless greenery and generous bodies of water. It's fascinating how much your environment shapes your hobbies. Since coming here, I've been loving camping, swimming at the beach, and even fishing.</p>
+    </article>
+
+    <article class="entry">
+      <h3>Projects</h3>
+      <p>My brain races with thoughts day to day, and since I have an embarrassingly high screen time, a lot of them tend to revolve around digital solutions. It's hard to categorise my thoughts, but building a small prototype lets me explore them. Most of these projects never saw the light of day; an unfinished project here, a bad idea there, but they've all taught me something about validating an idea, coding, prompting, and tooling. Take this portfolio. I'd never touched 3D rendering before, and half of building it was learning what Three.js even does. Building keeps the momentum going too. It's one thing to read about 3D rendering, another to spend a weekend fighting with it. Finally, I love the feedback I receive from the people around me when I build, whether it's impressed comments or laughter.</p>
+    </article>
+
+    <article class="entry">
+      <h3>Claw machines</h3>
+      <p>Claw machines and I have a love-hate relationship. So far, I've won 5 plushies from a claw machine, but have attempted much more. The photo on the side is me, very defeated, a few attempts before winning the plushie in the photo. After reflection, I've realised what I like is the feeling of winning (who doesn't), and what keeps me coming back is being <i>so close</i> to getting what I want.</p>
+    </article>
+
+    <article class="entry">
+      <h3>Friends</h3>
+      <p>Building community wherever you go is so important, and I'm grateful to have a tight knit group of friends who transformed Sydney from another city on the map to a place I've been calling home for the past 4 years. We've gone through university together, nights out, lunches, brunches, and much more. It's always funny to hear someone say that my friends and I sound similar, as it attests to how close we are. They're driven, motivated, funny, kind, generous, and inspire me to be better everyday.</p>
+    </article>
+
+    <article class="entry">
+      <h3>Family</h3>
+      <p>If friends are family, then family is family². My family is massive, with roughly 50 cousins from my mom's side. Growing up with a large family means growing up with a lot of love, laughter, and a very strong sense of community and belonging. Some live in Jordan, some abroad; some I see often, some every few years. No matter the distance, though, I always know I have a community that has my back and always wants what's best for me because we grow together even when apart.</p>
+    </article>
+  </section>
+
+  <section id="skills" aria-labelledby="skills-h" data-chapter="Skills">
+    <p class="room-tag">The office</p>
+    <h2 id="skills-h">Skills</h2>
+    <hr class="rule" />
+    <p class="section-note">The same list the monitor in the office prints when
+    you run <code>./skills</code>, in the same order.</p>
+
+    <article class="entry">
+      <h3>AI &amp; LLM</h3>
+      <ul class="skills">
+        <li>Claude API · Claude Code</li>
+        <li>Ollama · Llama 3</li>
+        <li>Prompt engineering · agentic workflows</li>
+        <li>LLM output evaluation · model/bias evaluation</li>
+        <li>scikit-learn · PyTorch · TensorFlow</li>
+        <li>Computer vision · OpenCV · YOLOv8</li>
+      </ul>
+    </article>
+
+    <article class="entry">
+      <h3>Languages</h3>
+      <ul class="skills">
+        <li>TypeScript · JavaScript</li>
+        <li>Python · Java · C</li>
+      </ul>
+    </article>
+
+    <article class="entry">
+      <h3>Web</h3>
+      <ul class="skills">
+        <li>React · Next.js · Vue 3</li>
+        <li>Node · Express · FastAPI · Django</li>
+        <li>Spring Boot</li>
+        <li>Three.js · WebGL</li>
+        <li>Tailwind · CSS architecture</li>
+      </ul>
+    </article>
+
+    <article class="entry">
+      <h3>Data</h3>
+      <ul class="skills">
+        <li>PostgreSQL · MySQL · MongoDB</li>
+        <li>AWS · Cloudflare</li>
+      </ul>
+    </article>
+
+    <article class="entry">
+      <h3>Tooling</h3>
+      <ul class="skills">
+        <li>REST API design and integration</li>
+        <li>Browser automation</li>
+        <li>Git · Docker · Linux</li>
+        <li>Jenkins · CI/CD pipelines</li>
+        <li>pytest · JUnit · fuzzing</li>
+        <li>ClickUp</li>
+      </ul>
+    </article>
+
+    <article class="entry">
+      <h3>Search &amp; SEO</h3>
+      <ul class="skills">
+        <li>Apache Solr · Elasticsearch</li>
+        <li>Vectara · semantic search</li>
+        <li>Technical SEO · structured data</li>
+        <li>On-page/off-page SEO · site speed</li>
+      </ul>
+    </article>
+
+    <article class="entry">
+      <h3>APIs in production</h3>
+      <ul class="skills">
+        <li>Ahrefs · SE Ranking · Google Search Console</li>
+        <li>Apify · Dexscreener · CoinGecko</li>
+      </ul>
+    </article>
+
+    <article class="entry">
+      <h3>Spoken languages</h3>
+      <ul class="skills">
+        <li>English — native</li>
+        <li>Modern Standard Arabic — native</li>
+        <li>Shami Arabic — native</li>
+        <li>French — intermediate</li>
+        <li>Mandarin — beginner</li>
+      </ul>
+    </article>
+  </section>
+
+  <section id="experience" aria-labelledby="experience-h" data-chapter="Experience">
+    <p class="room-tag">The dining room</p>
+    <h2 id="experience-h">Experience</h2>
+    <hr class="rule" />
+    <p class="section-note">One place setting per employer, newest first.</p>
+
+    <article class="entry">
+      <h3>Junior Product Engineer</h3>
+      <p class="meta">Search It Local · Aug 2026 &ndash; Present</p>
+      <ul>
+        <li>Built and shipped a full-stack web application (React, Node.js,
+        PostgreSQL) that opened a new revenue stream of AUD $2,000 per client.</li>
+        <li>Partnered with process owners across SEO and sales teams to automate
+        manual workflows.</li>
+      </ul>
+    </article>
+
+    <article class="entry">
+      <h3>SEO Specialist</h3>
+      <p class="meta">Search It Local · Apr 2026 &ndash; Aug 2026</p>
+      <ul>
+        <li>Automated a recurring reporting process from 5 hours to 20 minutes,
+        returning over 80 hours to the team each month.</li>
+        <li>Built retrieval tooling across four SEO APIs serving 100 client
+        accounts, contributing to page-one Google rankings for 13 client sites.</li>
+      </ul>
+    </article>
+
+    <article class="entry">
+      <h3>Data Science &amp; AI Intern</h3>
+      <p class="meta">Arab Bank · Jan 2026 &ndash; Feb 2026</p>
+      <ul>
+        <li>Developed machine learning models and built GenAI agents with
+        tool-calling loops.</li>
+        <li>Built APIs, microservices and pipelines serving model outputs and
+        performance metrics, with analysis feeding business decisions.</li>
+      </ul>
+    </article>
+
+    <article class="entry">
+      <h3>Software Engineering Intern</h3>
+      <p class="meta">WinBoard · Aug 2024 &ndash; Nov 2024</p>
+      <ul>
+        <li>Built a real time computer vision pipeline in Python scoring ad
+        engagement from live and recorded footage.</li>
+        <li>Extracted dwell time, sentiment and demographics with YOLOv8 and
+        FairFace under GDPR compliant anonymisation.</li>
+      </ul>
+    </article>
+
+    <article class="entry">
+      <h3>AI Development Intern</h3>
+      <p class="meta">MobiSoft Mobility · Nov 2023 &ndash; Feb 2024</p>
+      <ul>
+        <li>Built AI tooling that automated customs tracking workflows for
+        government clients across the Middle East.</li>
+        <li>Integrated multilingual semantic search over item descriptions using
+        Apache Solr and Vectara indexes.</li>
+      </ul>
+    </article>
+
+    <article class="entry">
+      <h3>Programming Tutor</h3>
+      <p class="meta">Self-employed · Feb 2023 &ndash; March 2026</p>
+      <ul>
+        <li>Tutored university students one on one in Java and Python, working
+        through their coursework each week.</li>
+        <li>Lifted average assessment scores by roughly 20 percent across the
+        students tutored since 2023.</li>
+      </ul>
+    </article>
+  </section>
+
+  <section id="projects" aria-labelledby="projects-h" data-chapter="Projects">
+    <p class="room-tag">The living room</p>
+    <h2 id="projects-h">Projects</h2>
+    <hr class="rule" />
+    <p class="section-note">Every spread from the book on the living-room shelf,
+    in the order the book turns.</p>
+
+    <article class="entry">
+      <h3>Medical Chatbot Bias Analysis</h3>
+      <p class="meta">Honours thesis · University of Sydney · solo</p>
+      <p>Study of two deployed medical AI chatbots, Doctronic and Dr Khan,
+      tested for response bias across patient demographics. A browser-automation
+      pipeline collected 1,546 responses and 22,936 turn-level observations
+      across a 5×2×3×10×3 factorial design. Mixed-effects models, ML
+      classification at 0.999 macro-F1, trajectory modelling and PERMANOVA all
+      named chatbot identity as the driver.</p>
+      <p class="tech">Python · browser automation · mixed-effects models · scikit-learn · embeddings/PERMANOVA</p>
+      <a class="visit" href="https://github.com/raaannndddd/ELEC4713-Thesis-B" target="_blank" rel="noopener">Visit &#8599;</a>
+    </article>
+
+    <article class="entry">
+      <h3>Advertising Effectiveness Analysis</h3>
+      <p class="meta">Capstone · WITS Consulting · 13 weeks</p>
+      <p>Client capstone with a six-person Extreme Programming team over thirteen
+      weeks, measuring who actually looks at an advertisement. Owned the
+      computer-vision pipeline: Dlib face detection feeding a PyTorch ResNet that
+      classifies age and gender. Integrated live camera streaming into the React
+      frontend, then processed real client footage across 92 tracked
+      individuals.</p>
+      <p class="tech">Python · Dlib · PyTorch (ResNet) · React · live video streaming</p>
+      <a class="visit" href="https://drive.google.com/file/d/1Ofm27VoKBhMmX4QL8byoXmq000rmV_aB/view?usp=sharing" target="_blank" rel="noopener">Visit &#8599;</a>
+    </article>
+
+    <article class="entry">
+      <h3>Jordan Language Academy</h3>
+      <p class="meta">Freelance client · solo · paid</p>
+      <p>Rebuilt a Jordanian language academy's fifteen-year-old static site as a
+      modern deployed product for a paying client. Sole developer across the full
+      scope: information architecture, UX, front-end build, technical SEO and
+      on-page optimisation. Shipped a live site structured to rank for local
+      course searches and to be maintained by a non-technical owner.</p>
+      <p class="tech">Full-stack build · technical SEO · IA &amp; UX</p>
+      <a class="visit" href="https://jla-website-green.vercel.app/" target="_blank" rel="noopener">Visit &#8599;</a>
+    </article>
+
+    <article class="entry">
+      <h3>ChartChat</h3>
+      <p class="meta">Chrome extension · solo</p>
+      <p>Chrome extension built on Next.js that layers a real-time chat assistant
+      over live crypto market data. Socket.io carries the conversation,
+      Dexscreener and CoinGecko supply pricing and token data, and a locally run
+      Ollama model generates the answers, with Google Sign-In on the door. Built
+      solo, from packaging to model integration.</p>
+      <p class="tech">Next.js · Chrome extension · Socket.io · Ollama · Dexscreener / CoinGecko APIs</p>
+      <a class="visit" href="https://github.com/raaannndddd/AxiomChat" target="_blank" rel="noopener">Visit &#8599;</a>
+    </article>
+
+    <article class="entry">
+      <h3>VolumeControl</h3>
+      <p class="meta">Personal project · solo · workshop demo</p>
+      <p>Gesture-controlled system volume tool for macOS. OpenCV captures webcam
+      frames and MediaPipe tracks hand landmarks, mapping the pinch distance
+      between thumb and index finger to system volume in real time. Taught the
+      build as a two-hour hands-on workshop to more than 30 attendees as a
+      practical introduction to computer vision.</p>
+      <p class="tech">Python · OpenCV · MediaPipe · real-time CV</p>
+      <a class="visit" href="https://github.com/raaannndddd/VolumeControl" target="_blank" rel="noopener">Visit &#8599;</a>
+    </article>
+
+    <p class="section-note" style="margin:26px 0 0">For more projects, check out
+    my <a href="https://github.com/raaannndddd" target="_blank" rel="noopener">GitHub</a>.</p>
+  </section>
+
+  <section id="education" aria-labelledby="education-h" data-chapter="Education">
+    <p class="room-tag">The bedroom</p>
+    <h2 id="education-h">Education</h2>
+    <hr class="rule" />
+    <p class="section-note">The two certificates framed above the bedhead.</p>
+
+    <article class="entry">
+      <h3>University of Sydney</h3>
+      <p class="meta">August 2022 &ndash; June 2026</p>
+      <p>Bachelor of Engineering (Software).</p>
+      <p>Graduation project: Evaluating Bias and Fairness in AI-Powered Medical
+      Chatbots.</p>
+    </article>
+
+    <article class="entry">
+      <h3>King&rsquo;s Academy, Madaba</h3>
+      <p class="meta">Graduated 2022</p>
+      <p>High school, in Jordan.</p>
+    </article>
+  </section>
+
+  <section id="contact" aria-labelledby="contact-h">
+    <p class="room-tag">The dining room</p>
+    <h2 id="contact-h">Contact</h2>
+    <hr class="rule" />
+    <div class="card">
+      <p>The seat across from me is set for you. Work, a project, or a strong
+      opinion on coffee &mdash; I would genuinely like to hear it.</p>
+      <ul style="list-style:none;margin-top:16px">
+        <li style="margin-bottom:12px">
+          <a href="mailto:hello@randhalasa.com">hello@randhalasa.com</a><br />
+          <span style="font-size:13.5px;color:var(--ink-soft)">The house
+          special. Comes with a reply, usually inside a day.</span>
+        </li>
+        <li style="margin-bottom:12px">
+          <a href="https://github.com/raaannndddd" rel="me">github.com/raaannndddd</a><br />
+          <span style="font-size:13.5px;color:var(--ink-soft)">Everything I have
+          actually built, served plain and unseasoned.</span>
+        </li>
+        <li>
+          <a href="https://linkedin.com/in/randhalasa" rel="me">linkedin.com/in/randhalasa</a><br />
+          <span style="font-size:13.5px;color:var(--ink-soft)">The formal
+          version, for the people who need one.</span>
+        </li>
+      </ul>
+      <p style="margin-top:16px;font-size:14px">The
+      <a href="contact.html">contact page</a> has the same list, flat.</p>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <p>This page is the whole tour in plain text. The rooms show the same
+    things, with more furniture.</p>
+  </footer>
+</main>
+
+<div id="fade"></div>
+<script>
+  setTimeout(function(){ document.getElementById('fade').classList.add('hidden'); }, 220);
+</script>
+
+<script>
+/* ============================================================
+   THE CHAPTERS RAIL
+   Read the page, build the contents, then keep the open chapter
+   matched to whatever is under the reading line. A section only
+   becomes a chapter by carrying data-chapter, so the closing
+   Contact block stays out of the list — and scrolling into it
+   closes the last chapter rather than leaving it stuck open.
+   ============================================================ */
+(function(){
+"use strict";
+
+var nav = document.getElementById('chapters');
+var sections = [].slice.call(document.querySelectorAll('main > section'));
+if(!nav || !sections.length) return;
+
+function slug(text){
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+/* ---- build ---------------------------------------------------- */
+var used = {}, chapters = [], list = document.createElement('ol');
+
+var title = document.createElement('p');
+title.className = 'ch-title';
+title.textContent = 'Chapters';
+nav.appendChild(title);
+
+sections.forEach(function(section){
+  var name = section.getAttribute('data-chapter');
+  var chapter = {section:section, item:null, link:null, subs:[]};
+  chapters.push(chapter);
+  if(!name) return;                     /* a section, but not a chapter */
+
+  var item = document.createElement('li');
+  item.className = 'ch-main';
+  var link = document.createElement('a');
+  link.href = '#' + section.id;
+  link.textContent = name;
+  item.appendChild(link);
+  chapter.item = item;
+  chapter.link = link;
+
+  /* the subchapters are the section's own headings — no second list to
+     keep in step with the page */
+  var heads = [].slice.call(section.querySelectorAll('h3'));
+  if(heads.length){
+    var wrap = document.createElement('div');
+    wrap.className = 'ch-sub';
+    var sub = document.createElement('ol');
+    heads.forEach(function(h){
+      if(!h.id){
+        var base = slug(h.textContent) || 'section';
+        var id = base, n = 2;
+        while(used[id] || document.getElementById(id)) id = base + '-' + (n++);
+        used[id] = 1;
+        h.id = id;
+      }
+      var li = document.createElement('li');
+      var a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      li.appendChild(a);
+      sub.appendChild(li);
+      chapter.subs.push({heading:h, item:li});
+    });
+    wrap.appendChild(sub);
+    item.appendChild(wrap);
+  }
+  list.appendChild(item);
+});
+nav.appendChild(list);
+
+/* ---- follow the reader ---------------------------------------- */
+/* the reading line sits a third of the way down the viewport: near enough to
+   the top that a chapter opens as its heading arrives, far enough down that
+   it does not flicker between two of them on a short scroll */
+function lineY(){ return window.pageYOffset + innerHeight*0.32; }
+function topOf(el){ return el.getBoundingClientRect().top + window.pageYOffset; }
+
+var open = null, current = null;
+
+/* scroll a box just far enough to show one of its own children, on whichever
+   axis that box actually scrolls — the wide rail scrolls down, the narrow
+   strip scrolls across, and the same call covers both */
+function reveal(box, item){
+  var b = box.getBoundingClientRect(), r = item.getBoundingClientRect();
+  if(box.scrollHeight > box.clientHeight){
+    if(r.top < b.top)         box.scrollTop -= (b.top - r.top) + 8;
+    else if(r.bottom > b.bottom) box.scrollTop += (r.bottom - b.bottom) + 8;
+  }
+  if(box.scrollWidth > box.clientWidth){
+    if(r.left < b.left)       box.scrollLeft -= (b.left - r.left) + 8;
+    else if(r.right > b.right)   box.scrollLeft += (r.right - b.right) + 8;
+  }
+}
+
+function paint(){
+  var y = lineY();
+
+  /* the chapter under the line: the last one that has started, and only
+     while the *next* section has not. Contact has no chapter, so its arrival
+     closes everything, which is what the collapsed state is for. */
+  var found = null;
+  for(var i=0;i<chapters.length;i++){
+    if(topOf(chapters[i].section) <= y) found = chapters[i];
+  }
+  if(found && !found.item) found = null;
+
+  if(found !== open){
+    if(open){
+      open.item.classList.remove('active');
+      open.link.removeAttribute('aria-current');
+    }
+    if(found){
+      found.item.classList.add('active');
+      found.link.setAttribute('aria-current', 'location');
+      /* the open chapter can sit outside the rail's own scroll: below the fold
+         on the wide rail, off to one side on the narrow strip. Nudged back by
+         hand rather than with scrollIntoView, which would happily scroll the
+         page too and fight whatever smooth scroll is already running. */
+      reveal(nav, found.item);
+      reveal(list, found.item);
+    }
+    open = found;
+  }
+
+  /* and the heading under the line inside it */
+  var sub = null;
+  if(open){
+    for(var j=0;j<open.subs.length;j++){
+      if(topOf(open.subs[j].heading) <= y) sub = open.subs[j];
+    }
+  }
+  if(sub !== current){
+    if(current) current.item.classList.remove('active');
+    if(sub) sub.item.classList.add('active');
+    current = sub;
+  }
+}
+
+var queued = false;
+function onScroll(){
+  if(queued) return;
+  queued = true;
+  requestAnimationFrame(function(){ queued = false; paint(); });
+}
+addEventListener('scroll', onScroll, {passive:true});
+addEventListener('resize', onScroll);
+paint();
+})();
+</script>
+
+<script src="house-nav.js"></script>
+</body>
+</html>

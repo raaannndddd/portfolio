@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Contact Me - Rand Halasa</title>
+<style>
+  :root{
+    --paper:#f4ede0;
+    --paper-edge:#21`qdcd2bc;
+    --card:#fffdf9;
+    --ink:#1c1a17;
+    --ink-soft:#7c7263;
+    --accent:#33474a;
+    --shadow:0 8px 30px rgba(28,22,14,.14);
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{background:var(--paper)}
+  body{
+    min-height:100svh;
+    display:grid;place-items:center;
+    font-family:"Helvetica Neue",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+    color:var(--ink);-webkit-font-smoothing:antialiased;
+    line-height:1.65;
+    padding:clamp(18px,5vw,40px);
+    padding-bottom:130px;
+  }
+
+  main{max-width:520px;width:100%}
+  .kicker{
+    font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--ink-soft);margin-bottom:14px;
+  }
+  h1{
+    font-family:Georgia,"Times New Roman",serif;font-weight:600;
+    font-size:clamp(32px,6vw,46px);line-height:1.1;
+  }
+  .lede{margin:16px 0 30px;font-size:16px;color:#3c3730}
+
+  .card{
+    background:var(--card);border:1px solid var(--paper-edge);
+    border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:10px;
+  }
+  .card a{
+    display:flex;align-items:center;gap:14px;
+    padding:16px 16px;border-radius:10px;
+    color:var(--ink);text-decoration:none;
+    transition:background .25s;
+  }
+  .card a:hover{background:rgba(28,26,23,.06)}
+  .card a:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
+  .card a + a{border-top:1px solid var(--paper-edge)}
+  .card svg{flex:none;color:var(--accent)}
+  .card .what{font-weight:600;font-size:15px}
+  .card .where{font-size:13px;color:var(--ink-soft)}
+
+  footer{
+    margin-top:26px;font-size:13px;color:var(--ink-soft);
+  }
+  footer a{color:var(--accent);text-underline-offset:3px}
+  footer a:hover{color:var(--ink)}
+
+  #fade{position:fixed;inset:0;background:#f4ede0;z-index:90;
+        transition:opacity .8s ease;pointer-events:none}
+  #fade.hidden{opacity:0}
+  @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important}}
+</style>
+<!-- the whole house's pictures, started before anything else asks for them -->
+<script src="preload.js"></script>
+</head>
+<body>
+
+<main>
+  <p class="kicker">Rand · say hello</p>
+  <h1>The seat across from me is set for you.</h1>
+  <p class="lede">Whether it is about work, a project, or a strong opinion on
+  coffee — I would genuinely like to hear it.</p>
+
+  <nav class="card" aria-label="Ways to reach me" id="ways">
+    <a href="https://github.com/raaannndddd" rel="me">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/>
+      </svg>
+      <span><span class="what">GitHub</span><br /><span class="where">github.com/raaannndddd</span></span>
+    </a>
+    <a href="https://linkedin.com/in/randhalasa" rel="me">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4V8h4v2a5 5 0 0 1 2-2z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/>
+      </svg>
+      <span><span class="what">LinkedIn</span><br /><span class="where">linkedin.com/in/randhalasa</span></span>
+    </a>
+  </nav>
+
+  <footer>
+    <p>Prefer the long version? <a href="writing.html">The whole house is in
+    writing</a> — or take <a href="entrance.html">the tour</a>.</p>
+  </footer>
+</main>
+
+<div id="fade"></div>
+<script>
+  /* Set this to your public email and a mail row appears at the top of the
+     card. Leave it empty and no email is shown at all. */
+  var EMAIL = 'hello@randhalasa.com';
+
+  if(EMAIL){
+    var ways = document.getElementById('ways');
+    var a = document.createElement('a');
+    a.href = 'mailto:' + EMAIL;
+    a.innerHTML =
+      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>' +
+      '<span><span class="what">Email</span><br /><span class="where"></span></span>';
+    a.querySelector('.where').textContent = EMAIL;
+    ways.insertBefore(a, ways.firstElementChild);
+  }
+
+  setTimeout(function(){ document.getElementById('fade').classList.add('hidden'); }, 220);
+</script>
+<script src="house-nav.js"></script>
+</body>
+</html>
