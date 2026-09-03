@@ -57,3 +57,4 @@ images/_originals/
 # committed by accident (162 MB of them); never again.
 cprof/
 cprofX/
+.vercel

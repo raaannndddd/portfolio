@@ -1,79 +1,140 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "",
+  "installCommand": "",
+  "outputDirectory": ".",
   "trailingSlash": false,
-
   "rewrites": [
-    { "source": "/", "destination": "/entrance.html" },
-    { "source": "/entrance", "destination": "/entrance.html" },
-    { "source": "/kitchen",  "destination": "/kitchen.html" },
-    { "source": "/living",   "destination": "/living.html" },
-    { "source": "/bedroom",  "destination": "/bedroom.html" },
-    { "source": "/office",   "destination": "/office.html" },
-    { "source": "/dining",   "destination": "/dining.html" },
-    { "source": "/writing",  "destination": "/writing.html" },
-    { "source": "/contact",  "destination": "/contact.html" },
-    { "source": "/cv",       "destination": "/CV/Rand_Halasa_Resume.pdf" }
+    {
+      "source": "/",
+      "destination": "/entrance.html"
+    },
+    {
+      "source": "/entrance",
+      "destination": "/entrance.html"
+    },
+    {
+      "source": "/kitchen",
+      "destination": "/kitchen.html"
+    },
+    {
+      "source": "/living",
+      "destination": "/living.html"
+    },
+    {
+      "source": "/bedroom",
+      "destination": "/bedroom.html"
+    },
+    {
+      "source": "/office",
+      "destination": "/office.html"
+    },
+    {
+      "source": "/dining",
+      "destination": "/dining.html"
+    },
+    {
+      "source": "/writing",
+      "destination": "/writing.html"
+    },
+    {
+      "source": "/contact",
+      "destination": "/contact.html"
+    },
+    {
+      "source": "/cv",
+      "destination": "/CV/Rand_Halasa_Resume.pdf"
+    }
   ],
-
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        }
       ]
     },
-
     {
       "source": "/:page(entrance|kitchen|living|bedroom|office|dining|writing|contact).html",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=604800" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, stale-while-revalidate=604800"
+        }
       ]
     },
     {
       "source": "/",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=604800" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, stale-while-revalidate=604800"
+        }
       ]
     },
-
     {
       "source": "/:script(preload|house-nav|tap-hints).js",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=604800" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, stale-while-revalidate=604800"
+        }
       ]
     },
     {
       "source": "/projects/projects.js",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=604800" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, stale-while-revalidate=604800"
+        }
       ]
     },
-
     {
       "source": "/vendor/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/images/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/projects/img/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
-
     {
       "source": "/CV/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=3600" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
       ]
     }
   ]
