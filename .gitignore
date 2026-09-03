@@ -52,3 +52,8 @@ Thumbs.db
 # Full-size originals of the room photographs. The served copies in
 # images/ are resized from these; keep these, but never ship them.
 images/_originals/
+
+# Chrome profile dumps from headless screenshot runs. These were once
+# committed by accident (162 MB of them); never again.
+cprof/
+cprofX/

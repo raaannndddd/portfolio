@@ -1,20 +1,13 @@
-# Accidentally committed Chrome profile dumps (~166 MB, nothing to serve)
-cprof
-cprofX
-
-# The previous Vite/React attempt. Kept in git, not deployed.
-old
-
-# Editor leftovers and local debug pages
-*.bak
-*.bak2
-*.bak3
-*.bak4
-*.bak5
-_dbgA.html
-_dbgB.html
-_probe.html
+# What never reaches the CDN.
+#
+# Everything the house actually serves lives at the repo root, so this
+# file is short by design: it names the few things that are here for
+# building the site rather than for showing it.
 
 .git
 claude.md
 scripts
+
+# Full-size room photographs. The resized copies in images/ are what
+# the rooms hang on their walls; these are the negatives.
+images/_originals
