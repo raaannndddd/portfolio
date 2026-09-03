@@ -150,30 +150,20 @@ var rest = mine.then(function(){
 /* ---- the CV --------------------------------------------------- */
 /* One PDF, ~90 KB, fetched on the same terms as the photographs: not
    in the way of the room you are looking at, but on the wire long
-   before anyone presses the CV button, so the preview opens on an
-   already-downloaded file rather than a spinner.
-
-   The blob is kept because the preview frame can be pointed straight
-   at it — no second request, no dependence on the disk cache still
-   holding the file by the time the button is pressed. The plain URL
-   stays the download and open-in-a-tab target, so what the visitor
-   saves has a real address and a real name. */
-var CV_URL = 'CV/Rand%20Halasa%20Resume.pdf';
-var cvBlobUrl = null;
+   before anyone presses the CV button. The nav link opens the file's
+   own address in a new tab, so all this has to do is leave a warm
+   cache entry behind for that tab to hit. */
+var CV_URL = 'CV/Rand_Halasa_Resume.pdf';
 
 var cvReady = mine.then(function(){
   return new Promise(function(resolve){
     function run(){
       fetch(CV_URL, {credentials:'same-origin'})
         .then(function(r){ return r.ok ? r.blob() : null; })
-        .then(function(b){
-          /* a wrong type here means a redirect or an error page dressed
-             as a 200 — better to fall back to the plain URL than to
-             hand the frame something that will not render */
-          if(b && b.type.indexOf('pdf') !== -1) cvBlobUrl = URL.createObjectURL(b);
-          resolve(cvBlobUrl);
-        })
-        .catch(function(){ resolve(null); });
+        /* the body has to be read for the response to be cached whole;
+           the blob itself is then of no further use to anyone */
+        .then(function(b){ resolve(!!b && b.type.indexOf('pdf') !== -1); })
+        .catch(function(){ resolve(false); });
     }
     if('requestIdleCallback' in window) requestIdleCallback(run, {timeout: 2500});
     else setTimeout(run, 600);
@@ -213,12 +203,11 @@ window.HOUSE_PRELOAD = {
      say) on the same terms as everything else */
   warm: warm,
 
-  /* the CV. `ready` resolves with a blob: URL for the preview frame,
-     or null if the fetch did not land — callers fall back to `url`. */
+  /* the CV. `ready` resolves true once the file is in the cache; `url`
+     is what to open, landed or not. */
   cv: {
     url: CV_URL,
-    ready: cvReady,
-    blobUrl: function(){ return cvBlobUrl; }
+    ready: cvReady
   },
 
   manifest: MANIFEST
