@@ -4,7 +4,6 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Rand Halasa</title>
-<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
@@ -236,6 +235,10 @@
   }
 
 </style>
+<!-- three.js is same-origin and immutable now, so this is a cache hit on
+     every room after the first. The hint just makes the parser ask for
+     it at the top of the document rather than fifty lines further down. -->
+<link rel="preload" as="script" href="vendor/three.r128.min.js">
 <!-- the whole house's pictures, started before anything else asks for them -->
 <script src="preload.js"></script>
 </head>
@@ -490,7 +493,7 @@ window.HouseBoot = {
 
 <div id="fade"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="vendor/three.r128.min.js"></script>
 <script>if(window.HouseBoot && window.THREE) HouseBoot.mark('three');</script>
 <script src="tap-hints.js"></script>
 <script>

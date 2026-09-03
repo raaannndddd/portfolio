@@ -3,7 +3,7 @@
      1. the room-to-room pill nav along the bottom
      2. the departure veil, so leaving a page fades into the
         colour the next page fades in from
-     3. idle prefetch of the other rooms
+     3. getting the next room ready before it is asked for
      4. the CV: a link beside Contact that opens the PDF in a tab
         of its own. The file is already fetched by preload.js, so
         the tab opens on a document rather than on a download.
@@ -154,18 +154,83 @@ addEventListener('pageshow', function(e){
   }
 });
 
-/* ---- idle prefetch of the other rooms ------------------------ */
-function prefetch(){
+/* ---- getting the next room ready before it is asked for ------- */
+/*
+   Every room is its own document with its own three.js scene, so a
+   click is a cold start: parse 130 KB of markup, hand three.js the
+   furniture, build it, paint it. Prefetching the file removes the
+   download from that list but leaves the build, which is the part
+   you actually feel.
+
+   Speculation rules remove both. Two rulesets, deliberately unequal:
+
+     prefetch   every other room, straight away. It is only the
+                document, it is ~30 KB over the wire, and it makes
+                even an unguessed click start from a warm cache.
+
+     prerender  the room under the cursor, and only that one. Chrome
+                loads it in a hidden tab: three.js runs, the scene is
+                built, the first frame is drawn — all before the
+                click. Activating it is a swap, not a load.
+
+   "moderate" is what keeps this honest. Prerendering all seven rooms
+   would mean seven WebGL contexts for six rooms nobody opened; on
+   hover it is at most a couple, for the ones a hand is already
+   moving towards.
+
+   Rooms need no changes to be safe here. The arrival veil lifts on a
+   composited frame, so it lifts inside the prerender and the room is
+   simply already up; audio is built on first tap, never on load.
+*/
+function speculate(){
+  /* someone paying for their bytes gets the cheap version */
+  var conn = navigator.connection;
+  if(conn && (conn.saveData || /(^|-)2g$/.test(conn.effectiveType || ''))) return;
+
+  var urls = [];
   PAGES.forEach(function(p){
-    if(!p.file || p.file === here) return;
-    var l = document.createElement('link');
-    l.rel = 'prefetch';
-    l.href = p.file;
-    document.head.appendChild(l);
+    if(p.file && p.file !== here) urls.push(p.file);
   });
+  if(!urls.length) return;
+
+  var supported = typeof HTMLScriptElement !== 'undefined' &&
+                  HTMLScriptElement.supports &&
+                  HTMLScriptElement.supports('speculationrules');
+
+  if(!supported){
+    /* Safari and Firefox: the download, at least */
+    urls.forEach(function(u){
+      var l = document.createElement('link');
+      l.rel = 'prefetch';
+      l.href = u;
+      document.head.appendChild(l);
+    });
+    return;
+  }
+
+  var s = document.createElement('script');
+  s.type = 'speculationrules';
+  s.textContent = JSON.stringify({
+    prefetch:  [{ source:'list', urls: urls, eagerness:'immediate' }],
+    prerender: [{ source:'list', urls: urls, eagerness:'moderate'  }]
+  });
+  document.head.appendChild(s);
 }
-if('requestIdleCallback' in window) requestIdleCallback(prefetch, {timeout:4000});
-else setTimeout(prefetch, 2500);
+function speculateWhenIdle(){
+  if('requestIdleCallback' in window) requestIdleCallback(speculate, {timeout:4000});
+  else setTimeout(speculate, 2500);
+}
+
+/* If this page is itself being prerendered, it has not been looked at
+   yet and has no cursor to follow — speculating from here would be
+   guessing on behalf of a visitor who has not arrived. Wait until the
+   room is actually activated, then behave normally. */
+if(document.prerendering){
+  document.addEventListener('prerenderingchange', speculateWhenIdle, {once:true});
+} else {
+  speculateWhenIdle();
+}
+
 /* the entrance's doors (and anything else) can use the same exit */
 window.HOUSE = { go: go, pages: PAGES, cv: CV_URL };
 

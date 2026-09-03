@@ -117,6 +117,10 @@
   }
   @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important}}
 </style>
+<!-- three.js is same-origin and immutable now, so this is a cache hit on
+     every room after the first. The hint just makes the parser ask for
+     it at the top of the document rather than fifty lines further down. -->
+<link rel="preload" as="script" href="vendor/three.r128.min.js">
 <!-- the whole house's pictures, started before anything else asks for them -->
 <script src="preload.js"></script>
 </head>
@@ -171,7 +175,7 @@
 
 <div id="fade"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="vendor/three.r128.min.js"></script>
 <script src="tap-hints.js"></script>
 <script>
 (function(){
