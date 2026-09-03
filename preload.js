@@ -147,6 +147,39 @@ var rest = mine.then(function(){
   });
 });
 
+/* ---- the CV --------------------------------------------------- */
+/* One PDF, ~90 KB, fetched on the same terms as the photographs: not
+   in the way of the room you are looking at, but on the wire long
+   before anyone presses the CV button, so the preview opens on an
+   already-downloaded file rather than a spinner.
+
+   The blob is kept because the preview frame can be pointed straight
+   at it — no second request, no dependence on the disk cache still
+   holding the file by the time the button is pressed. The plain URL
+   stays the download and open-in-a-tab target, so what the visitor
+   saves has a real address and a real name. */
+var CV_URL = 'CV/Rand%20Halasa%20Resume.pdf';
+var cvBlobUrl = null;
+
+var cvReady = mine.then(function(){
+  return new Promise(function(resolve){
+    function run(){
+      fetch(CV_URL, {credentials:'same-origin'})
+        .then(function(r){ return r.ok ? r.blob() : null; })
+        .then(function(b){
+          /* a wrong type here means a redirect or an error page dressed
+             as a 200 — better to fall back to the plain URL than to
+             hand the frame something that will not render */
+          if(b && b.type.indexOf('pdf') !== -1) cvBlobUrl = URL.createObjectURL(b);
+          resolve(cvBlobUrl);
+        })
+        .catch(function(){ resolve(null); });
+    }
+    if('requestIdleCallback' in window) requestIdleCallback(run, {timeout: 2500});
+    else setTimeout(run, 600);
+  });
+});
+
 /* ---- what the rooms use -------------------------------------- */
 window.HOUSE_PRELOAD = {
   /* the pictures this page needs, decoded. Rooms and loading
@@ -179,6 +212,14 @@ window.HOUSE_PRELOAD = {
   /* warm something not in the manifest (a picture built from data,
      say) on the same terms as everything else */
   warm: warm,
+
+  /* the CV. `ready` resolves with a blob: URL for the preview frame,
+     or null if the fetch did not land — callers fall back to `url`. */
+  cv: {
+    url: CV_URL,
+    ready: cvReady,
+    blobUrl: function(){ return cvBlobUrl; }
+  },
 
   manifest: MANIFEST
 };

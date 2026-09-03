@@ -1,0 +1,20 @@
+# Accidentally committed Chrome profile dumps (~166 MB, nothing to serve)
+cprof
+cprofX
+
+# The previous Vite/React attempt. Kept in git, not deployed.
+old
+
+# Editor leftovers and local debug pages
+*.bak
+*.bak2
+*.bak3
+*.bak4
+*.bak5
+_dbgA.html
+_dbgB.html
+_probe.html
+
+.git
+claude.md
+scripts

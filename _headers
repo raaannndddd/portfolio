@@ -19,3 +19,9 @@
 
 /*.html
   Cache-Control: public, max-age=0, must-revalidate
+
+# The CV is fetched on every page by the preloader so the preview opens on
+# a file that is already here. An hour is long enough that walking the house
+# never re-asks for it, short enough that a new CV is picked up the same day.
+/CV/*
+  Cache-Control: public, max-age=3600
