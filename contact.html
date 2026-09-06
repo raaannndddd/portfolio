@@ -3,11 +3,18 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<!-- If lite.js goes missing, every gated tag below still loads: the page
+     falls back to the way it behaved before there was a light path, rather
+     than throwing on the first call and taking the document with it. -->
+<script>window.only3D=function(html){document.write(html)}</script>
+<!-- decides, before anything is fetched, whether this visit gets the
+     house or the written version. Must stay the first script here. -->
+<script src="lite.js"></script>
 <title>Contact Me - Rand Halasa</title>
 <style>
   :root{
     --paper:#f4ede0;
-    --paper-edge:#21`qdcd2bc;
+    --paper-edge:#dcd2bc;
     --card:#fffdf9;
     --ink:#1c1a17;
     --ink-soft:#7c7263;
@@ -19,15 +26,19 @@
   html{background:var(--paper)}
   body{
     min-height:100svh;
-    display:grid;place-items:center;
+    display:flex;flex-direction:column;
     font-family:"Helvetica Neue",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
     color:var(--ink);-webkit-font-smoothing:antialiased;
     line-height:1.65;
+  }
+
+  /* auto margins on a flex child centre it on both axes, which leaves the
+     page padding on main where the notice bar can sit outside it */
+  main{
+    max-width:520px;width:100%;margin:auto;
     padding:clamp(18px,5vw,40px);
     padding-bottom:130px;
   }
-
-  main{max-width:520px;width:100%}
   .kicker{
     font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;
     color:var(--ink-soft);margin-bottom:14px;
@@ -62,15 +73,57 @@
   footer a{color:var(--accent);text-underline-offset:3px}
   footer a:hover{color:var(--ink)}
 
+
+  /* ============================================================
+     THE LIGHT PATH — see lite.js. On a phone this page and the
+     written one are the whole site, so the room nav is gone and
+     the space it was holding open goes back to the content.
+     ============================================================ */
+  .lite-notice{display:none}
+  html.lite:not(.notice-seen) .lite-notice{
+    display:flex;align-items:flex-start;gap:10px;
+    padding:11px clamp(18px,5vw,32px);
+    background:#ece2ce;border-bottom:1px solid var(--paper-edge);
+    font-size:13.5px;line-height:1.5;color:#3c3730;
+  }
+  .lite-notice p{flex:1;min-width:0}
+  .lite-notice a{color:var(--accent)}
+  .lite-notice a:hover{color:var(--ink)}
+  .lite-notice button{
+    flex:none;border:0;background:none;cursor:pointer;
+    font-size:19px;line-height:1;color:var(--ink-soft);
+    padding:2px 4px;margin:-2px -4px;border-radius:6px;font-family:inherit;
+  }
+  .lite-notice button:hover{color:var(--ink)}
+  .lite-notice button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+  html.lite main{padding-bottom:clamp(18px,5vw,40px)}
+
+  /* one narrow column has no room for a box around it; the hairlines
+     between the rows were doing the work anyway */
+  @media (max-width:600px){
+    .card{background:transparent;border:0;border-radius:0;box-shadow:none;padding:0}
+    .card a{padding:16px 0}
+  }
+
   #fade{position:fixed;inset:0;background:#f4ede0;z-index:90;
         transition:opacity .8s ease;pointer-events:none}
   #fade.hidden{opacity:0}
   @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important}}
 </style>
 <!-- the whole house's pictures, started before anything else asks for them -->
-<script src="preload.js"></script>
+<script>only3D('<script src="preload.js"><\/script>')</script>
 </head>
 <body>
+
+<!-- shown only on the light path; the rule above hides it outright on the
+     3D path, so a laptop never sees it flash. -->
+<div class="lite-notice" id="liteNotice">
+  <p>You&rsquo;re on the written site &mdash; everything is here.
+  The full version is a 3D house, which wants a laptop and a mouse.
+  <a href="entrance.html?tour=1">Open it anyway</a></p>
+  <button type="button" id="liteNoticeX" aria-label="Dismiss this notice">&times;</button>
+</div>
 
 <main>
   <p class="kicker">Rand · say hello</p>
@@ -91,11 +144,17 @@
       </svg>
       <span><span class="what">LinkedIn</span><br /><span class="where">linkedin.com/in/randhalasa</span></span>
     </a>
+    <a href="CV/Rand_Halasa_Resume.pdf" target="_blank" rel="noopener">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/>
+      </svg>
+      <span><span class="what">CV</span><br /><span class="where">One page, PDF, opens in a new tab</span></span>
+    </a>
   </nav>
 
   <footer>
     <p>Prefer the long version? <a href="writing.html">The whole house is in
-    writing</a>, or take <a href="entrance.html">the tour</a>.</p>
+    writing</a>.</p>
   </footer>
 </main>
 
@@ -119,6 +178,6 @@
 
   setTimeout(function(){ document.getElementById('fade').classList.add('hidden'); }, 220);
 </script>
-<script src="house-nav.js"></script>
+<script>only3D('<script src="house-nav.js"><\/script>')</script>
 </body>
 </html>

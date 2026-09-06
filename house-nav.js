@@ -14,6 +14,13 @@
 (function(){
 "use strict";
 
+/* On the light path the written page and the contact page are the whole
+   site, and each carries its own links. A pinned rail of room names would
+   only offer doors lite.js is going to shut behind them — and the
+   speculation further down would prefetch, and prerender, five WebGL
+   rooms nobody on that path can open. */
+if(window.HOUSE_LITE) return;
+
 var PAGES = [
   {file:'entrance.html', label:'Entrance',   fade:'#0e0c09', section:'the front room'},
   {file:'dining.html',   label:'Experience', fade:'#efece6', section:'experience'},

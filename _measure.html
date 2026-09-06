@@ -242,8 +242,8 @@
      button that hides seven words. Below that width they do not
      fit at any honest type size, so the row folds into a bar
      carrying the section you are in and a toggle for the rest.
-     The switch is at 680px — measured, not guessed; see the
-     note on the media query. */
+     The switch is at 620px because that is where the row
+     measures full — see the note on the media query. */
   nav.jump{display:none}
   html.lite nav.jump{
     display:block;position:sticky;top:0;z-index:30;
@@ -254,7 +254,7 @@
   }
   nav.jump .jump-bar{display:none}
   nav.jump .jump-links{
-    display:flex;flex-wrap:wrap;justify-content:center;gap:6px;
+    display:flex;flex-wrap:nowrap;justify-content:center;gap:6px;
     padding:9px 0;
   }
   nav.jump a{
@@ -263,19 +263,17 @@
     background:var(--card);
   }
   nav.jump a:hover{color:var(--ink);border-color:var(--ink-soft)}
-  nav.jump a[aria-current="location"]{
+  nav.jump a[aria-current="true"]{
     background:var(--ink);border-color:var(--ink);color:var(--card);
   }
 
   /* --- the folded shape ----------------------------------------
-     The seven links and their six gaps measure 555px, and the
-     page's own side padding takes another 64 — call it 620px of
-     content, given 680 so a substituted font has somewhere to
-     go. Below that they do not fit at any type size worth
-     reading (375px would need them at 9px), so they fold.
-     Only the row's width decides this; nothing is hidden that
-     could have been shown. */
-  @media (max-width:680px){
+     620px is measured, not guessed: the seven links plus their
+     gaps and the page's own side padding come to just under it.
+     Shrinking the type to force them into 375px would buy a row
+     nobody can read, so under that width they go behind the
+     toggle instead. */
+  @media (max-width:620px){
     nav.jump .jump-bar{
       display:flex;align-items:center;justify-content:space-between;
       gap:12px;padding:7px 0;
@@ -311,16 +309,10 @@
   }
 
   /* the scroll-following rail is a pointer affordance and it costs
-     a strip of a short screen — and the sections bar is already
-     pinned up there doing the same job, with the section you are
-     in written on it. */
+     a strip of a short screen. The static row has already done the
+     same job further up. */
   html.lite #chapters{display:none !important}
-  /* a jump has to clear the pinned bar: 58px of row above the fold
-     width, 46px of bar below it */
-  html.lite section[id],html.lite h3[id]{scroll-margin-top:70px}
-  @media (max-width:680px){
-    html.lite section[id],html.lite h3[id]{scroll-margin-top:58px}
-  }
+  html.lite section[id],html.lite h3[id]{scroll-margin-top:60px}
 
   /* a card grid looks composed in a design tool and cramped at
      375px. On one narrow column the hairline above does the same
@@ -347,7 +339,7 @@
      the 3D path, so there is no flash of it on a laptop. -->
 <div class="lite-notice" id="liteNotice">
   <p>You&rsquo;re reading the written version &mdash; everything is here.
-  The full site is a 3D house,which works better on a large screen.
+  The full site is a 3D house, which works better on a large screen.
   <a href="entrance.html?tour=1">Open it anyway</a></p>
   <button type="button" id="liteNoticeX" aria-label="Dismiss this notice">&times;</button>
 </div>
@@ -382,11 +374,6 @@
   <header class="masthead">
     <p class="kicker">Rand &middot; portfolio</p>
     <h1>The whole house, in writing</h1>
-    <p>Hi! I'm Rand, a software engineer from the University of
-    Sydney, building full-stack sites end to end and tuning them to be found
-    on Google and in AI assistants alike. This is everything the rooms show, laid out flat on one page. If you would rather wander and
-    discover the quirks of the place,
-    <a href="entrance.html">the entrance is this way</a>.</p>
     <!-- <p class="lede">Welcome. My name is Rand, and I&rsquo;m a software engineer.
     This is everything the rooms show, laid out flat on one page. If you would rather wander and
     discover the quirks of the place,
@@ -770,10 +757,10 @@
     </div>
   </section>
 
-  <!-- <footer class="colophon">
-    <p>This page is the whole tour in plain text. The rooms show the same
-    things, with more furniture.</p>
-  </footer> -->
+  <!-- <footer class="colophon"> -->
+    <!-- <p>This page is the whole tour in plain text. The rooms show the same
+    things, with more furniture.</p> -->
+  <!-- </footer> -->
 </main>
 
 <div id="fade"></div>
@@ -836,16 +823,7 @@ document.addEventListener('keydown', function(e){
   }
 });
 
-/* a tap outside the panel is a way out of it too */
-document.addEventListener('click', function(e){
-  if(nav.classList.contains('open') && !nav.contains(e.target)) setOpen(false);
-});
-
-/* closed when the row unfolds, and only then. Listening to resize instead
-   would close it every time an address bar slid away mid-scroll. */
-var wide = matchMedia('(min-width:681px)');
-(wide.addEventListener ? wide.addEventListener.bind(wide,'change')
-                       : wide.addListener.bind(wide))(function(){ setOpen(false); });
+addEventListener('resize', function(){ setOpen(false); });
 
 /* ---- where am I ----------------------------------------------- */
 /* same reading line as the rail: a third of the way down, near enough
@@ -867,7 +845,7 @@ function paint(){
   }
   if(found === current) return;
   if(current) current.link.removeAttribute('aria-current');
-  if(found)   found.link.setAttribute('aria-current', 'location');
+  if(found)   found.link.setAttribute('aria-current', 'true');
   where.textContent = found ? found.link.textContent : home;
   current = found;
 }
@@ -895,8 +873,8 @@ paint();
 (function(){
 "use strict";
 
-/* hidden on the light path, where the pinned sections bar is the
-   navigation — so it is not built there either */
+/* hidden on the light path, where the static row under the masthead is
+   the navigation — so it is not built there either */
 if(window.HOUSE_LITE) return;
 
 var nav = document.getElementById('chapters');
@@ -1041,5 +1019,31 @@ paint();
 </script>
 
 <script>only3D('<script src="house-nav.js"><\/script>')</script>
+
+<script>
+(function(){
+  (function(){
+    var links = document.getElementById('jump-links');
+    var as = links.querySelectorAll('a');
+    var w = 0, parts = [];
+    for(var i=0;i<as.length;i++){
+      var r = as[i].getBoundingClientRect();
+      w += r.width; parts.push(as[i].textContent+':'+r.width.toFixed(1));
+    }
+    var cs = getComputedStyle(links);
+    var nav = document.getElementById('jump');
+    var ns = getComputedStyle(nav);
+    document.title = 'MEASURE vw=' + innerWidth
+      + ' cls=' + document.documentElement.className.trim()
+      + ' linksWidth=' + links.scrollWidth
+      + ' sumA=' + w.toFixed(1)
+      + ' gap=' + cs.gap + ' navPad=' + ns.paddingLeft
+      + ' navH=' + nav.getBoundingClientRect().height
+      + ' barDisplay=' + getComputedStyle(document.querySelector('.jump-bar')).display
+      + ' linksDisplay=' + cs.display
+      + ' || ' + parts.join(' ');
+  })();
+})();
+</script>
 </body>
 </html>

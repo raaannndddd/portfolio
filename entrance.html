@@ -3,10 +3,17 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<!-- If lite.js goes missing, every gated tag below still loads: the page
+     falls back to the way it behaved before there was a light path, rather
+     than throwing on the first call and taking the document with it. -->
+<script>window.only3D=function(html){document.write(html)}</script>
+<!-- decides, before anything is fetched, whether this visit gets the
+     house or the written version. Must stay the first script here. -->
+<script src="lite.js"></script>
 <title>Rand Halasa</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+<script>only3D('<link rel="preconnect" href="https://fonts.googleapis.com">')</script>
+<script>only3D('<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>')</script>
+<script>only3D('<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">')</script>
 <style>
   :root{
     --ink:#1c1a17;
@@ -238,9 +245,9 @@
 <!-- three.js is same-origin and immutable now, so this is a cache hit on
      every room after the first. The hint just makes the parser ask for
      it at the top of the document rather than fifty lines further down. -->
-<link rel="preload" as="script" href="vendor/three.r128.min.js">
+<script>only3D('<link rel="preload" as="script" href="vendor/three.r128.min.js">')</script>
 <!-- the whole house's pictures, started before anything else asks for them -->
-<script src="preload.js"></script>
+<script>only3D('<script src="preload.js"><\/script>')</script>
 </head>
 <body>
 
@@ -493,12 +500,16 @@ window.HouseBoot = {
 
 <div id="fade"></div>
 
-<script src="vendor/three.r128.min.js"></script>
+<script>only3D('<script src="vendor/three.r128.min.js"><\/script>')</script>
 <script>if(window.HouseBoot && window.THREE) HouseBoot.mark('three');</script>
-<script src="tap-hints.js"></script>
+<script>only3D('<script src="tap-hints.js"><\/script>')</script>
 <script>
 (function(){
 "use strict";
+/* the phone never gets here — lite.js has already sent it to the
+   written version — but the scene is guarded at its own door so
+   that it can only ever run on the branch that loaded three.js */
+if(window.HOUSE_LITE) return;
 
 /* ============================================================
    0. HUD
@@ -2287,6 +2298,6 @@ requestAnimationFrame(function(){ requestAnimationFrame(function(){
 
 })();
 </script>
-<script src="house-nav.js"></script>
+<script>only3D('<script src="house-nav.js"><\/script>')</script>
 </body>
 </html>

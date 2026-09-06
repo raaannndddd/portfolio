@@ -84,7 +84,7 @@
       ]
     },
     {
-      "source": "/:script(preload|house-nav|tap-hints).js",
+      "source": "/:script(lite|preload|house-nav|tap-hints).js",
       "headers": [
         {
           "key": "Cache-Control",
