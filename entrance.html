@@ -165,6 +165,53 @@
   #welcome.show .w3{animation-delay:.66s}
   #welcome.show #wIn{animation-delay:.98s}
 
+  /* ============================================================
+     THE NOTICE
+     The house is the site on every device now, so a phone lands
+     here rather than being sent somewhere flatter. That is the
+     right default — it is the thing worth showing — but a room
+     on a 390px screen is a squint, and the written version has
+     every word of it laid out flat. So the entrance says so,
+     once, and then gets out of the way.
+
+     Small screens only, and only after the welcome note has been
+     put down: two cards held up at the same moment is one card
+     too many. Dismissed for the session by lite.js, which owns
+     the flag because contact.html and writing.html carry the
+     opposite notice and share it.
+     ============================================================ */
+  .lite-notice{display:none}
+  @media (max-width:899px),(pointer:coarse){
+    html.notice-ready:not(.notice-seen) .lite-notice{
+      display:flex;align-items:flex-start;gap:8px;
+      position:fixed;left:12px;right:12px;
+      bottom:calc(14px + env(safe-area-inset-bottom,0px));
+      /* the same shelf as the nav bar: above the room's HUD, below
+         every overlay the house can open over it */
+      z-index:7;
+      padding:12px 10px 12px 16px;
+      background:var(--card);border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      font-size:13px;line-height:1.5;color:#3c3730;
+      animation:noticeUp .42s cubic-bezier(.2,.8,.2,1);
+    }
+    /* the notice has the bottom of the screen while it is up */
+    html.notice-ready:not(.notice-seen) #back{bottom:104px !important}
+  }
+  @keyframes noticeUp{
+    from{opacity:0;transform:translateY(12px)}
+    to{opacity:1;transform:none}
+  }
+  .lite-notice p{flex:1;min-width:0;margin:0}
+  .lite-notice a{color:#33474a}
+  .lite-notice button{
+    flex:none;border:0;background:none;cursor:pointer;
+    font-size:19px;line-height:1;color:#8c8375;
+    padding:2px 6px;margin:-2px 0 0;border-radius:6px;font-family:inherit;
+  }
+  .lite-notice button:hover{color:var(--ink)}
+  .lite-notice button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
   #fade{position:fixed;inset:0;background:#0e0c09;z-index:9;
         transition:opacity .45s ease;pointer-events:none}
   #fade.hidden{opacity:0}
@@ -302,7 +349,44 @@ function mark(step){
 
    `open` is what the room calls when it has painted. `lift` is
    what actually raises the screen, and only the safety timeout
-   is allowed to call it early. */
+   is allowed to call it early.
+
+   ---- FOLLOW-UP: this wait was costed for a laptop ------------
+   The trade above — hold the door shut, buy silence in every
+   room afterwards — was made when only a laptop on a desk ever
+   got this far. lite.js sent phones to the written version, so
+   nobody on a phone ever saw this screen.
+
+   That is no longer true. The house is now the site on every
+   device, which means a phone on 4G is being asked to sit in
+   front of "turning the lights on" while roughly 6.5 MB of
+   photographs comes down a connection that laptops were never
+   measured on. SAFETY_MS caps it at twelve seconds, but twelve
+   seconds of a dark screen is a closed tab, and the cap firing
+   is the bad case, not the safe one.
+
+   What to do about it, roughly in order of how much it is worth:
+
+     1. Split the manifest. Only the entrance's own pictures have
+        to be in before the door opens; the other rooms' can keep
+        loading behind an open room, which is where the visitor
+        would rather be waiting. HOUSE_PRELOAD already tracks
+        `here` separately from `all` — this is mostly a matter of
+        waiting on the smaller promise.
+
+     2. Cut the wait on a narrow screen, or on a connection that
+        says it is slow. `navigator.connection.effectiveType` and
+        `saveData` are already read in house-nav.js's speculation
+        for exactly this decision.
+
+     3. Bring SAFETY_MS down for the phone case, so the bad day
+        ends sooner than twelve seconds.
+
+   None of it is hard; it wants measuring on a real phone on a
+   real connection first, which is the part that has not been
+   done. Until then this comment is the honest record of a
+   decision that is now being applied outside the conditions it
+   was made under. */
 function open(){
   if(asked) return;
   asked = true;
@@ -498,6 +582,14 @@ window.HouseBoot = {
   </div>
 </div>
 
+<!-- said once, on a small screen, after the welcome note is down.
+     Everything about when it appears is in the CSS above. -->
+<div class="lite-notice" id="liteNotice">
+  <p>This portfolio looks better on a larger screen, but you can still naviagte it.
+  <a href="writing.html">Read it instead</a></p>
+  <button type="button" id="liteNoticeX" aria-label="Dismiss this notice">&times;</button>
+</div>
+
 <div id="fade"></div>
 
 <script>only3D('<script src="vendor/three.r128.min.js"><\/script>')</script>
@@ -506,9 +598,10 @@ window.HouseBoot = {
 <script>
 (function(){
 "use strict";
-/* the phone never gets here — lite.js has already sent it to the
-   written version — but the scene is guarded at its own door so
-   that it can only ever run on the branch that loaded three.js */
+/* the house is the site on every device, so a phone does get here.
+   What does not is a visit that asked for the written version — and
+   on that branch three.js was never fetched, so the scene is guarded
+   at its own door rather than trusting the tags above it. */
 if(window.HOUSE_LITE) return;
 
 /* ============================================================
@@ -525,6 +618,9 @@ function closeWelcome(){
   if(!welcomeEl.classList.contains('show')) return false;
   welcomeEl.classList.remove('show');
   welcomeEl.setAttribute('aria-hidden','true');
+  /* the small-screen notice has been waiting for the note to come down,
+     so that the first thing anyone reads here is the greeting */
+  document.documentElement.classList.add('notice-ready');
   return true;
 }
 welcomeEl.addEventListener('click', function(e){
@@ -610,13 +706,45 @@ const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 200)
 camera.position.copy(HOME);
 
 const H_HALF = 30 * Math.PI/180;                 /* constant horizontal FOV */
+
+/* How far past "wide" this viewport is: 0 on anything 4:3 or wider, 1 on a
+   phone held upright. Same measure the bedroom uses, and for the same
+   reason — a constant horizontal field of view runs out of width on a
+   portrait screen, the clamp below takes over, and what is left is a tall
+   keyhole.
+
+   The hall is the worst room in the house to see through one. Three doors
+   sit 8.2m apart on a wall 14m away, and there is no field of view that
+   fits all three AND leaves their name plates legible: the two are the same
+   number traded against each other. Widening far enough to hold the outer
+   doors shrinks EDUCATION to fifty pixels of grey.
+
+   So portrait does not try. It walks four metres up the hall instead, which
+   is the one move that buys something for nothing — the door wall goes from
+   under half the frame to nearly two thirds of it, the rug stops taking the
+   bottom third, and the middle door and its plate come up to a size worth
+   reading. What that costs is the outer doors, and the drag-to-pan below is
+   what pays for it: the frame becomes a window you move along the wall
+   rather than a crop you are stuck with. */
+let framing = 0;
+
 function frameCamera(){
   camera.aspect = innerWidth / innerHeight;
   const v = 2 * Math.atan(Math.tan(H_HALF) / camera.aspect) * 180/Math.PI;
   camera.fov = THREE.MathUtils.clamp(v, 24, 54);
   camera.updateProjectionMatrix();
+  /* 4:3 is the last aspect with room to spare; 9:16 is a phone upright */
+  framing = THREE.MathUtils.clamp((1.333 - camera.aspect) / (1.333 - 0.5625), 0, 1);
 }
 frameCamera();
+
+/* the portrait framing, at framing = 1 */
+const PORTRAIT_PUSH = 4.0;    /* metres up the hall */
+const PORTRAIT_LIFT = 0.72;   /* and the aim raised, to even out what is left
+                                 above and below the doors */
+const PORTRAIT_PAN  = 3.9;    /* how far either side the drag can look: far
+                                 enough to bring either outer door round to
+                                 the middle of the frame */
 
 /* ============================================================
    3. TEXTURE FOUNDRY
@@ -1923,6 +2051,9 @@ const dom = renderer.domElement;
 const pointer = new THREE.Vector2(0,0);
 const look = {x:0,y:0}, target = {x:0,y:0};
 let dolly = 0, dollyTarget = 0, yaw = 0, pitch = 0;
+/* where along the wall the portrait framing is looking, and where it is
+   heading. Nothing but a drag on a narrow screen ever moves it. */
+let pan = 0, panTarget = 0, panLastX = 0;
 let dragging = false, dragged = false, lastX = 0, lastY = 0;
 
 const raycaster = new THREE.Raycaster();
@@ -1947,7 +2078,10 @@ function approach(door){
   walk.from.copy(camera.position);
   walk.to.copy(door.position).addScaledVector(n, APPROACH);
   walk.to.y = 1.9;
-  walk.lookFrom.copy(restLook);
+  /* from where the camera is actually looking, not from where it would be
+     looking if nobody had touched it — otherwise a panned view snaps back to
+     centre on the first frame of the walk */
+  walk.lookFrom.copy(lookAt.lengthSq() ? lookAt : restLook);
   walk.lookTo.copy(door.position).setY(1.86);
 
   /* a prop that is still inside the frame once we arrive cannot dissolve at
@@ -2004,6 +2138,7 @@ dom.addEventListener('pointerdown', function(e){
   pointer.y = -(e.clientY/innerHeight)*2 + 1;
   dragging = true; dragged = false;
   lastX = e.clientX; lastY = e.clientY;
+  panLastX = e.clientX;
   if(dom.setPointerCapture) dom.setPointerCapture(e.pointerId);
 });
 dom.addEventListener('pointermove', function(e){
@@ -2011,10 +2146,24 @@ dom.addEventListener('pointermove', function(e){
   pointer.x =  (e.clientX/innerWidth)*2 - 1;
   pointer.y = -(e.clientY/innerHeight)*2 + 1;
   target.x = pointer.x; target.y = pointer.y;
-  /* the hall does not follow a held press. all that is left to measure is
-     whether the press wandered far enough to stop being a click */
-  if(dragging && Math.abs(e.clientX-lastX) + Math.abs(e.clientY-lastY) > 12){
-    dragged = true;
+  /* on a wide screen the hall does not follow a held press — the cursor does
+     the looking, and all a drag has to do is stop being a click.
+
+     On a narrow one there is no cursor to hover with and more wall than
+     frame, so the drag turns the view instead: a swipe across the screen
+     carries you the width of the pan, which is either outer door. The turn
+     is scaled by `framing`, so it fades in exactly as the crop tightens and
+     is worth nothing at all on a desktop. */
+  if(dragging){
+    if(Math.abs(e.clientX-lastX) + Math.abs(e.clientY-lastY) > 12) dragged = true;
+    if(framing > 0 && walk.state === 'idle'){
+      const reach = PORTRAIT_PAN * framing;
+      panTarget = THREE.MathUtils.clamp(
+        panTarget - (e.clientX - panLastX) * (2 * reach / innerWidth),
+        -reach, reach
+      );
+    }
+    panLastX = e.clientX;
   }
 });
 function endDrag(){
@@ -2212,7 +2361,7 @@ function tick(){
       if(walk.state === 'out'){
         walk.state = 'idle';
         HOME.copy(ORIGIN);
-        yaw = pitch = 0; dolly = dollyTarget = 0;
+        yaw = pitch = 0; dolly = dollyTarget = 0; pan = panTarget = 0;
         look.x = look.y = target.x = target.y = 0;
       } else {
         walk.state = 'at';
@@ -2235,12 +2384,18 @@ function tick(){
     look.x += (target.x - look.x)*k;
     look.y += (target.y - look.y)*k;
     dolly  += (dollyTarget - dolly)*Math.min(1, dt*3.2);
+    pan    += (panTarget - pan)*Math.min(1, dt*6.0);
     camera.position.set(
       HOME.x + look.x*0.42 + yaw*2.6,
       HOME.y + look.y*0.16 + pitch*2.0 + Math.sin(t*0.4)*0.014,
-      HOME.z - dolly
+      HOME.z - dolly - PORTRAIT_PUSH*framing
     );
-    lookAt.set(look.x*0.8 + yaw*1.9, 1.98 + look.y*0.26 + pitch*1.5, BACK_Z);
+    /* the pan turns on the spot rather than sliding along the wall: from four
+       metres closer, a slide would have the camera out through the wainscot
+       before either outer door was centred. */
+    lookAt.set(pan + look.x*0.8 + yaw*1.9,
+               1.98 + PORTRAIT_LIFT*framing + look.y*0.26 + pitch*1.5,
+               BACK_Z);
     camera.lookAt(lookAt);
     updateHover();
   }

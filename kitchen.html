@@ -214,17 +214,28 @@
         transition:opacity .45s ease;pointer-events:none}
   #fade.hidden{opacity:0}
 
+  /* --- the opened photo on a narrow screen -------------------------
+     The print goes above the words rather than beside them, and the
+     two arrows go out to the edges of the screen where a thumb
+     already is. Under the card they were a long reach from the
+     bottom of a phone held one-handed, and they took a strip of a
+     screen that had none to spare.
+
+     The card is narrowed to leave them a lane rather than being
+     overlaid by them: 100px of viewport buys two 42px buttons and
+     a margin either side, and nothing sits on top of the caption.
+     Swiping does the same job — see the handler in the script. */
   @media (max-width:820px){
     #plaque{top:14px;left:14px;font-size:13px}
+    #lb{padding:52px 0 46px}
     #lb figure{flex-direction:column;gap:0;padding:14px;
-               width:min(calc(100vw - 28px), calc(100vh - 330px))}
-    #lb img{flex:none;width:auto;max-width:100%;max-height:44vh;margin:0 auto}
+               width:min(calc(100vw - 100px), calc(100vh - 300px))}
+    #lb img{flex:none;width:auto;max-width:100%;max-height:42vh;margin:0 auto}
     #lb figcaption{align-self:stretch;padding:15px 2px 4px;font-size:13px}
-    .lb-nav{top:auto;bottom:20px;transform:none;width:46px;height:46px}
-    .lb-nav:hover{transform:scale(1.07)}
-    #lb-prev{left:calc(50% - 62px)}
-    #lb-next{right:calc(50% - 62px)}
-    #lb-hint{display:none}
+    .lb-nav{width:42px;height:42px;font-size:23px}
+    #lb-prev{left:5px}
+    #lb-next{right:5px}
+    #lb-hint{white-space:normal;text-align:center;max-width:80vw}
   }
   @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important}}
 </style>
@@ -285,9 +296,10 @@
 <script>
 (function(){
 "use strict";
-/* the phone never gets here — lite.js has already sent it to the
-   written version — but the scene is guarded at its own door so
-   that it can only ever run on the branch that loaded three.js */
+/* the house is the site on every device, so a phone does get here.
+   What does not is a visit that asked for the written version — and
+   on that branch three.js was never fetched, so the scene is guarded
+   at its own door rather than trusting the tags above it. */
 if(window.HOUSE_LITE) return;
 if(!window.THREE) return;
 
@@ -2847,14 +2859,67 @@ function closePhoto(){
 }
 function stepPhoto(d){ if(openIndex >= 0) showPhoto(openIndex + d); }
 
-/* anywhere on the overlay closes it — except the two arrows */
-lb.addEventListener('click', closePhoto);
+/* anywhere on the overlay closes it — except the two arrows, and except the
+   click a swipe leaves behind it (see the swipe handler below, which is what
+   sets the flag). The guard lives here rather than in a capture listener
+   because a swipe that begins and ends on the backdrop targets the overlay
+   itself, and a listener on the same node cannot get out of another's way. */
+let swipedAway = false;
+lb.addEventListener('click', function(){
+  if(swipedAway){ swipedAway = false; return; }
+  closePhoto();
+});
 [['lb-prev', -1], ['lb-next', 1]].forEach(function(a){
   document.getElementById(a[0]).addEventListener('click', function(e){
     e.stopPropagation();
     stepPhoto(a[1]);
   });
 });
+
+/* the same instruction, in whichever gesture this visit actually has */
+(function(){
+  const hint = document.getElementById('lb-hint');
+  let coarse = false;
+  try { coarse = matchMedia('(pointer:coarse)').matches; } catch(_){}
+  if(coarse) hint.textContent = 'Swipe to browse \u00b7 tap to close';
+})();
+
+/* --- swiping between the photographs -------------------------------
+   The arrows are there and they work, but on a phone the gesture for
+   "next picture" is a swipe, and a set of nine that can only be
+   stepped through by hitting a 42px target is a set most people see
+   two of.
+
+   The overlay closes on any click, so a swipe has to be told apart
+   from a tap before the finger comes up: past 45px of horizontal
+   travel this is a browse, and the click that follows the touch is
+   swallowed rather than closing the photo behind the new one.
+   Vertical drags are left alone — the caption can be longer than the
+   card, and scrolling it is not a page turn. */
+(function(){
+  let x0 = 0, y0 = 0, tracking = false;
+  const THRESHOLD = 45;
+
+  lb.addEventListener('touchstart', function(e){
+    if(e.touches.length !== 1){ tracking = false; return; }
+    x0 = e.touches[0].clientX;
+    y0 = e.touches[0].clientY;
+    tracking = true;
+  }, {passive:true});
+
+  lb.addEventListener('touchmove', function(e){
+    if(!tracking) return;
+    const dx = e.touches[0].clientX - x0;
+    const dy = e.touches[0].clientY - y0;
+    if(Math.abs(dx) < THRESHOLD || Math.abs(dx) < Math.abs(dy)) return;
+    /* one photo per gesture: the finger has to lift before the next */
+    tracking = false;
+    swipedAway = true;
+    stepPhoto(dx < 0 ? 1 : -1);
+  }, {passive:true});
+
+  lb.addEventListener('touchend', function(){ tracking = false; }, {passive:true});
+})();
 
 /* a keyboard route in, since a plane in a WebGL canvas cannot be tabbed to */
 (function(){

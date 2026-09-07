@@ -2,56 +2,32 @@
    lite.js — the first script on every page, and the only one
    that runs before a single byte of the house is requested.
 
-   The house is five WebGL rooms. On a phone that is 600 KB of
-   three.js, ~6 MB of baked photographs and a prerender of every
-   other room — slow on 4G and, often enough, a tab Safari kills
-   outright. Hiding the canvas in CSS does not help: the browser
-   has already fetched all of it by the time the stylesheet has
-   an opinion.
+   It answers one question, up front, and writes the answer onto
+   <html> so the first paint is already the right shape:
 
-   So the decision is made here, up front, and everything heavy
-   is written into the document only on the branch that wants it.
-   Nothing on the light path is downloaded and then discarded;
-   it is never asked for.
+     .house-full   the tour
+     .lite         the written portfolio. Text, contact, CV.
 
-     .lite         — the written portfolio. Text, contact, CV.
-     .house-full   — the tour.
+   The house is the site on every device now, phones included. It
+   is the thing worth showing, and a room on a small screen is
+   still a room — what has to change is the furniture around it,
+   which the pages do for themselves in media queries.
 
-   The written page is not a fallback. It is the same content,
-   and it is what Google and a screen reader read either way.
+   The written version is not a fallback and never was. It is the
+   same content, it is what Google and a screen reader read either
+   way, it is one tap from the entrance — and ?lite=1 makes it the
+   whole visit. What it no longer is is somewhere anybody gets
+   sent by the size of their screen.
    ============================================================ */
 (function(){
 "use strict";
 
-/* ---- the test ------------------------------------------------
-   Two conditions, and a visit has to pass both:
+/* ---- house or written ---------------------------------------
+   The house, unless this visit has asked for the other one.
+   Remembered for the session so it survives walking page to
+   page, since the nav links carry no query of their own. */
+var can3D = true;
 
-     min-width:900px   room to stand back and look at a room
-     pointer:fine      a mouse — the rooms are hover-and-drag,
-                       and there is no touch equivalent of
-                       "the cursor is over the fridge"
-
-   A phone fails both. A tablet passes the first and fails the
-   second, which is the answer we want: an iPad has the screen
-   for it and not the input. A narrow window on a laptop fails
-   the width and gets the readable page, which is also right.
-
-   Deliberately not user-agent sniffing. The question is what
-   this visit can comfortably do, not what device it claims. */
-var can3D;
-try {
-  can3D = matchMedia('(min-width: 900px) and (pointer: fine)').matches;
-} catch(e) {
-  /* a browser too old to answer gets the written version, which
-     is the one that works everywhere */
-  can3D = false;
-}
-
-/* ---- the override --------------------------------------------
-   Someone who wants the tour on a tablet is allowed to have it,
-   and someone on a laptop is allowed the plain page. Remembered
-   for the session so it survives walking room to room, since the
-   nav links carry no query of their own. */
 var KEY = 'house-force';
 var forced = null;
 try { forced = sessionStorage.getItem(KEY); } catch(e){}
@@ -65,7 +41,7 @@ if(forced){
   try { sessionStorage.setItem(KEY, forced); } catch(e){}
 }
 
-window.HOUSE_LITE  = !can3D;
+window.HOUSE_LITE   = !can3D;
 window.HOUSE_FORCED = forced;
 document.documentElement.className += can3D ? ' house-full' : ' lite';
 
@@ -82,12 +58,13 @@ window.only3D = function(html){
   if(can3D) document.write(html);
 };
 
-/* ---- a room asked for on a phone -----------------------------
-   Every room has a written counterpart under its own heading, so
-   a shared link to the kitchen lands on About rather than on the
-   top of a long page. replace() rather than assign() so the back
-   button goes where the visitor came from instead of bouncing
-   off the room again. */
+/* ---- a room asked for on the light path ----------------------
+   Only reachable now by asking for it — ?lite=1, or a session
+   that already has. Every room has a written counterpart under
+   its own heading, so a shared link to the kitchen lands on
+   About rather than on the top of a long page. replace() rather
+   than assign() so the back button goes where the visitor came
+   from instead of bouncing off the room again. */
 var ROOM_SECTION = {
   'entrance.html': '',
   'kitchen.html':  'about',
@@ -106,22 +83,24 @@ if(!can3D){
 }
 
 /* ---- the notice ----------------------------------------------
-   The written pages carry a one-line bar in their own markup
-   saying what this is. It sits in the flow above everything, so
-   nothing is covered and there is no modal to trap a focus ring
-   in, and it is dismissed for the session rather than forever —
-   a phone that is a laptop tomorrow should be told again.
+   Three pages carry one, and they say opposite things: the two
+   written pages point at the house, and the entrance — on a small
+   screen, where the house is the harder read — points at the
+   written version. Each page decides in its own CSS whether its bar
+   applies to this visit; all that is settled here is whether the
+   visitor has already waved one away.
 
-   The flag is read here, in the head, and answered with a class
-   rather than by deleting the bar later: a bar removed after the
-   page has painted takes a line of text out from under whoever
-   was already reading it. */
+   Dismissed for the session rather than forever: a phone that is
+   a laptop tomorrow should be told again. The flag is read here,
+   in the head, and answered with a class rather than by deleting
+   the bar later — a bar removed after the page has painted takes
+   a line of text out from under whoever was already reading it. */
 var NOTICE = 'house-notice';
 var dismissed = false;
 try { dismissed = sessionStorage.getItem(NOTICE) === 'seen'; } catch(e){}
 if(dismissed) document.documentElement.className += ' notice-seen';
 
-if(!can3D && !dismissed){
+if(!dismissed){
   document.addEventListener('DOMContentLoaded', function(){
     var x = document.getElementById('liteNoticeX');
     if(!x) return;

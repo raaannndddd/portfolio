@@ -42,6 +42,12 @@
     max-width:var(--col);margin:0 auto;
     padding:clamp(28px,6vw,72px) clamp(18px,5vw,32px) 140px;
   }
+  /* the 140px is clearance for house-nav's rail along the bottom. On a
+     compact viewport the rail is not there — the sections bar at the top
+     is — so it would only be a screen and a half of nothing. */
+  @media (max-width:899px),(pointer:coarse){
+    main{padding-bottom:clamp(40px,9vw,72px)}
+  }
 
   header.masthead{margin-bottom:clamp(36px,7vw,64px)}
   .kicker{
@@ -203,11 +209,17 @@
 
   /* ============================================================
      THE LIGHT PATH
-     Everything under html.lite applies when lite.js has decided
-     this visit is not getting the house: a phone, a tablet, or a
-     laptop window too narrow to stand a room in. This page is
-     then the whole site, so it is styled as the destination it
-     is rather than as somewhere you ended up.
+     Everything under html.lite applies when this visit has asked
+     for the written version instead of the house — ?lite=1, or a
+     session that already has. Nobody is sent here by their screen
+     any more; the house is the site on a phone too. On this path
+     the page is the whole site, so it is styled as the destination
+     it is rather than as somewhere you ended up.
+
+     Separately, the sections bar below also comes up on any
+     compact viewport, house or not: house-nav stands its rail
+     down there, and the top of the screen is left to whichever
+     bar the page itself brings.
      ============================================================ */
 
   /* one line, in the flow, so it pushes the page down instead of
@@ -244,14 +256,21 @@
      carrying the section you are in and a toggle for the rest.
      The switch is at 680px — measured, not guessed; see the
      note on the media query. */
-  nav.jump{display:none}
-  html.lite nav.jump{
-    display:block;position:sticky;top:0;z-index:30;
+  /* Two ways in: the light path, where this page is the whole site, and
+     any compact viewport, where house-nav hides its rail and leaves the
+     top of the screen to whichever bar the page itself brings. The rule
+     below carries the shape; the two selectors after it only decide
+     whether this visit gets one. */
+  nav.jump{
+    display:none;position:sticky;top:0;z-index:30;
     background:rgba(244,237,224,.94);
     -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
     border-bottom:1px solid var(--paper-edge);
     padding:0 clamp(18px,5vw,32px);
   }
+  html.lite nav.jump{display:block}
+  @media (max-width:899px),(pointer:coarse){ nav.jump{display:block} }
+
   nav.jump .jump-bar{display:none}
   nav.jump .jump-links{
     display:flex;flex-wrap:wrap;justify-content:center;gap:6px;
@@ -268,11 +287,12 @@
   }
 
   /* --- the folded shape ----------------------------------------
-     The seven links and their six gaps measure 555px, and the
-     page's own side padding takes another 64 — call it 620px of
-     content, given 680 so a substituted font has somewhere to
-     go. Below that they do not fit at any type size worth
-     reading (375px would need them at 9px), so they fold.
+     The section links and their gaps measure around 620px with
+     the page's own side padding, and are given 680 so a
+     substituted font has somewhere to go. Below that they do not
+     fit at any type size worth reading (375px would need them at
+     9px), so they fold. Between 680 and the fold they wrap onto
+     a second row rather than shrink.
      Only the row's width decides this; nothing is hidden that
      could have been shown. */
   @media (max-width:680px){
@@ -315,11 +335,18 @@
      pinned up there doing the same job, with the section you are
      in written on it. */
   html.lite #chapters{display:none !important}
+  @media (max-width:899px),(pointer:coarse){
+    #chapters{display:none !important}
+  }
   /* a jump has to clear the pinned bar: 58px of row above the fold
      width, 46px of bar below it */
   html.lite section[id],html.lite h3[id]{scroll-margin-top:70px}
+  @media (max-width:899px),(pointer:coarse){
+    section[id],h3[id]{scroll-margin-top:70px}
+  }
   @media (max-width:680px){
     html.lite section[id],html.lite h3[id]{scroll-margin-top:58px}
+    section[id],h3[id]{scroll-margin-top:58px}
   }
 
   /* a card grid looks composed in a design tool and cramped at
@@ -373,6 +400,9 @@
     <a href="#about">About</a>
     <a href="#contact">Contact</a>
     <a href="CV/Rand_Halasa_Resume.pdf" target="_blank" rel="noopener">CV</a>
+    <!-- the only link here that leaves the page: on a phone this bar is the
+         one nav on screen, so the door back into the house belongs in it -->
+    <a href="entrance.html">The house</a>
   </div>
 </nav>
 

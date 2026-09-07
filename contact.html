@@ -39,6 +39,15 @@
     padding:clamp(18px,5vw,40px);
     padding-bottom:130px;
   }
+  /* house-nav moves from a rail along the bottom to a bar across the top
+     on a compact viewport, and the clearance has to move with it — the
+     bar is fixed, so nothing in the flow knows it is there. */
+  @media (max-width:899px),(pointer:coarse){
+    main{
+      padding-top:calc(clamp(18px,5vw,40px) + 56px + env(safe-area-inset-top,0px));
+      padding-bottom:clamp(18px,5vw,40px);
+    }
+  }
   .kicker{
     font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;
     color:var(--ink-soft);margin-bottom:14px;
@@ -75,8 +84,9 @@
 
 
   /* ============================================================
-     THE LIGHT PATH — see lite.js. On a phone this page and the
-     written one are the whole site, so the room nav is gone and
+     THE LIGHT PATH — see lite.js. When a visit has asked for the
+     written version this page and the written one are the whole
+     site, so the room nav is gone and
      the space it was holding open goes back to the content.
      ============================================================ */
   .lite-notice{display:none}

@@ -258,9 +258,10 @@
 <script>
 (function(){
 "use strict";
-/* the phone never gets here — lite.js has already sent it to the
-   written version — but the scene is guarded at its own door so
-   that it can only ever run on the branch that loaded three.js */
+/* the house is the site on every device, so a phone does get here.
+   What does not is a visit that asked for the written version — and
+   on that branch three.js was never fetched, so the scene is guarded
+   at its own door rather than trusting the tags above it. */
 if(window.HOUSE_LITE) return;
 if(!window.THREE) return;
 

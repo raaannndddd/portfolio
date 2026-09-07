@@ -127,7 +127,10 @@ function warmAll(list, priority){
 }
 
 /* ---- the run ------------------------------------------------- */
-/* this room first: this is the promise the loading screen waits on */
+/* this room first, at high priority. Note that the entrance's loading
+   screen does not wait on this one — it waits on `all` below, which is
+   a deliberate choice and a costly one on a phone. See the FOLLOW-UP
+   note beside HouseBoot in entrance.html. */
 var mine = warmAll(MANIFEST[here] || [], 'high');
 
 /* then the rest of the house, quietly. Low priority so it can never
@@ -172,12 +175,16 @@ var cvReady = mine.then(function(){
 
 /* ---- what the rooms use -------------------------------------- */
 window.HOUSE_PRELOAD = {
-  /* the pictures this page needs, decoded. Rooms and loading
-     screens await this. */
+  /* the pictures this page needs, decoded. Rooms await this. */
   here: mine,
 
-  /* every picture in the house. Nothing blocks on this — it is
-     here so a page can know when the walk ahead is free. */
+  /* every picture in the house, this page's included — `rest`
+     chains off `mine`, so this resolves last of the two.
+
+     The entrance's loading screen blocks on it: it holds the door
+     shut until the whole house is warm, in exchange for silence
+     in every room afterwards. That was costed when only laptops
+     ever reached it. See the FOLLOW-UP note in entrance.html. */
   all: rest,
 
   /* the decoded element for a path, or null if it has not landed

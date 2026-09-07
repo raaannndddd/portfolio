@@ -143,13 +143,40 @@
   @keyframes turnBR{
     0%{transform:perspective(1400px) rotateY(-34deg);filter:brightness(.72)}
     100%{transform:none;filter:none}}
+  /* --- the book on a narrow screen ---------------------------------
+     The spread stands the two pages one above the other rather than
+     side by side. Split evenly that gives half a phone to a picture
+     and half to the writing, and the writing is the part somebody
+     came for — a screenshot at 180px tall says very little, and a
+     paragraph in a 180px window is read four lines at a time.
+
+     So the picture keeps a band across the top, enough to recognise
+     the project by, and everything else goes to the page that has
+     words on it. flex-basis rather than a min-height, because both
+     pages are flex:1 by default and a minimum cannot take space
+     back off an equal share. */
   @media (max-width:820px){
-    #spread{flex-direction:column;width:min(94vw,430px);height:min(82vh,720px)}
-    .pageL{border-radius:8px 8px 0 0;min-height:38%}
-    .pageR{border-radius:0 0 8px 8px;padding:26px 24px 34px}
+    /* the spread gives up 100px of width so the two arrows have a lane of
+       their own down the sides. At -24px they sat on the paragraph, and a
+       page of writing with a button over the start of every fourth line is
+       not a page anybody finishes. */
+    #spread{flex-direction:column;width:min(calc(100vw - 100px),430px);height:min(84svh,720px)}
+    .pageL{border-radius:8px 8px 0 0;flex:0 0 26%;min-height:104px}
+    .pageR{border-radius:0 0 8px 8px;flex:1 1 auto;padding:20px 22px 30px}
     .pageL::before,.pageR::before{display:none}
-    #pgPrev{left:-12px} #pgNext{right:-12px}
-    #pgImg{inset:14px;width:calc(100% - 28px);height:calc(100% - 28px)}
+    .pgArrow{width:44px;height:44px;font-size:23px}
+    #pgPrev{left:-48px} #pgNext{right:-48px}
+    #pgImg{inset:10px;width:calc(100% - 20px);height:calc(100% - 20px)}
+    #pgTitle{font-size:21px;margin:0 0 10px}
+    #pgKicker{margin:0 0 7px}
+    #pgBody{font-size:14px;line-height:1.6}
+    #pgTech{margin:11px 0 0}
+    #pgLink{margin-top:13px}
+    /* the standing github line is a footnote, and on a phone it is a
+       footnote competing with the paragraph above it for the same
+       inches. It keeps its place, tighter, and stops indenting. */
+    #pgGithub{margin:auto 0 0;padding-top:9px;font-size:12px}
+    #pgNum{right:14px;bottom:9px}
   }
 
   /* --- the letter off the coffee table ------------------------------- */
@@ -297,9 +324,10 @@
 <script>
 (function(){
 "use strict";
-/* the phone never gets here — lite.js has already sent it to the
-   written version — but the scene is guarded at its own door so
-   that it can only ever run on the branch that loaded three.js */
+/* the house is the site on every device, so a phone does get here.
+   What does not is a visit that asked for the written version — and
+   on that branch three.js was never fetched, so the scene is guarded
+   at its own door rather than trusting the tags above it. */
 if(window.HOUSE_LITE) return;
 if(!window.THREE) return;
 
@@ -3303,9 +3331,53 @@ function bookTick(dt){
 /* --- overlay controls --------------------------------------------------- */
 document.getElementById('pgPrev').addEventListener('click', function(){ renderPage(pageIdx - 1, -1); });
 document.getElementById('pgNext').addEventListener('click', function(){ renderPage(pageIdx + 1, 1); });
+
+/* --- turning the page with a thumb --------------------------------------
+   The arrows are there and they work, but a book on a phone asks to be
+   swiped, and a set of projects that can only be stepped through by hitting
+   a 44px target is a set most people see one of.
+
+   Two things have to be true of a swipe here. It must not be a scroll: the
+   writing on the right-hand page is taller than the page on a phone, so a
+   drag that is mostly vertical belongs to the paragraph. And it must not be
+   a close: the overlay shuts on a press anywhere that is not an arrow, a
+   link, or the text — which includes the picture and the backdrop a swipe
+   is most likely to start on. So the gesture leaves a flag behind it and
+   the close handler reads it, rather than trying to intercept the click
+   from a capture listener: a swipe that begins and ends on the backdrop
+   targets the overlay itself, and a listener on the same node cannot get
+   out of another's way. */
+let pageSwiped = false;
+(function(){
+  let x0 = 0, y0 = 0, tracking = false;
+  const THRESHOLD = 45;
+
+  overlay.addEventListener('touchstart', function(e){
+    if(e.touches.length !== 1){ tracking = false; return; }
+    x0 = e.touches[0].clientX;
+    y0 = e.touches[0].clientY;
+    tracking = true;
+  }, {passive:true});
+
+  overlay.addEventListener('touchmove', function(e){
+    if(!tracking) return;
+    const dx = e.touches[0].clientX - x0;
+    const dy = e.touches[0].clientY - y0;
+    if(Math.abs(dx) < THRESHOLD || Math.abs(dx) < Math.abs(dy)) return;
+    /* one page per gesture: the finger has to lift before the next */
+    tracking = false;
+    pageSwiped = true;
+    const dir = dx < 0 ? 1 : -1;
+    renderPage(pageIdx + dir, dir);
+  }, {passive:true});
+
+  overlay.addEventListener('touchend', function(){ tracking = false; }, {passive:true});
+})();
+
 /* anywhere that is not an arrow, the link, or the text page closes it —
    the text page stays inert so it can be selected and copied */
 overlay.addEventListener('click', function(e){
+  if(pageSwiped){ pageSwiped = false; return; }
   if(e.target.closest('.pgArrow') || e.target.closest('#pgLink') || e.target.closest('.pageR')) return;
   closeBook();
 });

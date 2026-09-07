@@ -187,9 +187,10 @@
 <script>
 (function(){
 "use strict";
-/* the phone never gets here — lite.js has already sent it to the
-   written version — but the scene is guarded at its own door so
-   that it can only ever run on the branch that loaded three.js */
+/* the house is the site on every device, so a phone does get here.
+   What does not is a visit that asked for the written version — and
+   on that branch three.js was never fetched, so the scene is guarded
+   at its own door rather than trusting the tags above it. */
 if(window.HOUSE_LITE) return;
 if(!window.THREE) return;
 
@@ -267,13 +268,41 @@ const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 200)
 camera.position.copy(HOME);
 
 const H_HALF = 30 * Math.PI/180;                 /* constant horizontal FOV */
+
+/* How far past "wide" this viewport is: 0 on anything 4:3 or wider, 1 on a
+   phone held upright. The room is aimed differently at the two ends of it.
+
+   A constant horizontal field of view is the right rule while there is width
+   to spend, but a portrait screen runs out of it: 30 degrees either side of
+   a phone would need 100 degrees of vertical, so the clamp below takes over
+   and what is left is a tall keyhole — a strip of ceiling, a strip of floor,
+   and the room squeezed between them. Two things then have to move.
+
+   Sideways, because the bed is built off-centre (BED.x) and the rest of the
+   room is arranged around it. On a wide screen that reads as composition; in
+   a keyhole it reads as the bed falling out of the left of the frame.
+
+   Downwards, because the ceiling is the emptiest thing in the room and the
+   default aim sits slightly above eye level, which spends the top quarter of
+   a phone on blank plaster. */
+let framing = 0;
+
 function frameCamera(){
   camera.aspect = innerWidth / innerHeight;
   const v = 2 * Math.atan(Math.tan(H_HALF) / camera.aspect) * 180/Math.PI;
   camera.fov = THREE.MathUtils.clamp(v, 24, 54);
   camera.updateProjectionMatrix();
+  /* 4:3 is the last aspect with room to spare; 9:16 is a phone upright */
+  framing = THREE.MathUtils.clamp((1.333 - camera.aspect) / (1.333 - 0.5625), 0, 1);
 }
 frameCamera();
+
+/* the aim at framing = 1. The sideways figure is BED.x — the offset is there
+   to cancel it, so if the bed moves this follows it rather than drifting.
+   The drop is measured, not guessed: at 10.2m the frame is 5.2m tall, and
+   0.85 of that takes the ceiling band off the top without pushing the bed
+   up into it — checked on a 390x844 screen, not guessed. */
+const PORTRAIT_DROP = 0.85;
 
 /* ============================================================
    3. TEXTURE FOUNDRY
@@ -2423,12 +2452,18 @@ function tick(){
   look.x += (target.x - look.x)*k;
   look.y += (target.y - look.y)*k;
   dolly  += (dollyTarget - dolly)*Math.min(1, dt*3.2);
+  /* the sideways part moves the camera and its aim together, so it is a step
+     to one side rather than a turn — the room keeps the perspective it was
+     built with, and only the crop changes */
+  const aimX = BED.x * framing;
   camera.position.set(
-    HOME.x + look.x*0.42 + yaw*2.4,
+    HOME.x + aimX + look.x*0.42 + yaw*2.4,
     HOME.y + look.y*0.16 + pitch*2.0 + Math.sin(t*0.4)*0.013,
     HOME.z - dolly
   );
-  lookAt.set(look.x*0.8 + yaw*2.4, 1.78 + look.y*0.26 + pitch*1.5, BACK_Z);
+  lookAt.set(aimX + look.x*0.8 + yaw*2.4,
+             1.78 - PORTRAIT_DROP*framing + look.y*0.26 + pitch*1.5,
+             BACK_Z);
   camera.lookAt(lookAt);
   updateHover();
   paintHints();
