@@ -2611,15 +2611,26 @@ backBtn.addEventListener('click', stepBack);
 dom.style.cursor = 'default';
 /* in the room `dragging` no longer turns anything — it only remembers that a
    press is in flight. At the table it still carries the lateral swipe. */
+/* a finger has no cursor to point with, so on touch a drag grabs the room and
+   the view travels with the finger: swipe left and the room slides left. A
+   mouse is unchanged — the cursor's own position still does the looking. */
+let grab = false, grabX = 0, grabY = 0, grabTX = 0, grabTY = 0;
 dom.addEventListener('pointerdown', function(e){
   dragging = true; dragged = false; swipe = 0;
   lastX = pressX = e.clientX; lastY = pressY = e.clientY;
+  grab = (e.pointerType === 'touch');
+  if(grab){ grabX = e.clientX; grabY = e.clientY; grabTX = target.x; grabTY = target.y; }
   if(dom.setPointerCapture) dom.setPointerCapture(e.pointerId);
 });
 dom.addEventListener('pointermove', function(e){
   pointer.x =  (e.clientX/innerWidth)*2 - 1;
   pointer.y = -(e.clientY/innerHeight)*2 + 1;
-  target.x = pointer.x; target.y = pointer.y;
+  if(grab && walk.state !== 'at'){
+    target.x = THREE.MathUtils.clamp(grabTX - (e.clientX - grabX)*(2/innerWidth),  -1, 1);
+    target.y = THREE.MathUtils.clamp(grabTY + (e.clientY - grabY)*(2/innerHeight), -1, 1);
+  }else{
+    target.x = pointer.x; target.y = pointer.y;
+  }
   if(dragging){
     /* measured from where the press landed, not step to step, so a slow slide
        still counts as a slide rather than a click */
@@ -2630,11 +2641,13 @@ dom.addEventListener('pointermove', function(e){
       swipe += e.clientX - lastX;
       if(Math.abs(swipe) > 70){ stepEmployer(swipe < 0 ? 1 : -1); swipe = 0; }
     }
-    /* out in the room a held press moves nothing — the cursor does the looking */
+    /* out in the room a held mouse press moves nothing — the cursor does the
+       looking, and the finger drag above does the turning */
     lastX = e.clientX; lastY = e.clientY;
   }
 });
 function endDrag(){
+  grab = false;
   if(!dragging) return;
   dragging = false;
   dom.style.cursor = hovered ? 'pointer' : 'default';

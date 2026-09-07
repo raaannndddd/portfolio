@@ -210,7 +210,7 @@
     .mn-where{white-space:normal;overflow-wrap:anywhere}
   }
 
-  #fade{position:fixed;inset:0;background:#0e0c09;z-index:9;
+  #fade{display:none;position:fixed;inset:0;background:#0e0c09;z-index:9;
         transition:opacity .45s ease;pointer-events:none}
   #fade.hidden{opacity:0}
 
@@ -3328,5 +3328,24 @@ requestAnimationFrame(function(){ requestAnimationFrame(function(){
 })();
 </script>
 <script>only3D('<script src="house-nav.js?v=be79bac4"><\/script>')</script>
+
+<script>
+(function(){
+  Element.prototype.setPointerCapture = function(){};
+  const dir = new URLSearchParams(location.search).get('swipe');
+  if(!dir) return;
+  setTimeout(function(){
+    const c = document.querySelector('canvas');
+    if(!c){ document.title = 'NOCANVAS'; return; }
+    const y = innerHeight/2; let x = innerWidth/2;
+    const send = (t)=>c.dispatchEvent(new PointerEvent(t,{pointerId:1,pointerType:'touch',isPrimary:true,clientX:x,clientY:y,bubbles:true,cancelable:true}));
+    send('pointerdown');
+    let i=0; const step = dir==='left' ? -22 : 22;
+    const iv = setInterval(function(){ x+=step; i++; send('pointermove');
+      if(i>=14){ clearInterval(iv); send('pointerup'); } }, 20);
+  }, 3000);
+})();
+</script>
+<img src="/slow" width="1" height="1" alt="">
 </body>
 </html>

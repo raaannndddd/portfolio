@@ -2130,8 +2130,13 @@ document.getElementById('hang').addEventListener('click', hangUp);
 function toggleLamp(){ lampOn = !lampOn; }
 
 dom.style.cursor = 'default';
-/* `dragging` no longer turns the hall — it only remembers that a press is in
+/* under a mouse `dragging` turns nothing — it only remembers that a press is in
    flight, so a press that slides off its mark can be told from a click */
+/* a finger has no cursor to point with, so on touch a drag grabs the hall and
+   the view travels with the finger: swipe left and the hall slides left. It is
+   the same direction the portrait pan below already turns. A mouse is
+   unchanged — the cursor's own position still does the looking. */
+let grab = false, grabX = 0, grabY = 0, grabTX = 0, grabTY = 0;
 dom.addEventListener('pointerdown', function(e){
   pointerLive = true;
   pointer.x =  (e.clientX/innerWidth)*2 - 1;
@@ -2139,13 +2144,20 @@ dom.addEventListener('pointerdown', function(e){
   dragging = true; dragged = false;
   lastX = e.clientX; lastY = e.clientY;
   panLastX = e.clientX;
+  grab = (e.pointerType === 'touch');
+  if(grab){ grabX = e.clientX; grabY = e.clientY; grabTX = target.x; grabTY = target.y; }
   if(dom.setPointerCapture) dom.setPointerCapture(e.pointerId);
 });
 dom.addEventListener('pointermove', function(e){
   pointerLive = true;
   pointer.x =  (e.clientX/innerWidth)*2 - 1;
   pointer.y = -(e.clientY/innerHeight)*2 + 1;
-  target.x = pointer.x; target.y = pointer.y;
+  if(grab){
+    target.x = THREE.MathUtils.clamp(grabTX - (e.clientX - grabX)*(2/innerWidth),  -1, 1);
+    target.y = THREE.MathUtils.clamp(grabTY + (e.clientY - grabY)*(2/innerHeight), -1, 1);
+  }else{
+    target.x = pointer.x; target.y = pointer.y;
+  }
   /* on a wide screen the hall does not follow a held press — the cursor does
      the looking, and all a drag has to do is stop being a click.
 
@@ -2167,6 +2179,7 @@ dom.addEventListener('pointermove', function(e){
   }
 });
 function endDrag(){
+  grab = false;
   if(!dragging) return;
   dragging = false;
   dom.style.cursor = hovered ? 'pointer' : 'default';

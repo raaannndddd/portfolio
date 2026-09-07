@@ -2484,24 +2484,36 @@ let lightsOn = true, lightLevel = 1;
 function toggleLights(){ lightsOn = !lightsOn; }
 
 dom.style.cursor = 'default';
-/* `dragging` no longer turns the room — it only remembers that a press is in
+/* under a mouse `dragging` turns nothing — it only remembers that a press is in
    flight, so a press that slides off its mark can be told from a click */
+/* a finger has no cursor to point with, so on touch a drag grabs the room and
+   the view travels with the finger: swipe left and the room slides left. A
+   mouse is unchanged — the cursor's own position still does the looking. */
+let grab = false, grabX = 0, grabY = 0, grabTX = 0, grabTY = 0;
 dom.addEventListener('pointerdown', function(e){
   dragging = true; dragged = false;
   lastX = e.clientX; lastY = e.clientY;
+  grab = (e.pointerType === 'touch');
+  if(grab){ grabX = e.clientX; grabY = e.clientY; grabTX = target.x; grabTY = target.y; }
   if(dom.setPointerCapture) dom.setPointerCapture(e.pointerId);
 });
 dom.addEventListener('pointermove', function(e){
   pointer.x =  (e.clientX/innerWidth)*2 - 1;
   pointer.y = -(e.clientY/innerHeight)*2 + 1;
-  target.x = pointer.x; target.y = pointer.y;
-  /* the room does not follow a held press. all that is left to measure is
+  if(grab){
+    target.x = THREE.MathUtils.clamp(grabTX - (e.clientX - grabX)*(2/innerWidth),  -1, 1);
+    target.y = THREE.MathUtils.clamp(grabTY + (e.clientY - grabY)*(2/innerHeight), -1, 1);
+  }else{
+    target.x = pointer.x; target.y = pointer.y;
+  }
+  /* under a mouse the room does not follow a held press; the rest is measuring
      whether the press wandered far enough to stop being a click */
   if(dragging && Math.abs(e.clientX - lastX) + Math.abs(e.clientY - lastY) > 12){
     dragged = true;
   }
 });
 function endDrag(){
+  grab = false;
   if(!dragging) return;
   dragging = false;
   dom.style.cursor = hovered && hovered.userData.clickable ? 'pointer' : 'default';

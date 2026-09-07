@@ -3392,18 +3392,29 @@ let dragging = false, lastX = 0, lastY = 0;
 let pressX = 0, pressY = 0, pressT = 0;
 dom.style.cursor = 'default';
 
-/* `dragging` no longer turns the room — it only remembers that a press is in
+/* under a mouse `dragging` turns nothing — it only remembers that a press is in
    flight, so a press that slides off its mark can be told from a click */
+/* a finger has no cursor to point with, so on touch a drag grabs the room and
+   the view travels with the finger: swipe left and the room slides left. A
+   mouse is unchanged — the cursor's own position still does the looking. */
+let grab = false, grabX = 0, grabY = 0, grabTX = 0, grabTY = 0;
 dom.addEventListener('pointerdown', function(e){
   dragging = true; lastX = e.clientX; lastY = e.clientY;
   pressX = e.clientX; pressY = e.clientY; pressT = performance.now();
+  grab = (e.pointerType === 'touch');
+  if(grab){ grabX = e.clientX; grabY = e.clientY; grabTX = target.x; grabTY = target.y; }
   dom.setPointerCapture(e.pointerId);
 });
 dom.addEventListener('pointermove', function(e){
-  target.x =  (e.clientX/innerWidth)*2 - 1;
-  target.y = -(e.clientY/innerHeight)*2 + 1;
-  /* a held press does not turn the room — the cursor's own position is the
-     only thing the camera answers to */
+  if(grab){
+    target.x = THREE.MathUtils.clamp(grabTX - (e.clientX - grabX)*(2/innerWidth),  -1, 1);
+    target.y = THREE.MathUtils.clamp(grabTY + (e.clientY - grabY)*(2/innerHeight), -1, 1);
+  }else{
+    target.x =  (e.clientX/innerWidth)*2 - 1;
+    target.y = -(e.clientY/innerHeight)*2 + 1;
+  }
+  /* under a mouse a held press does not turn the room — the cursor's own
+     position is the only thing the camera answers to */
   if(bookState === 'idle' && !letterOpen){
     /* the shelves and the letters are clickable, and the hand should say so */
     dom.style.cursor = (letterAt(e.clientX, e.clientY) ||
@@ -3411,6 +3422,7 @@ dom.addEventListener('pointermove', function(e){
   }
 });
 function endDrag(){
+  grab = false;
   if(!dragging) return;
   dragging = false;
   dom.style.cursor = 'default';
