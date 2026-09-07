@@ -9,7 +9,7 @@
 <script>window.only3D=function(html){document.write(html)}</script>
 <!-- decides, before anything is fetched, whether this visit gets the
      house or the written version. Must stay the first script here. -->
-<script src="lite.js"></script>
+<script src="lite.js?v=51e9fb28"></script>
 <title>Experience - Rand Halasa</title>
 <style>
   :root{
@@ -169,7 +169,7 @@
      it at the top of the document rather than fifty lines further down. -->
 <script>only3D('<link rel="preload" as="script" href="vendor/three.r128.min.js">')</script>
 <!-- the whole house's pictures, started before anything else asks for them -->
-<script>only3D('<script src="preload.js"><\/script>')</script>
+<script>only3D('<script src="preload.js?v=1159f966"><\/script>')</script>
 </head>
 <body>
 
@@ -254,7 +254,7 @@
 <div id="fade"></div>
 
 <script>only3D('<script src="vendor/three.r128.min.js"><\/script>')</script>
-<script>only3D('<script src="tap-hints.js"><\/script>')</script>
+<script>only3D('<script src="tap-hints.js?v=282bdcb0"><\/script>')</script>
 <script>
 (function(){
 "use strict";
@@ -2896,6 +2896,6 @@ requestAnimationFrame(function(){ requestAnimationFrame(function(){
 
 })();
 </script>
-<script>only3D('<script src="house-nav.js"><\/script>')</script>
+<script>only3D('<script src="house-nav.js?v=be79bac4"><\/script>')</script>
 </body>
 </html>
